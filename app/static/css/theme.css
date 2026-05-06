@@ -1,0 +1,14 @@
+:root {
+  color-scheme: light;
+}
+[data-bs-theme="dark"] {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+body[data-bs-theme="dark"] {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+.card {
+  border-radius: 0.75rem;
+}

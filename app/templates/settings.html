@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Settings - SmartContract Manager{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">User settings</h5>
+        <form method="post" action="/settings">
+          <div class="mb-3">
+            <label class="form-label">Timezone</label>
+            <select name="timezone" class="form-select">
+              {% for tz in timezones %}
+              <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Base currency</label>
+            <select name="currency" class="form-select">
+              {% for currency in currencies %}
+              <option value="{{ currency }}" {% if user.currency == currency %}selected{% endif %}>{{ currency }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-primary">Save settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

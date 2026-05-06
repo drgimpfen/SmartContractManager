@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - SmartContract Manager{% endblock %}
+{% block content %}
+<div class="row mb-4">
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h4 class="card-title">Overview</h4>
+        <p>Monthly budget: <strong>{{ monthly_budget }} {{ user.currency }}</strong></p>
+        <p>Open contracts: <strong>{{ contracts|length }}</strong></p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Cashflow forecast</h5>
+        <canvas id="cashflowChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Critical deadlines</h5>
+        {% if critical_reminders %}
+        <ul class="list-group list-group-flush">
+          {% for contract in critical_reminders %}
+          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or 'no number' }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-muted">No urgent cancellation deadlines.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Inbox</h5>
+        {% if missing_notice %}
+        <ul class="list-group list-group-flush">
+          {% for contract in missing_notice %}
+          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or 'no number' }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-muted">No contracts without cancellation notice.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Cost distribution</h5>
+    <canvas id="categoryChart" height="120"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const cashflowLabels = {{ cashflow | map(attribute='month') | list | safe }};
+const cashflowValues = {{ cashflow | map(attribute='amount') | list | safe }};
+const categoryLabels = {{ distribution | map(attribute='category') | list | safe }};
+const categoryValues = {{ distribution | map(attribute='value') | list | safe }};
+
+new Chart(document.getElementById('cashflowChart'), {
+  type: 'bar',
+  data: {
+    labels: cashflowLabels,
+    datasets: [{ label: 'Cashflow', data: cashflowValues, backgroundColor: '#0d6efd' }],
+  },
+  options: { responsive: true, maintainAspectRatio: false },
+});
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: categoryLabels,
+    datasets: [{ data: categoryValues, backgroundColor: ['#0d6efd', '#6610f2', '#198754', '#fd7e14'] }],
+  },
+  options: { responsive: true, maintainAspectRatio: false },
+});
+</script>
+{% endblock %}

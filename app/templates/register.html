@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Register - SmartContract Manager{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title mb-4">Register</h3>
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/register">
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" name="username" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" name="password" required />
+          </div>
+          <button type="submit" class="btn btn-primary">Create account</button>
+          <a href="/login" class="btn btn-link">Back to login</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

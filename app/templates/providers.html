@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Provider - SmartContract Manager{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Provider</h5>
+        <table class="table table-hover">
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Website</th></tr>
+          </thead>
+          <tbody>
+            {% for provider in providers %}
+            <tr>
+              <td>{{ provider.name }}</td>
+              <td>{{ provider.email or '-' }}</td>
+              <td><a href="{{ provider.website }}" target="_blank">{{ provider.website or '-' }}</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Add new provider</h5>
+        <form method="post" action="/providers">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input name="name" class="form-control" required />
+          </div>
+          <div class="mb-3"><label class="form-label">Customer number</label><input name="customer_number" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Website</label><input name="website" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Customer portal link</label><input name="customer_portal" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Cancellation link</label><input name="cancel_url" class="form-control" /></div>
+          <button class="btn btn-primary">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Contracts - SmartContract Manager{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-7 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Contract list</h5>
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Provider</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contract in contracts %}
+            <tr>
+              <td>{{ contract.category }}</td>
+              <td>{{ contract.provider.name if contract.provider else '-' }}</td>
+              <td>{{ contract.amount }} {{ contract.currency }}</td>
+              <td>{{ contract.status.value }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Add new contract</h5>
+        <form method="post" action="/contracts" enctype="multipart/form-data">
+          <div class="mb-3"><label class="form-label">Category</label><input name="category" class="form-control" required /></div>
+          <div class="mb-3"><label class="form-label">Provider</label><select name="provider_id" class="form-select"><option value="">Select</option>{% for provider in providers %}<option value="{{ provider.id }}">{{ provider.name }}</option>{% endfor %}</select></div>
+          <div class="mb-3"><label class="form-label">Contract number</label><input name="contract_number" class="form-control" /></div>
+          <div class="row">
+            <div class="col"><label class="form-label">Start date</label><input name="start_date" type="date" class="form-control" /></div>
+            <div class="col"><label class="form-label">End date</label><input name="end_date" type="date" class="form-control" /></div>
+          </div>
+          <div class="row mt-3">
+            <div class="col"><label class="form-label">Cancellation notice</label><input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" /></div>
+            <div class="col"><label class="form-label">Unit</label><select name="cancellation_notice_unit" class="form-select"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months">Months</option></select></div>
+          </div>
+          <div class="mb-3 mt-3"><label class="form-label">Amount</label><input name="amount" type="number" step="0.01" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Currency</label><input name="currency" class="form-control" value="EUR" /></div>
+          <div class="mb-3"><label class="form-label">Frequency</label><select name="frequency" class="form-select">{% for value in frequencies %}<option value="{{ value.value }}">{{ value.value }}</option>{% endfor %}</select></div>
+          <div class="mb-3"><label class="form-label">Payment method</label><input name="payment_method" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Tags (comma-separated)</label><input name="tags" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">Document (PDF)</label><input name="document" type="file" class="form-control" accept="application/pdf" /></div>
+          <button class="btn btn-primary">Save contract</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
