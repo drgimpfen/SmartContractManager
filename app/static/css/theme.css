@@ -1,6 +1,10 @@
 :root {
   color-scheme: light;
 }
+body {
+  background: #eef2f6;
+  min-height: 100vh;
+}
 [data-bs-theme="dark"] {
   background-color: #121212;
   color: #f8f9fa;
@@ -9,6 +13,120 @@ body[data-bs-theme="dark"] {
   background-color: #121212;
   color: #f8f9fa;
 }
+.app-shell {
+  min-height: 100vh;
+}
+.sidebar {
+  min-width: 260px;
+  max-width: 260px;
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.content-shell {
+  margin-left: 260px;
+  min-height: 100vh;
+  background: transparent;
+}
+.topbar {
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+.content-area {
+  padding-top: 0.5rem;
+}
+.sidebar-brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.brand-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.brand-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+.nav-link {
+  color: #f8f9fa;
+  font-weight: 500;
+  border-radius: 0.75rem;
+}
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+.sidebar-footer {
+  margin-top: auto;
+}
+.user-card {
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0.85rem;
+}
+.user-initial {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  font-weight: 700;
+}
+.user-name {
+  font-weight: 600;
+}
+.btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
 .card {
   border-radius: 0.75rem;
+  border: none;
+}
+.dashboard-hero {
+  min-height: 190px;
+}
+.action-card {
+  min-width: 260px;
+}
+.overview-metric {
+  padding: 1rem;
+  background: rgba(13, 110, 253, 0.07);
+  border-radius: 0.75rem;
+}
+.metric-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+.metric-label {
+  color: #6c757d;
+}
+.placeholder-card {
+  min-height: 180px;
+  background: rgba(248, 249, 250, 0.92);
+  border-radius: 0.75rem;
+}
+.chart-container {
+  position: relative;
+  height: 240px;
+}
+.chart-container-small {
+  height: 180px;
+}
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+.shadow-sm {
+  box-shadow: 0 0.75rem 1.5rem rgba(49, 64, 86, 0.08);
 }

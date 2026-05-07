@@ -1,57 +1,192 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - SmartContract Manager{% endblock %}
+{% block title %}{{ _('dashboard.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
+{% block page_title %}<h1 class="h3 mb-0">{{ _('dashboard.title') }}</h1>{% endblock %}
 {% block content %}
-<div class="row mb-4">
-  <div class="col-lg-8">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h4 class="card-title">Overview</h4>
-        <p>Monthly budget: <strong>{{ monthly_budget }} {{ user.currency }}</strong></p>
-        <p>Open contracts: <strong>{{ contracts|length }}</strong></p>
+<div class="dashboard-header d-flex flex-column flex-md-row align-items-stretch justify-content-between gap-3 mb-4">
+  <div class="card flex-fill shadow-sm dashboard-hero">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h4 class="card-title mb-1">{{ _('dashboard.title') }}</h4>
+          <p class="text-muted mb-0">{{ _('dashboard.subtitle') }}</p>
+        </div>
+      </div>
+      <div class="row gy-2">
+        <div class="col-sm-4">
+          <div class="overview-metric">
+            <span class="metric-value">{{ monthly_budget }} {{ user.currency }}</span>
+            <div class="metric-label">{{ _('dashboard.monthly_budget') }}</div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="overview-metric">
+            <span class="metric-value">{{ contracts|length }}</span>
+            <div class="metric-label">{{ _('dashboard.contracts') }}</div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="overview-metric">
+            <span class="metric-value">{{ providers|length }}</span>
+            <div class="metric-label">{{ _('dashboard.providers') }}</div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="card mb-3">
+  </div>
+  <div class="card shadow-sm action-card">
+    <div class="card-body d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="card-title">{{ _('dashboard.actions.title') }}</h5>
+        <p class="text-muted">{{ _('dashboard.actions.description') }}</p>
+      </div>
+      <div class="d-grid gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContractModal">{{ _('dashboard.actions.add_contract') }}</button>
+        <a class="btn btn-outline-primary" href="/contracts">{{ _('dashboard.actions.all_contracts') }}</a>
+        <a class="btn btn-outline-secondary" href="/providers">{{ _('dashboard.actions.manage_providers') }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row gy-4 mb-4">
+  <div class="col-lg-8">
+    <div class="card h-100 shadow-sm">
       <div class="card-body">
-        <h5 class="card-title">Cashflow forecast</h5>
-        <canvas id="cashflowChart" height="150"></canvas>
+        <h5 class="card-title">{{ _('dashboard.cashflow_title') }}</h5>
+        {% if cashflow %}
+        <div class="chart-container">
+          <canvas id="cashflowChart"></canvas>
+        </div>
+        {% else %}
+        <div class="placeholder-card p-4 text-center text-muted">
+          <p class="mb-2">{{ _('dashboard.no_active_contracts') }}</p>
+          <p class="mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
   <div class="col-lg-4">
-    <div class="card mb-3">
+    <div class="card mb-3 shadow-sm">
       <div class="card-body">
-        <h5 class="card-title">Critical deadlines</h5>
+        <h5 class="card-title">{{ _('dashboard.critical_deadlines') }}</h5>
         {% if critical_reminders %}
         <ul class="list-group list-group-flush">
           {% for contract in critical_reminders %}
-          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or 'no number' }}</li>
+          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or _('common.no_number') }}</li>
           {% endfor %}
         </ul>
         {% else %}
-        <div class="text-muted">No urgent cancellation deadlines.</div>
+        <div class="text-muted">{{ _('dashboard.no_urgent_deadlines') }}</div>
         {% endif %}
       </div>
     </div>
-    <div class="card">
+    <div class="card shadow-sm">
       <div class="card-body">
-        <h5 class="card-title">Inbox</h5>
+        <h5 class="card-title">{{ _('dashboard.missing_notice') }}</h5>
         {% if missing_notice %}
         <ul class="list-group list-group-flush">
           {% for contract in missing_notice %}
-          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or 'no number' }}</li>
+          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or _('common.no_number') }}</li>
           {% endfor %}
         </ul>
         {% else %}
-        <div class="text-muted">No contracts without cancellation notice.</div>
+        <div class="text-muted">{{ _('dashboard.no_notice') }}</div>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
   <div class="card-body">
-    <h5 class="card-title">Cost distribution</h5>
-    <canvas id="categoryChart" height="120"></canvas>
+    <h5 class="card-title">{{ _('dashboard.cost_distribution') }}</h5>
+    {% if distribution %}
+    <div class="chart-container chart-container-small">
+      <canvas id="categoryChart"></canvas>
+    </div>
+    {% else %}
+    <div class="placeholder-card p-4 text-center text-muted">{{ _('dashboard.no_cost_distribution') }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="addContractModal" tabindex="-1" aria-labelledby="addContractModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form action="/contracts" method="post" enctype="multipart/form-data">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addContractModalLabel">{{ _('modal.add_contract') }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.provider') }}</label>
+              <select name="provider_id" class="form-select">
+                <option value="" selected>{{ _('form.no_provider_selected') }}</option>
+                {% for provider in providers %}
+                <option value="{{ provider.id }}">{{ provider.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.category') }}</label>
+              <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.contract_number') }}</label>
+              <input name="contract_number" class="form-control" placeholder="{{ _('form.optional') }}" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.amount') }}</label>
+              <input type="number" step="0.01" name="amount" class="form-control" value="0.00" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.currency') }}</label>
+              <input name="currency" class="form-control" value="EUR" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.frequency') }}</label>
+              <select name="frequency" class="form-select">
+                <option value="monthly">{{ _('form.monthly') }}</option>
+                <option value="quarterly">{{ _('form.quarterly') }}</option>
+                <option value="yearly">{{ _('form.yearly') }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.start_date') }}</label>
+              <input type="date" name="start_date" class="form-control" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.end_date') }}</label>
+              <input type="date" name="end_date" class="form-control" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ _('form.cancellation_notice') }}</label>
+              <div class="input-group">
+                <input type="number" name="cancellation_notice_amount" class="form-control" value="0" min="0" />
+                <select name="cancellation_notice_unit" class="form-select">
+                  <option value="days">{{ _('form.days') }}</option>
+                  <option value="weeks">{{ _('form.weeks') }}</option>
+                  <option value="months">{{ _('form.months') }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ _('form.notes') }}</label>
+              <textarea name="notes" class="form-control" rows="3" placeholder="{{ _('form.description') }}"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">{{ _('form.document') }}</label>
+              <input type="file" name="document" accept="application/pdf" class="form-control" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('modal.close') }}</button>
+          <button type="submit" class="btn btn-primary">{{ _('modal.save') }}</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -67,7 +202,7 @@ new Chart(document.getElementById('cashflowChart'), {
   type: 'bar',
   data: {
     labels: cashflowLabels,
-    datasets: [{ label: 'Cashflow', data: cashflowValues, backgroundColor: '#0d6efd' }],
+    datasets: [{ label: '{{ _('dashboard.cashflow_title') }}', data: cashflowValues, backgroundColor: '#0d6efd' }],
   },
   options: { responsive: true, maintainAspectRatio: false },
 });

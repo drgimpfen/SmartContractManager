@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Login - SmartContract Manager{% endblock %}
+{% block title %}{{ _('login.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-5">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h3 class="card-title mb-4">Login</h3>
+        <h3 class="card-title mb-4">{{ _('login.title') }}</h3>
         {% if error %}
-        <div class="alert alert-danger">{{ error }}</div>
+        <div class="alert alert-danger">{{ _(error) }}</div>
         {% endif %}
         <form method="post" action="/login">
           <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
+            <label for="username" class="form-label">{{ _('login.username') }}</label>
             <input type="text" class="form-control" id="username" name="username" required />
           </div>
           <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
+            <label for="password" class="form-label">{{ _('login.password') }}</label>
             <input type="password" class="form-control" id="password" name="password" required />
           </div>
-          <button type="submit" class="btn btn-primary">Login</button>
-          <a href="/register" class="btn btn-link">Register</a>
+          <button type="submit" class="btn btn-primary">{{ _('login.submit') }}</button>
+          <a href="/register" class="btn btn-link">{{ _('login.register') }}</a>
         </form>
       </div>
     </div>

@@ -1,0 +1,131 @@
+{
+  "app": {
+    "brand": {
+      "title": "SmartContract",
+      "subtitle": "Manager"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "contracts": "Contracts",
+    "providers": "Providers",
+    "settings": "Settings",
+    "logged_in": "logged in",
+    "theme": "Theme",
+    "logout": "Logout",
+    "language": "Language"
+  },
+  "topbar": {
+    "hello": "Hello,"
+  },
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Login",
+    "register": "Register"
+  },
+  "register": {
+    "title": "Register",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Create account",
+    "back_to_login": "Back to login"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Quick overview of your contracts and cashflow forecast.",
+    "monthly_budget": "Monthly budget",
+    "contracts": "Contracts",
+    "providers": "Providers",
+    "actions": {
+      "title": "Actions",
+      "description": "Add new entries directly from the dashboard.",
+      "add_contract": "Add new contract",
+      "all_contracts": "All contracts",
+      "manage_providers": "Manage providers"
+    },
+    "cashflow_title": "Cashflow forecast",
+    "no_active_contracts": "No active contracts available.",
+    "no_contracts_hint": "Create a contract to see the cashflow forecast.",
+    "critical_deadlines": "Critical deadlines",
+    "no_urgent_deadlines": "No urgent deadlines.",
+    "missing_notice": "Missing notice",
+    "no_notice": "All active contracts have a cancellation notice.",
+    "cost_distribution": "Cost distribution",
+    "no_cost_distribution": "No cost distribution available yet."
+  },
+  "modal": {
+    "close": "Close",
+    "save": "Save",
+    "add_contract": "Add new contract"
+  },
+  "form": {
+    "provider": "Provider",
+    "no_provider_selected": "No provider selected",
+    "category": "Category",
+    "category_hint": "e.g. Internet, Utilities",
+    "contract_number": "Contract number",
+    "amount": "Amount",
+    "currency": "Currency",
+    "frequency": "Frequency",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "yearly": "Yearly",
+    "start_date": "Start date",
+    "end_date": "End date",
+    "cancellation_notice": "Cancellation notice",
+    "unit": "Unit",
+    "days": "Days",
+    "weeks": "Weeks",
+    "months": "Months",
+    "payment_method": "Payment method",
+    "notes": "Notes",
+    "description": "Description",
+    "tags": "Tags (comma-separated)",
+    "document": "Document (PDF)",
+    "optional": "Optional",
+    "name": "Name",
+    "phone": "Phone"
+  },
+  "contracts": {
+    "title": "Contracts",
+    "list_title": "Contract list",
+    "table": {
+      "category": "Category",
+      "provider": "Provider",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "save_contract": "Save contract"
+  },
+  "providers": {
+    "title": "Provider",
+    "list_title": "Provider",
+    "add_new_provider": "Add new provider",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "website": "Website"
+    },
+    "customer_number": "Customer number",
+    "customer_portal": "Customer portal link",
+    "cancellation_link": "Cancellation link",
+    "save": "Save"
+  },
+  "settings": {
+    "title": "Settings",
+    "user_settings": "User settings",
+    "timezone": "Timezone",
+    "base_currency": "Base currency",
+    "save_settings": "Save settings"
+  },
+  "auth": {
+    "invalid_credentials": "Invalid username or password.",
+    "username_exists": "Username already exists."
+  },
+  "common": {
+    "none": "-",
+    "no_number": "no number"
+  }
+}

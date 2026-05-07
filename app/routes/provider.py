@@ -1,13 +1,12 @@
 from pathlib import Path
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import get_db
+from app.i18n import TEMPLATES
 from app.models import Provider
 from app.auth import get_current_user
 
-TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 router = APIRouter()
 
 
@@ -17,7 +16,7 @@ def provider_list(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
     providers = db.query(Provider).filter(Provider.user_id == user.id).order_by(Provider.name).all()
-    return TEMPLATES.TemplateResponse("providers.html", {"request": request, "user": user, "providers": providers})
+    return TEMPLATES.TemplateResponse(request, "providers.html", {"user": user, "providers": providers})
 
 
 @router.post("/providers")

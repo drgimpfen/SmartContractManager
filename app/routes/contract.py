@@ -3,15 +3,14 @@ from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import get_db
+from app.i18n import TEMPLATES
 from app.models import Contract, Provider, Tag, Document, Frequency, ContractStatus
 from app.auth import get_current_user
 from app.utils import normalize_monthly_amount
 from pdfminer.high_level import extract_text
 
-TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 router = APIRouter()
 
 
@@ -32,8 +31,9 @@ def contract_list(request: Request, db: Session = Depends(get_db)):
     contracts = db.query(Contract).filter(Contract.user_id == user.id).order_by(Contract.category).all()
     providers = db.query(Provider).filter(Provider.user_id == user.id).all()
     return TEMPLATES.TemplateResponse(
+        request,
         "contracts.html",
-        {"request": request, "user": user, "contracts": contracts, "providers": providers, "frequencies": list(Frequency)},
+        {"user": user, "contracts": contracts, "providers": providers, "frequencies": list(Frequency)},
     )
 
 
@@ -41,7 +41,7 @@ def contract_list(request: Request, db: Session = Depends(get_db)):
 def add_contract(
     request: Request,
     category: str = Form(...),
-    provider_id: int = Form(None),
+    provider_id: int | None = Form(None),
     contract_number: str = Form(""),
     start_date: str = Form(""),
     end_date: str = Form(""),

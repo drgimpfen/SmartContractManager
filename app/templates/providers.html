@@ -1,21 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Provider - SmartContract Manager{% endblock %}
+{% block title %}{{ _('providers.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
+{% block page_title %}<h1 class="h3 mb-0">{{ _('providers.title') }}</h1>{% endblock %}
 {% block content %}
 <div class="row">
   <div class="col-lg-6 mb-4">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Provider</h5>
+        <h5 class="card-title">{{ _('providers.list_title') }}</h5>
         <table class="table table-hover">
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Website</th></tr>
+            <tr><th>{{ _('providers.table.name') }}</th><th>{{ _('providers.table.email') }}</th><th>{{ _('providers.table.website') }}</th></tr>
           </thead>
           <tbody>
             {% for provider in providers %}
             <tr>
               <td>{{ provider.name }}</td>
-              <td>{{ provider.email or '-' }}</td>
-              <td><a href="{{ provider.website }}" target="_blank">{{ provider.website or '-' }}</a></td>
+              <td>{{ provider.email or _('common.none') }}</td>
+              <td><a href="{{ provider.website }}" target="_blank">{{ provider.website or _('common.none') }}</a></td>
             </tr>
             {% endfor %}
           </tbody>
@@ -26,19 +27,19 @@
   <div class="col-lg-6 mb-4">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Add new provider</h5>
+        <h5 class="card-title">{{ _('providers.add_new_provider') }}</h5>
         <form method="post" action="/providers">
           <div class="mb-3">
-            <label class="form-label">Name</label>
+            <label class="form-label">{{ _('form.name') }}</label>
             <input name="name" class="form-control" required />
           </div>
-          <div class="mb-3"><label class="form-label">Customer number</label><input name="customer_number" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Website</label><input name="website" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Customer portal link</label><input name="customer_portal" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Cancellation link</label><input name="cancel_url" class="form-control" /></div>
-          <button class="btn btn-primary">Save</button>
+          <div class="mb-3"><label class="form-label">{{ _('providers.customer_number') }}</label><input name="customer_number" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('providers.table.email') }}</label><input name="email" type="email" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.phone') }}</label><input name="phone" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('providers.table.website') }}</label><input name="website" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('providers.customer_portal') }}</label><input name="customer_portal" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('providers.cancellation_link') }}</label><input name="cancel_url" class="form-control" /></div>
+          <button class="btn btn-primary">{{ _('providers.save') }}</button>
         </form>
       </div>
     </div>

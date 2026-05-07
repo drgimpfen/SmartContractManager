@@ -1,13 +1,12 @@
 from pathlib import Path
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.db import get_db
+from app.i18n import TEMPLATES
 from app.models import User
 from app.auth import get_current_user
 
-TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 router = APIRouter()
 
 TIMEZONE_OPTIONS = [
@@ -28,9 +27,9 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
     return TEMPLATES.TemplateResponse(
+        request,
         "settings.html",
         {
-            "request": request,
             "user": user,
             "timezones": TIMEZONE_OPTIONS,
             "currencies": CURRENCY_OPTIONS,

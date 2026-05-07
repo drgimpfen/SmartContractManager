@@ -6,7 +6,7 @@ from .models import User
 from .db import get_db
 from typing import Optional
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 
 
 def get_password_hash(password: str) -> str:

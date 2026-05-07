@@ -1,43 +1,72 @@
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="light">
+<html lang="{{ lang }}" data-bs-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}SmartContract Manager{% endblock %}</title>
+    <title>{% block title %}{{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/theme.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="/">SmartContract Manager</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMenu">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            {% if user %}
-            <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="/contracts">Contracts</a></li>
-            <li class="nav-item"><a class="nav-link" href="/providers">Providers</a></li>
-            <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
-            {% endif %}
-          </ul>
-          <div class="d-flex align-items-center">
-            <button class="btn btn-outline-light btn-sm me-2" id="themeToggle">Dark/Light</button>
-            {% if user %}
-            <span class="text-white me-3">{{ user.username }}</span>
-            <a class="btn btn-outline-light btn-sm" href="/logout">Logout</a>
-            {% endif %}
-          </div>
+    <div class="app-shell d-flex">
+      <aside class="sidebar bg-primary text-white d-flex flex-column">
+        <div class="sidebar-brand p-4 border-bottom border-white-10">
+          <a href="/" class="text-decoration-none text-white">
+            <div class="brand-title">{{ _('app.brand.title') }}</div>
+            <div class="brand-subtitle">{{ _('app.brand.subtitle') }}</div>
+          </a>
         </div>
+        <nav class="nav flex-column px-3 py-4 gap-1">
+          {% if user %}
+          <a class="nav-link text-white" href="/">{{ _('sidebar.dashboard') }}</a>
+          <a class="nav-link text-white" href="/contracts">{{ _('sidebar.contracts') }}</a>
+          <a class="nav-link text-white" href="/providers">{{ _('sidebar.providers') }}</a>
+          <a class="nav-link text-white" href="/settings">{{ _('sidebar.settings') }}</a>
+          {% endif %}
+        </nav>
+        <div class="sidebar-footer mt-auto px-3 pb-4">
+          {% if user %}
+          <div class="user-card d-flex align-items-center gap-3 mb-3">
+            <div class="user-initial">{{ user.username[:1]|upper }}</div>
+            <div>
+              <div class="user-name">{{ user.username }}</div>
+              <div class="text-white-50 small">{{ _('sidebar.logged_in') }}</div>
+            </div>
+          </div>
+          <button class="btn btn-outline-light btn-sm w-100 mb-2" id="themeToggle">{{ _('sidebar.theme') }}</button>
+          <a class="btn btn-light btn-sm w-100 mb-2" href="/logout">{{ _('sidebar.logout') }}</a>
+          <div class="language-select mt-3">
+            <label for="lang-select" class="form-label small text-white-50">{{ _('sidebar.language') }}</label>
+            <select id="lang-select" class="form-select form-select-sm" onchange="window.location.href='/set-language/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)">
+              {% for code, name in languages.items() %}
+              <option value="{{ code }}" {% if lang == code %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </div>
+      </aside>
+      <div class="content-shell flex-fill d-flex flex-column">
+        <header class="topbar border-bottom bg-white">
+          <div class="container-fluid d-flex align-items-center justify-content-between py-3">
+            <div class="page-title">
+              {% block page_title %}{% endblock %}
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {% if user %}
+              <span class="small text-muted d-none d-md-inline">{{ _('topbar.hello') }} {{ user.username }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </header>
+        <main class="content-area flex-fill">
+          <div class="container-fluid py-4">
+            {% block content %}{% endblock %}
+          </div>
+        </main>
       </div>
-    </nav>
-
-    <main class="container py-4">
-      {% block content %}{% endblock %}
-    </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/theme.js"></script>

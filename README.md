@@ -46,3 +46,10 @@ uvicorn app.main:app --reload
 - `app/routes/` – application routes
 - `app/templates/` – Jinja2 templates
 - `app/static/` – CSS/JS and upload directory
+- `app/app/locales/` – JSON translation files for i18n
+
+## Localization
+
+Translation files are now stored in `app/locales/*.json`.
+Add a new language by creating a new locale file like `app/locales/fr.json` and adding translated strings.
+The app loads all available locale files automatically at startup.

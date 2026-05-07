@@ -1,25 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Contracts - SmartContract Manager{% endblock %}
+{% block title %}{{ _('contracts.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
+{% block page_title %}<h1 class="h3 mb-0">{{ _('contracts.title') }}</h1>{% endblock %}
 {% block content %}
 <div class="row">
   <div class="col-lg-7 mb-4">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Contract list</h5>
+        <h5 class="card-title">{{ _('contracts.list_title') }}</h5>
         <table class="table table-sm align-middle">
           <thead>
             <tr>
-              <th>Category</th>
-              <th>Provider</th>
-              <th>Amount</th>
-              <th>Status</th>
+              <th>{{ _('contracts.table.category') }}</th>
+              <th>{{ _('contracts.table.provider') }}</th>
+              <th>{{ _('contracts.table.amount') }}</th>
+              <th>{{ _('contracts.table.status') }}</th>
             </tr>
           </thead>
           <tbody>
             {% for contract in contracts %}
             <tr>
               <td>{{ contract.category }}</td>
-              <td>{{ contract.provider.name if contract.provider else '-' }}</td>
+              <td>{{ contract.provider.name if contract.provider else _('common.none') }}</td>
               <td>{{ contract.amount }} {{ contract.currency }}</td>
               <td>{{ contract.status.value }}</td>
             </tr>
@@ -32,26 +33,26 @@
   <div class="col-lg-5 mb-4">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Add new contract</h5>
+        <h5 class="card-title">{{ _('modal.add_contract') }}</h5>
         <form method="post" action="/contracts" enctype="multipart/form-data">
-          <div class="mb-3"><label class="form-label">Category</label><input name="category" class="form-control" required /></div>
-          <div class="mb-3"><label class="form-label">Provider</label><select name="provider_id" class="form-select"><option value="">Select</option>{% for provider in providers %}<option value="{{ provider.id }}">{{ provider.name }}</option>{% endfor %}</select></div>
-          <div class="mb-3"><label class="form-label">Contract number</label><input name="contract_number" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.category') }}</label><input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.provider') }}</label><select name="provider_id" class="form-select"><option value="">{{ _('form.no_provider_selected') }}</option>{% for provider in providers %}<option value="{{ provider.id }}">{{ provider.name }}</option>{% endfor %}</select></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.contract_number') }}</label><input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" /></div>
           <div class="row">
-            <div class="col"><label class="form-label">Start date</label><input name="start_date" type="date" class="form-control" /></div>
-            <div class="col"><label class="form-label">End date</label><input name="end_date" type="date" class="form-control" /></div>
+            <div class="col"><label class="form-label">{{ _('form.start_date') }}</label><input name="start_date" type="date" class="form-control" /></div>
+            <div class="col"><label class="form-label">{{ _('form.end_date') }}</label><input name="end_date" type="date" class="form-control" /></div>
           </div>
           <div class="row mt-3">
-            <div class="col"><label class="form-label">Cancellation notice</label><input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" /></div>
-            <div class="col"><label class="form-label">Unit</label><select name="cancellation_notice_unit" class="form-select"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months">Months</option></select></div>
+            <div class="col"><label class="form-label">{{ _('form.cancellation_notice') }}</label><input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" /></div>
+            <div class="col"><label class="form-label">{{ _('form.unit') }}</label><select name="cancellation_notice_unit" class="form-select"><option value="days">{{ _('form.days') }}</option><option value="weeks">{{ _('form.weeks') }}</option><option value="months">{{ _('form.months') }}</option></select></div>
           </div>
-          <div class="mb-3 mt-3"><label class="form-label">Amount</label><input name="amount" type="number" step="0.01" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Currency</label><input name="currency" class="form-control" value="EUR" /></div>
-          <div class="mb-3"><label class="form-label">Frequency</label><select name="frequency" class="form-select">{% for value in frequencies %}<option value="{{ value.value }}">{{ value.value }}</option>{% endfor %}</select></div>
-          <div class="mb-3"><label class="form-label">Payment method</label><input name="payment_method" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Tags (comma-separated)</label><input name="tags" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">Document (PDF)</label><input name="document" type="file" class="form-control" accept="application/pdf" /></div>
-          <button class="btn btn-primary">Save contract</button>
+          <div class="mb-3 mt-3"><label class="form-label">{{ _('form.amount') }}</label><input name="amount" type="number" step="0.01" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.currency') }}</label><input name="currency" class="form-control" value="EUR" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.frequency') }}</label><select name="frequency" class="form-select"><option value="monthly">{{ _('form.monthly') }}</option><option value="quarterly">{{ _('form.quarterly') }}</option><option value="yearly">{{ _('form.yearly') }}</option></select></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.payment_method') }}</label><input name="payment_method" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.tags') }}</label><input name="tags" class="form-control" /></div>
+          <div class="mb-3"><label class="form-label">{{ _('form.document') }}</label><input name="document" type="file" class="form-control" accept="application/pdf" /></div>
+          <button class="btn btn-primary">{{ _('contracts.save_contract') }}</button>
         </form>
       </div>
     </div>

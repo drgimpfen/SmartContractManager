@@ -1,0 +1,131 @@
+{
+  "app": {
+    "brand": {
+      "title": "SmartContract",
+      "subtitle": "Manager"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "contracts": "Verträge",
+    "providers": "Provider",
+    "settings": "Einstellungen",
+    "logged_in": "eingeloggt",
+    "theme": "Theme",
+    "logout": "Abmelden",
+    "language": "Sprache"
+  },
+  "topbar": {
+    "hello": "Hallo,"
+  },
+  "login": {
+    "title": "Login",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "submit": "Login",
+    "register": "Registrieren"
+  },
+  "register": {
+    "title": "Registrieren",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "submit": "Konto erstellen",
+    "back_to_login": "Zurück zum Login"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Schneller Überblick über deine Verträge und Cashflow-Prognose.",
+    "monthly_budget": "Monatliches Budget",
+    "contracts": "Verträge",
+    "providers": "Provider",
+    "actions": {
+      "title": "Aktionen",
+      "description": "Füge neue Einträge direkt vom Dashboard hinzu.",
+      "add_contract": "Neuen Vertrag anlegen",
+      "all_contracts": "Alle Verträge",
+      "manage_providers": "Provider verwalten"
+    },
+    "cashflow_title": "Cashflow-Prognose",
+    "no_active_contracts": "Keine aktiven Verträge vorhanden.",
+    "no_contracts_hint": "Erstelle einen Vertrag, um die Cashflow-Prognose zu sehen.",
+    "critical_deadlines": "Dringende Fristen",
+    "no_urgent_deadlines": "Keine dringenden Fristen.",
+    "missing_notice": "Fehlende Kündigungsfrist",
+    "no_notice": "Alle aktiven Verträge haben eine Kündigungsfrist.",
+    "cost_distribution": "Kostenverteilung",
+    "no_cost_distribution": "Noch keine Kostenverteilung verfügbar."
+  },
+  "modal": {
+    "close": "Schließen",
+    "save": "Speichern",
+    "add_contract": "Neuen Vertrag anlegen"
+  },
+  "form": {
+    "provider": "Provider",
+    "no_provider_selected": "Keinen Provider wählen",
+    "category": "Kategorie",
+    "category_hint": "z. B. Internet, Nebenkosten",
+    "contract_number": "Vertragsnummer",
+    "amount": "Betrag",
+    "currency": "Währung",
+    "frequency": "Frequenz",
+    "monthly": "Monatlich",
+    "quarterly": "Vierteljährlich",
+    "yearly": "Jährlich",
+    "start_date": "Startdatum",
+    "end_date": "Enddatum",
+    "cancellation_notice": "Kündigungsfrist",
+    "unit": "Einheit",
+    "days": "Tage",
+    "weeks": "Wochen",
+    "months": "Monate",
+    "payment_method": "Zahlungsmethode",
+    "notes": "Notizen",
+    "description": "Beschreibung",
+    "tags": "Tags (kommagetrennt)",
+    "document": "Dokument (PDF)",
+    "optional": "Optional",
+    "name": "Name",
+    "phone": "Telefon"
+  },
+  "contracts": {
+    "title": "Verträge",
+    "list_title": "Vertragsliste",
+    "table": {
+      "category": "Kategorie",
+      "provider": "Provider",
+      "amount": "Betrag",
+      "status": "Status"
+    },
+    "save_contract": "Vertrag speichern"
+  },
+  "providers": {
+    "title": "Provider",
+    "list_title": "Provider",
+    "add_new_provider": "Provider hinzufügen",
+    "table": {
+      "name": "Name",
+      "email": "E-Mail",
+      "website": "Website"
+    },
+    "customer_number": "Kundennummer",
+    "customer_portal": "Kundenportal-Link",
+    "cancellation_link": "Kündigungslink",
+    "save": "Speichern"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "user_settings": "Benutzereinstellungen",
+    "timezone": "Zeitzone",
+    "base_currency": "Basiswährung",
+    "save_settings": "Einstellungen speichern"
+  },
+  "auth": {
+    "invalid_credentials": "Ungültiger Benutzername oder Passwort.",
+    "username_exists": "Der Benutzername existiert bereits."
+  },
+  "common": {
+    "none": "-",
+    "no_number": "keine Nummer"
+  }
+}

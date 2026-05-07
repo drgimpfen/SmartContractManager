@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Settings - SmartContract Manager{% endblock %}
+{% block title %}{{ _('settings.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
+{% block page_title %}<h1 class="h3 mb-0">{{ _('settings.title') }}</h1>{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">User settings</h5>
+        <h5 class="card-title">{{ _('settings.user_settings') }}</h5>
         <form method="post" action="/settings">
           <div class="mb-3">
-            <label class="form-label">Timezone</label>
+            <label class="form-label">{{ _('settings.timezone') }}</label>
             <select name="timezone" class="form-select">
               {% for tz in timezones %}
               <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
@@ -16,14 +17,14 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label">Base currency</label>
+            <label class="form-label">{{ _('settings.base_currency') }}</label>
             <select name="currency" class="form-select">
               {% for currency in currencies %}
               <option value="{{ currency }}" {% if user.currency == currency %}selected{% endif %}>{{ currency }}</option>
               {% endfor %}
             </select>
           </div>
-          <button class="btn btn-primary">Save settings</button>
+          <button class="btn btn-primary">{{ _('settings.save_settings') }}</button>
         </form>
       </div>
     </div>
