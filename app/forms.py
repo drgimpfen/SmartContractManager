@@ -64,7 +64,6 @@ class ContractForm(FlaskForm):
         default='monthly',
     )
     payment_method = StringField('Payment Method', validators=[Optional(), Length(max=64)])
-    payment_term = StringField('Payment Term', validators=[Optional(), Length(max=64)])
     status = SelectField(
         'Status',
         choices=[('active', 'Active'), ('canceled', 'Canceled'), ('archived', 'Archived')],

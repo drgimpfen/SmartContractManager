@@ -99,7 +99,6 @@
     "months": "Monate",
     "month": "Monat",
     "payment_method": "Zahlungsmethode",
-    "payment_term": "Zahlungsziel / Konditionen",
     "notes": "Notizen",
     "description": "Beschreibung",
     "tags": "Tags (kommagetrennt)",
@@ -222,6 +221,7 @@
     "none": "-",
     "no_number": "keine Nummer",
     "search": "Suchen...",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "back": "Zurück"
   }
 }

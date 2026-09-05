@@ -146,7 +146,6 @@ class Contract(db.Model):
     amount = Column(Float, default=0.0)
     currency = Column(String(8), default="EUR")
     frequency = Column(Enum(Frequency), default=Frequency.monthly, nullable=False)
-    payment_term = Column(String(64), nullable=True)
     payment_method = Column(String(64), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

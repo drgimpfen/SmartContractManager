@@ -99,7 +99,6 @@
     "months": "Months",
     "month": "Month",
     "payment_method": "Payment method",
-    "payment_term": "Payment terms",
     "notes": "Notes",
     "description": "Description",
     "tags": "Tags (comma-separated)",
@@ -222,6 +221,7 @@
     "none": "-",
     "no_number": "no number",
     "search": "Search...",
-    "actions": "Actions"
+    "actions": "Actions",
+    "back": "Back"
   }
 }

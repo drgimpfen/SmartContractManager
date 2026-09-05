@@ -4,14 +4,17 @@
 {% block content %}
 <div class="d-flex flex-column gap-4">
   <!-- Top Navigation & Header Bar -->
-  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-2 border-bottom">
-    <div class="d-flex align-items-center gap-3">
-      <a href="{{ url_for('contract.index') }}" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Zurück zur Übersicht">
-        <i class="bi bi-arrow-left fs-5"></i>
-      </a>
-      <div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <h1 class="h3 fw-bold mb-0">{{ contract.category }}</h1>
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-3 border-bottom">
+    <div>
+      <!-- Clean Breadcrumb Back Navigation -->
+      <nav aria-label="breadcrumb" class="mb-1">
+        <a href="{{ url_for('contract.index') }}" class="text-decoration-none text-body-secondary small d-inline-flex align-items-center gap-1">
+          <i class="bi bi-arrow-left"></i>
+          <span>{{ _('contracts.title') }}</span>
+        </a>
+      </nav>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h3 fw-bold mb-0">{{ contract.category }}</h1>
           {% if contract.status.value == 'active' %}
           <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
             <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
@@ -51,7 +54,6 @@
         </small>
         {% endif %}
       </div>
-    </div>
 
     <!-- Header Action Buttons -->
     <div class="d-flex align-items-center gap-2">
@@ -166,8 +168,54 @@
               {% endif %}
             </div>
 
-            <!-- Cancellation Notice & Deadline -->
+            <!-- Payment Method -->
             <div class="col-12 col-sm-4">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-credit-card me-1"></i>{{ _('form.payment_method') }}</span>
+              <span class="fw-semibold text-body">{{ contract.payment_method or '-' }}</span>
+            </div>
+
+            <!-- Start Date -->
+            <div class="col-12 col-sm-4 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-event me-1"></i>{{ _('form.start_date') }}</span>
+              <span class="fw-semibold text-body">
+                {{ contract.start_date.strftime('%d.%m.%Y') if contract.start_date else '-' }}
+              </span>
+            </div>
+
+            <!-- End Date -->
+            <div class="col-12 col-sm-4 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-x me-1"></i>{{ _('form.end_date') }}</span>
+              {% if contract.end_date %}
+              <div class="d-flex flex-column">
+                <span class="fw-semibold text-body">{{ contract.end_date.strftime('%d.%m.%Y') }}</span>
+                {% set days_end = contract.days_until_end %}
+                {% if days_end is not none %}
+                  {% if days_end > 1 %}
+                  <span class="text-muted small mt-1">
+                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.days_left', days=days_end) }}
+                  </span>
+                  {% elif days_end == 1 %}
+                  <span class="text-warning-emphasis small fw-semibold mt-1">
+                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.day_left') }}
+                  </span>
+                  {% elif days_end == 0 %}
+                  <span class="text-warning-emphasis small fw-semibold mt-1">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ _('contracts.ends_today') }}
+                  </span>
+                  {% else %}
+                  <span class="text-muted small mt-1">
+                    <i class="bi bi-check-all me-1"></i>{{ _('contracts.ended_ago', days=-days_end) }}
+                  </span>
+                  {% endif %}
+                {% endif %}
+              </div>
+              {% else %}
+              <span class="fw-semibold text-muted">{{ _('contracts.unlimited') }}</span>
+              {% endif %}
+            </div>
+
+            <!-- Cancellation Notice & Deadline -->
+            <div class="col-12 col-sm-4 border-top pt-3">
               <span class="text-muted small d-block mb-1">{{ _('form.cancellation_notice') }}</span>
               {% if contract.cancellation_notice_amount and contract.cancellation_notice_amount > 0 %}
               <div class="d-flex flex-column">
@@ -212,54 +260,6 @@
               {% else %}
               <span class="text-muted">-</span>
               {% endif %}
-            </div>
-
-            <!-- Start & End Date -->
-            <div class="col-6 col-sm-6 border-top pt-3">
-              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-event me-1"></i>{{ _('form.start_date') }}</span>
-              <span class="fw-semibold text-body">
-                {{ contract.start_date.strftime('%d.%m.%Y') if contract.start_date else '-' }}
-              </span>
-            </div>
-            <div class="col-6 col-sm-6 border-top pt-3">
-              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-x me-1"></i>{{ _('form.end_date') }}</span>
-              {% if contract.end_date %}
-              <div class="d-flex flex-column">
-                <span class="fw-semibold text-body">{{ contract.end_date.strftime('%d.%m.%Y') }}</span>
-                {% set days_end = contract.days_until_end %}
-                {% if days_end is not none %}
-                  {% if days_end > 1 %}
-                  <span class="text-muted small mt-1">
-                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.days_left', days=days_end) }}
-                  </span>
-                  {% elif days_end == 1 %}
-                  <span class="text-warning-emphasis small fw-semibold mt-1">
-                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.day_left') }}
-                  </span>
-                  {% elif days_end == 0 %}
-                  <span class="text-warning-emphasis small fw-semibold mt-1">
-                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ _('contracts.ends_today') }}
-                  </span>
-                  {% else %}
-                  <span class="text-muted small mt-1">
-                    <i class="bi bi-check-all me-1"></i>{{ _('contracts.ended_ago', days=-days_end) }}
-                  </span>
-                  {% endif %}
-                {% endif %}
-              </div>
-              {% else %}
-              <span class="fw-semibold text-muted">{{ _('contracts.unlimited') }}</span>
-              {% endif %}
-            </div>
-
-            <!-- Payment Method & Term -->
-            <div class="col-6 col-sm-6 border-top pt-3">
-              <span class="text-muted small d-block mb-1"><i class="bi bi-credit-card me-1"></i>{{ _('form.payment_method') }}</span>
-              <span class="fw-semibold text-body">{{ contract.payment_method or '-' }}</span>
-            </div>
-            <div class="col-6 col-sm-6 border-top pt-3">
-              <span class="text-muted small d-block mb-1"><i class="bi bi-hourglass-split me-1"></i>{{ _('form.payment_term') }}</span>
-              <span class="fw-semibold text-body">{{ contract.payment_term or '-' }}</span>
             </div>
 
             <!-- Tags -->
@@ -677,10 +677,6 @@
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
               <input name="payment_method" class="form-control" value="{{ contract.payment_method or '' }}" />
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.payment_term') }}</label>
-              <input name="payment_term" class="form-control" value="{{ contract.payment_term or '' }}" />
             </div>
             <div class="col-12">
               <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>

@@ -42,7 +42,6 @@ def index():
             currency=form.currency.data.strip() if form.currency.data else 'EUR',
             frequency=Frequency(form.frequency.data),
             payment_method=form.payment_method.data.strip() if form.payment_method.data else None,
-            payment_term=form.payment_term.data.strip() if form.payment_term.data else None,
             notes=form.notes.data.strip() if form.notes.data else None,
         )
         db.session.add(contract)
@@ -159,7 +158,6 @@ def edit(id):
         contract.cancellation_notice_unit = form.cancellation_notice_unit.data or 'days'
         contract.frequency = Frequency(form.frequency.data)
         contract.payment_method = form.payment_method.data.strip() if form.payment_method.data else None
-        contract.payment_term = form.payment_term.data.strip() if form.payment_term.data else None
         contract.notes = form.notes.data.strip() if form.notes.data else None
 
         # Synchronize tags
