@@ -141,7 +141,13 @@ class FinancialService:
         """
         as_of_date = as_of or date.today()
 
-        if not contracts or not any(c.status == ContractStatus.active and c.billing_anchor_date for c in contracts):
+        eligible_statuses = (
+            ContractStatus.active,
+            ContractStatus.pending_cancellation,
+            ContractStatus.cancellation_confirmed,
+        )
+
+        if not contracts or not any(c.status in eligible_statuses and c.billing_anchor_date for c in contracts):
             return []
 
         base_first_of_month = date(as_of_date.year, as_of_date.month, 1)
@@ -157,6 +163,9 @@ class FinancialService:
                 "start": m_first,
                 "end": m_last,
                 "amount": 0.0,
+                "committed_amount": 0.0,
+                "flexible_amount": 0.0,
+                "contract_items": [],
             })
 
         if not buckets:
@@ -166,11 +175,48 @@ class FinancialService:
         horizon_end = buckets[-1]["end"]
 
         for contract in contracts:
-            if contract.status != ContractStatus.active or not contract.billing_anchor_date:
+            if contract.status not in eligible_statuses or not contract.billing_anchor_date:
                 continue
+
+            # Determine termination boundary if cancelled or fixed-term
+            term_end_date = None
+            if contract.status == ContractStatus.cancellation_confirmed:
+                term_end_date = contract.confirmed_end_date or contract.end_date
+            elif contract.status == ContractStatus.pending_cancellation:
+                term_end_date = contract.confirmed_end_date or contract.earliest_cancellation_date or contract.end_date
+            elif getattr(contract, 'renewal_type', None) == 'none':
+                term_end_date = contract.end_date
 
             due_dates = self._get_due_dates_in_range(contract, horizon_start, horizon_end)
             for d in due_dates:
+                # Discard payments beyond the termination date
+                if term_end_date and d > term_end_date:
+                    continue
+
+                # Classify payment as flexible vs committed:
+                # 1. Cancelled contracts are committed obligations until the confirmed termination date
+                if contract.status in (ContractStatus.pending_cancellation, ContractStatus.cancellation_confirmed):
+                    is_flexible = False
+                # 2. Fixed-term contracts (renewal_type == 'none') terminate without rollover
+                elif getattr(contract, 'renewal_type', None) == 'none':
+                    is_flexible = False
+                # 3. Fixed cycle renewals (fixed_period) cannot be cancelled monthly
+                elif getattr(contract, 'renewal_type', None) == 'fixed_period':
+                    is_flexible = False
+                # 4. Standard monthly rolling consumer contracts:
+                else:
+                    min_term_end = contract.initial_term_end_date
+                    if not min_term_end and contract.initial_term_months and contract.initial_term_months > 0:
+                        c_start = contract.start_date or contract.billing_anchor_date
+                        if c_start:
+                            min_term_end = add_months(c_start, contract.initial_term_months)
+
+                    if min_term_end:
+                        is_flexible = d > min_term_end
+                    else:
+                        # No initial term obligation -> flexible from start
+                        is_flexible = True
+
                 # Find matching bucket
                 d_key = d.strftime("%Y-%m")
                 amt, curr = get_contract_price_on_date(contract, d)
@@ -179,6 +225,20 @@ class FinancialService:
                 for b in buckets:
                     if b["month"] == d_key:
                         b["amount"] += converted
+                        if is_flexible:
+                            b["flexible_amount"] += converted
+                        else:
+                            b["committed_amount"] += converted
+
+                        contract_title = contract.title or (contract.provider.name if contract.provider else contract.category)
+                        b["contract_items"].append({
+                            "contract_id": contract.id,
+                            "title": contract_title,
+                            "provider_name": contract.provider.name if contract.provider else "",
+                            "category": contract.category,
+                            "amount": round(converted, 2),
+                            "is_flexible": is_flexible,
+                        })
                         break
 
         return [
@@ -186,6 +246,9 @@ class FinancialService:
                 "month": b["month"],
                 "label": b["label"],
                 "amount": round(b["amount"], 2),
+                "committed_amount": round(b["committed_amount"], 2),
+                "flexible_amount": round(b["flexible_amount"], 2),
+                "contract_items": b["contract_items"],
             }
             for b in buckets
         ]

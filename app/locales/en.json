@@ -57,6 +57,12 @@
       "manage_providers": "Manage providers"
     },
     "cashflow_title": "Cashflow forecast",
+    "cashflow_legend_committed": "Guaranteed Minimum Commitment",
+    "cashflow_legend_flexible": "After Minimum Term (Flexible)",
+    "cashflow_tooltip_total": "Total Expenses",
+    "cashflow_tooltip_committed": "Guaranteed Costs",
+    "cashflow_tooltip_flexible": "Flexible Costs (Cancellable)",
+    "cashflow_flexible_tag": "flexible",
     "no_active_contracts": "No active contracts available.",
     "no_contracts_hint": "Create a contract to see the cashflow forecast.",
     "critical_deadlines": "Critical deadlines",

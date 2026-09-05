@@ -57,6 +57,12 @@
       "manage_providers": "Vertragspartner verwalten"
     },
     "cashflow_title": "Cashflow-Prognose",
+    "cashflow_legend_committed": "Garantierte Mindestbindung",
+    "cashflow_legend_flexible": "Nach Mindestlaufzeit (flexibel)",
+    "cashflow_tooltip_total": "Gesamtkosten",
+    "cashflow_tooltip_committed": "Garantierte Kosten",
+    "cashflow_tooltip_flexible": "Flexible Kosten (kündbar)",
+    "cashflow_flexible_tag": "flexibel",
     "no_active_contracts": "Keine aktiven Verträge vorhanden.",
     "no_contracts_hint": "Erstelle einen Vertrag, um die Cashflow-Prognose zu sehen.",
     "critical_deadlines": "Dringende Fristen",

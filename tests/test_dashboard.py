@@ -117,6 +117,8 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
     # Charts rendered
     assert 'id="cashflowChart"' in html
     assert 'id="categoryChart"' in html
+    assert ('Guaranteed Minimum Commitment' in html or 'Garantierte Mindestbindung' in html)
+    assert ('After Minimum Term' in html or 'Nach Mindestlaufzeit' in html)
 
     # Critical reminders section has INS-002
     assert 'INS-002' in html

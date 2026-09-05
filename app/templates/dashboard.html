@@ -105,10 +105,24 @@
   <div class="col-12 col-lg-8">
     <div class="card border shadow-sm h-100">
       <div class="card-body p-3 p-md-4">
-        <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
-          <i class="bi bi-graph-up text-primary"></i>
-          <span>{{ _('dashboard.cashflow_title') }}</span>
-        </h5>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-graph-up text-primary"></i>
+            <span>{{ _('dashboard.cashflow_title') }}</span>
+          </h5>
+          {% if cashflow %}
+          <div class="d-flex flex-wrap align-items-center gap-2 small">
+            <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
+              <span style="display:inline-block;width:12px;height:12px;background:#0d6efd;border-radius:2px;"></span>
+              <span>{{ _('dashboard.cashflow_legend_committed') }}</span>
+            </span>
+            <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
+              <span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg,#0d6efd,#0d6efd 2px,#ffffff 2px,#ffffff 5px);border-radius:2px;border:1px solid rgba(0,0,0,0.15);"></span>
+              <span>{{ _('dashboard.cashflow_legend_flexible') }}</span>
+            </span>
+          </div>
+          {% endif %}
+        </div>
         {% if cashflow %}
         <div class="chart-container">
           <canvas id="cashflowChart"></canvas>
@@ -313,65 +327,232 @@
   }
 
   // Chart data provided directly via server-side Jinja2
-  const cashflowLabels = {{ (cashflow | map(attribute='label') | list if cashflow else []) | tojson }};
-  const cashflowValues = {{ (cashflow | map(attribute='amount') | list if cashflow else []) | tojson }};
-  const cashflowTitle = {{ _('dashboard.cashflow_title') | tojson }};
+  const cashflowData = {{ (cashflow if cashflow else []) | tojson }};
+  const cashflowLabels = cashflowData.map(b => b.label);
   const categoryLabels = {{ (distribution | map(attribute='category') | list if distribution else []) | tojson }};
   const categoryValues = {{ (distribution | map(attribute='value') | list if distribution else []) | tojson }};
   const chartCurrency = {{ (current_user.currency or 'EUR') | tojson }};
+  const i18nCashflow = {
+    total: {{ _('dashboard.cashflow_tooltip_total') | tojson }},
+    committed: {{ _('dashboard.cashflow_tooltip_committed') | tojson }},
+    flexible: {{ _('dashboard.cashflow_tooltip_flexible') | tojson }},
+    flexibleTag: {{ _('dashboard.cashflow_flexible_tag') | tojson }},
+  };
+
+  const contractPalette = [
+    '#0d6efd', // Blue
+    '#20c997', // Teal
+    '#fd7e14', // Orange
+    '#6f42c1', // Purple
+    '#0dcaf0', // Cyan
+    '#d63384', // Pink
+    '#198754', // Green
+    '#ffc107', // Amber
+    '#6610f2', // Indigo
+    '#dc3545', // Red
+    '#343a40', // Dark slate
+    '#6c757d', // Secondary gray
+  ];
+
+  function createHatchPattern(baseColor, isDark) {
+    const size = 12;
+    const patternCanvas = document.createElement('canvas');
+    patternCanvas.width = size;
+    patternCanvas.height = size;
+    const pctx = patternCanvas.getContext('2d');
+
+    // Fill base background
+    pctx.fillStyle = baseColor;
+    pctx.fillRect(0, 0, size, size);
+
+    // Diagonal stripe
+    pctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(255, 255, 255, 0.65)';
+    pctx.lineWidth = 2.5;
+
+    pctx.beginPath();
+    pctx.moveTo(0, size);
+    pctx.lineTo(size, 0);
+    pctx.moveTo(-size / 2, size / 2);
+    pctx.lineTo(size / 2, -size / 2);
+    pctx.moveTo(size / 2, size * 1.5);
+    pctx.lineTo(size * 1.5, size / 2);
+    pctx.stroke();
+
+    return pctx.createPattern(patternCanvas, 'repeat');
+  }
 
   let cashflowChartInstance = null;
   let categoryChartInstance = null;
 
   function initCharts() {
     const colors = getThemeColors();
+    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
 
     const cashflowEl = document.getElementById('cashflowChart');
-    if (cashflowEl && typeof Chart !== 'undefined' && cashflowLabels.length > 0) {
+    if (cashflowEl && typeof Chart !== 'undefined' && cashflowData.length > 0) {
       if (cashflowChartInstance) {
         cashflowChartInstance.destroy();
+      }
+
+      // Collect all contracts present across all forward buckets
+      const contractsMap = new Map();
+      cashflowData.forEach(b => {
+        (b.contract_items || []).forEach(item => {
+          if (!contractsMap.has(item.contract_id)) {
+            contractsMap.set(item.contract_id, {
+              id: item.contract_id,
+              title: item.title,
+              category: item.category,
+            });
+          }
+        });
+      });
+
+      const contractsList = Array.from(contractsMap.values());
+      const committedDatasets = [];
+      const flexibleDatasets = [];
+
+      contractsList.forEach((c, idx) => {
+        const color = contractPalette[idx % contractPalette.length];
+        const committedData = [];
+        const flexibleData = [];
+        let hasCommitted = false;
+        let hasFlexible = false;
+
+        cashflowData.forEach(b => {
+          let commSum = 0;
+          let flexSum = 0;
+          (b.contract_items || []).forEach(item => {
+            if (item.contract_id === c.id) {
+              if (item.is_flexible) {
+                flexSum += item.amount;
+              } else {
+                commSum += item.amount;
+              }
+            }
+          });
+          commSum = Math.round(commSum * 100) / 100;
+          flexSum = Math.round(flexSum * 100) / 100;
+          committedData.push(commSum);
+          flexibleData.push(flexSum);
+          if (commSum > 0) hasCommitted = true;
+          if (flexSum > 0) hasFlexible = true;
+        });
+
+        if (hasCommitted) {
+          committedDatasets.push({
+            label: c.title,
+            stack: 'cashflow',
+            tier: 'committed',
+            contractId: c.id,
+            contractName: c.title,
+            data: committedData,
+            backgroundColor: color,
+            hoverBackgroundColor: color,
+            borderRadius: 0,
+          });
+        }
+
+        if (hasFlexible) {
+          flexibleDatasets.push({
+            label: c.title + ' (' + i18nCashflow.flexibleTag + ')',
+            stack: 'cashflow',
+            tier: 'flexible',
+            contractId: c.id,
+            contractName: c.title,
+            data: flexibleData,
+            backgroundColor: createHatchPattern(color, isDark),
+            hoverBackgroundColor: createHatchPattern(color, isDark),
+            borderRadius: 0,
+          });
+        }
+      });
+
+      // Bottom tier: guaranteed committed costs. Top tier: flexible costs after minimum term.
+      let datasets = [...committedDatasets, ...flexibleDatasets];
+      if (datasets.length === 0) {
+        datasets = [{
+          label: {{ _('dashboard.cashflow_title') | tojson }},
+          stack: 'cashflow',
+          tier: 'committed',
+          contractName: {{ _('dashboard.cashflow_title') | tojson }},
+          data: cashflowData.map(b => b.amount),
+          backgroundColor: '#0d6efd',
+        }];
       }
 
       cashflowChartInstance = new Chart(cashflowEl, {
         type: 'bar',
         data: {
           labels: cashflowLabels,
-          datasets: [{
-            label: cashflowTitle,
-            data: cashflowValues,
-            backgroundColor: '#0d6efd',
-            borderRadius: 6,
-            hoverBackgroundColor: '#0b5ed7',
-          }],
+          datasets: datasets,
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
           plugins: {
             legend: {
-              display: false
+              display: false,
             },
             tooltip: {
+              backgroundColor: colors.tooltipBg,
+              titleColor: colors.tooltipText,
+              bodyColor: colors.tooltipText,
+              borderColor: colors.gridColor,
+              borderWidth: 1,
+              padding: 12,
+              boxPadding: 6,
               callbacks: {
+                title: function(items) {
+                  if (!items.length) return '';
+                  const idx = items[0].dataIndex;
+                  const bucket = cashflowData[idx];
+                  return `${bucket.label}  —  ${i18nCashflow.total}: ${bucket.amount.toFixed(2)} ${chartCurrency}`;
+                },
+                beforeBody: function(items) {
+                  if (!items.length) return [];
+                  const idx = items[0].dataIndex;
+                  const bucket = cashflowData[idx];
+                  const lines = [];
+                  if (bucket.committed_amount > 0) {
+                    lines.push(`🔒 ${i18nCashflow.committed}: ${bucket.committed_amount.toFixed(2)} ${chartCurrency}`);
+                  }
+                  if (bucket.flexible_amount > 0) {
+                    lines.push(`🔓 ${i18nCashflow.flexible}: ${bucket.flexible_amount.toFixed(2)} ${chartCurrency}`);
+                  }
+                  lines.push('──────────────────────────────');
+                  return lines;
+                },
                 label: function(ctx) {
-                  return ' ' + (ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + ' ' + chartCurrency : '');
-                }
-              }
-            }
+                  const val = ctx.parsed.y;
+                  if (!val || val <= 0) return null;
+                  const isFlex = ctx.dataset.tier === 'flexible';
+                  const icon = isFlex ? '▨' : '■';
+                  const tag = isFlex ? ` (${i18nCashflow.flexibleTag})` : '';
+                  return ` ${icon} ${ctx.dataset.contractName}: ${val.toFixed(2)} ${chartCurrency}${tag}`;
+                },
+              },
+            },
           },
           scales: {
             x: {
+              stacked: true,
               ticks: { color: colors.textColor },
-              grid: { display: false }
+              grid: { display: false },
             },
             y: {
+              stacked: true,
               ticks: {
                 color: colors.textColor,
-                callback: function(val) { return val + ' ' + chartCurrency; }
+                callback: function(val) { return val + ' ' + chartCurrency; },
               },
-              grid: { color: colors.gridColor }
-            }
-          }
+              grid: { color: colors.gridColor },
+            },
+          },
         },
       });
     }

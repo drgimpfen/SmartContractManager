@@ -628,3 +628,97 @@ def test_calculate_provider_summary():
     assert summary["total_remaining"] is not None
     assert summary["total_cost"] == round(summary["total_paid"] + summary["total_remaining"], 2)
 
+
+def test_cashflow_committed_vs_flexible_split():
+    """Cashflow forecast accurately splits committed vs flexible amounts across initial_term_end_date."""
+    fin_svc = FinancialService()
+
+    # Contract 1: monthly rolling with initial term until 2026-06-30
+    c1 = Contract(
+        id=1,
+        title="Fiber Internet",
+        category="Internet",
+        status=ContractStatus.active,
+        amount=50.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 1, 1),
+        billing_anchor_date=date(2026, 1, 1),
+        initial_term_end_date=date(2026, 6, 30),
+        renewal_type="monthly_rolling",
+    )
+
+    # Contract 2: monthly rolling with no minimum term (flexible from start)
+    c2 = Contract(
+        id=2,
+        title="Streaming",
+        category="Entertainment",
+        status=ContractStatus.active,
+        amount=15.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 1, 1),
+        billing_anchor_date=date(2026, 1, 1),
+        initial_term_end_date=None,
+        initial_term_months=0,
+        renewal_type="monthly_rolling",
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c1, c2], "EUR", as_of=date(2026, 1, 1), months=12)
+    assert len(proj) == 12
+
+    # Month 0 (2026-01):
+    # c1 is committed (50.0), c2 is flexible (15.0) -> total 65.0
+    assert proj[0]["month"] == "2026-01"
+    assert proj[0]["amount"] == 65.0
+    assert proj[0]["committed_amount"] == 50.0
+    assert proj[0]["flexible_amount"] == 15.0
+    assert len(proj[0]["contract_items"]) == 2
+
+    # Month 5 (2026-06):
+    # c1 (2026-06-01 <= 2026-06-30) still committed, c2 flexible
+    assert proj[5]["month"] == "2026-06"
+    assert proj[5]["committed_amount"] == 50.0
+    assert proj[5]["flexible_amount"] == 15.0
+
+    # Month 6 (2026-07):
+    # c1 is now past initial_term_end_date (2026-07-01 > 2026-06-30) -> c1 is now flexible!
+    # c1 (50.0) + c2 (15.0) = 65.0 flexible, 0.0 committed!
+    assert proj[6]["month"] == "2026-07"
+    assert proj[6]["committed_amount"] == 0.0
+    assert proj[6]["flexible_amount"] == 65.0
+    assert proj[6]["amount"] == 65.0
+
+
+def test_cashflow_includes_cancelled_contract_until_termination():
+    """Contracts with pending_cancellation or cancellation_confirmed are projected as committed until confirmed_end_date."""
+    fin_svc = FinancialService()
+
+    # Contract confirmed cancelled to 2026-03-31
+    c_cancelled = Contract(
+        id=3,
+        title="Old Mobile Contract",
+        category="Mobile",
+        status=ContractStatus.cancellation_confirmed,
+        amount=30.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2024, 1, 1),
+        billing_anchor_date=date(2026, 1, 1),
+        confirmed_end_date=date(2026, 3, 31),
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c_cancelled], "EUR", as_of=date(2026, 1, 1), months=6)
+    assert len(proj) == 6
+
+    # Months 0, 1, 2 (Jan, Feb, Mar 2026): active payments, counted as committed
+    assert proj[0]["amount"] == 30.0
+    assert proj[0]["committed_amount"] == 30.0
+    assert proj[1]["amount"] == 30.0
+    assert proj[2]["amount"] == 30.0
+
+    # Month 3 (Apr 2026) and beyond: contract has ended, amount is 0
+    assert proj[3]["amount"] == 0.0
+    assert proj[4]["amount"] == 0.0
+
+
