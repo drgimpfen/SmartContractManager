@@ -9,7 +9,7 @@ This document tracks project milestones, active epics, and progress across the a
 | Epic | Name | Status | Progress |
 | :--- | :--- | :---: | :--- |
 | **Epic 1** | Basic Infrastructure & Core Auth | **Completed** | 100% (Docker, SQLAlchemy, Classic Auth, Alembic Baseline Migrations) |
-| **Epic 2** | CRUD Operations (Core) | **In Progress** | ~60% (Provider & Contract foundation established) |
+| **Epic 2** | CRUD Operations (Core) | **Completed** | 100% (Contracts, Providers, Tags with colors, Price History with validity & auto-adjust) |
 | **Epic 3** | Financial Dashboard & Calculations | **Planned** | 0% (TDD specifications ready) |
 | **Epic 4** | Document Management & OCR | **Planned** | 0% |
 | **Epic 5** | Export & Import | **Planned** | 0% |
@@ -33,10 +33,10 @@ This document tracks project milestones, active epics, and progress across the a
 ### Epic 2: CRUD Operations (Core)
 *Objective: Full management of providers, contracts, tags, and price histories.*
 
-- [x] Management of `Provider` entities with contact information, customer numbers, customer portals, and cancellation URLs.
-- [ ] Management of `Contract` entities including `billing_anchor_date`, payment rhythms, categories, and notice periods.
-- [ ] Tagging system (`Tag`) with many-to-many contract association (`contract_tags`).
-- [ ] Price history tracking (`PriceEntry`) maintaining effective dates and historic pricing.
+- [x] Management of `Provider` entities with contact information, customer numbers, customer portals, cancellation URLs, edit, and delete actions.
+- [x] Management of `Contract` entities including `billing_anchor_date`, payment rhythms, categories, notice periods, search, status filtering, and tag filtering.
+- [x] Tagging system (`Tag`) with many-to-many contract association (`contract_tags`) and deterministic color assignment.
+- [x] Price history tracking (`PriceEntry`) maintaining validity ranges (`valid_from`, `valid_to`, `is_current`), overlap collision detection, and smart auto-adjustment.
 
 ### Epic 3: Financial Dashboard & Calculations (Test-Driven via pytest)
 *Objective: Deterministic cash flow projections and monthly budget normalization with automated currency conversion.*

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Table,
     Text,
     Enum,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 
@@ -80,6 +81,7 @@ class Tag(db.Model):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(64), nullable=False)
+    color = Column(String(16), default="#0d6efd", nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="tags")
@@ -97,6 +99,7 @@ class Contract(db.Model):
     contract_number = Column(String(120), nullable=True)
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+    billing_anchor_date = Column(Date, nullable=True)
     cancellation_notice_amount = Column(Integer, default=0)
     cancellation_notice_unit = Column(String(16), default="days")
     amount = Column(Float, default=0.0)
@@ -112,7 +115,12 @@ class Contract(db.Model):
     provider = relationship("Provider", back_populates="contracts")
     tags = relationship("Tag", secondary=contract_tags, back_populates="contracts")
     documents = relationship("Document", back_populates="contract", cascade="all, delete-orphan")
-    price_history = relationship("PriceEntry", back_populates="contract", cascade="all, delete-orphan")
+    price_history = relationship(
+        "PriceEntry",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        order_by="PriceEntry.valid_from.desc()",
+    )
 
 
 class Document(db.Model):
@@ -133,13 +141,23 @@ class PriceEntry(db.Model):
 
     id = Column(Integer, primary_key=True, index=True)
     contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=False)
-    effective_date = Column(Date, nullable=False)
+    valid_from = Column(Date, nullable=False)
+    valid_to = Column(Date, nullable=True)
+    is_current = Column(Boolean, default=True, nullable=False)
     amount = Column(Float, nullable=False)
     currency = Column(String(8), nullable=False, default="EUR")
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     contract = relationship("Contract", back_populates="price_history")
+
+    @property
+    def effective_date(self):
+        return self.valid_from
+
+    @effective_date.setter
+    def effective_date(self, value):
+        self.valid_from = value
 
 
 class ExchangeRateCache(db.Model):

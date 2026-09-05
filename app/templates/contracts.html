@@ -1,145 +1,312 @@
 {% extends "base.html" %}
 {% block title %}{{ _('contracts.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
-{% block page_title %}<h1 class="h4 mb-0 fw-bold">{{ _('contracts.title') }}</h1>{% endblock %}
-{% block content %}
-<div class="row g-3">
-  <!-- Contracts List Table -->
-  <div class="col-12 col-xl-7">
-    <div class="card border shadow-sm">
-      <div class="card-body p-3 p-md-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
-            <i class="bi bi-file-earmark-text text-primary"></i>
-            <span>{{ _('contracts.list_title') }}</span>
-          </h5>
-          <span class="badge bg-primary rounded-pill">{{ contracts|length }}</span>
-        </div>
 
-        {% if contracts %}
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="py-2">{{ _('contracts.table.category') }}</th>
-                <th class="py-2">{{ _('contracts.table.provider') }}</th>
-                <th class="py-2">{{ _('contracts.table.amount') }}</th>
-                <th class="py-2 text-end">{{ _('contracts.table.status') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for contract in contracts %}
-              <tr>
-                <td class="fw-semibold">{{ contract.category }}</td>
-                <td>{{ contract.provider.name if contract.provider else _('common.none') }}</td>
-                <td class="text-nowrap">{{ "%.2f"|format(contract.amount|default(0.0, true)) }} {{ contract.currency }}</td>
-                <td class="text-end">
-                  {% if contract.status.value == 'active' %}
-                  <span class="badge bg-success">{{ contract.status.value }}</span>
-                  {% elif contract.status.value == 'canceled' %}
-                  <span class="badge bg-warning text-dark">{{ contract.status.value }}</span>
-                  {% else %}
-                  <span class="badge bg-secondary">{{ contract.status.value }}</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
-          <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
-          <p class="mb-1 fw-semibold">{{ _('dashboard.no_active_contracts') }}</p>
-          <p class="small mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
-        </div>
-        {% endif %}
-      </div>
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Page Header & Action Bar -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1 d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-text text-primary"></i>
+        <span>{{ _('contracts.title') }}</span>
+      </h1>
+      <p class="text-muted small mb-0">{{ _('dashboard.subtitle') }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
+        <i class="bi bi-plus-lg"></i>
+        <span>{{ _('modal.add_contract') }}</span>
+      </button>
     </div>
   </div>
 
-  <!-- Add Contract Form Card -->
-  <div class="col-12 col-xl-5">
-    <div class="card border shadow-sm">
-      <div class="card-body p-3 p-md-4">
-        <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
-          <i class="bi bi-plus-circle text-primary"></i>
+  <!-- Filter & Search Card -->
+  <div class="card border shadow-sm">
+    <div class="card-body p-3">
+      <form method="get" action="{{ url_for('contract.index') }}" class="row g-2 align-items-center">
+        <!-- Status Filter Pills -->
+        <div class="col-12 col-lg-auto me-lg-auto">
+          <div class="btn-group btn-group-sm w-100" role="group">
+            <a href="{{ url_for('contract.index', status='all', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'all' %}active fw-semibold{% endif %}">
+              {{ _('contracts.filter_all') }}
+            </a>
+            <a href="{{ url_for('contract.index', status='active', tag=active_tag, q=search_query) }}" class="btn btn-outline-success {% if active_status == 'active' %}active fw-semibold{% endif %}">
+              {{ _('contracts.filter_active') }}
+            </a>
+            <a href="{{ url_for('contract.index', status='canceled', tag=active_tag, q=search_query) }}" class="btn btn-outline-warning {% if active_status == 'canceled' %}active fw-semibold{% endif %}">
+              {{ _('contracts.filter_canceled') }}
+            </a>
+            <a href="{{ url_for('contract.index', status='archived', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'archived' %}active fw-semibold{% endif %}">
+              {{ _('contracts.filter_archived') }}
+            </a>
+          </div>
+        </div>
+
+        <!-- Search Input -->
+        <div class="col-12 col-sm-8 col-lg-4">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-transparent"><i class="bi bi-search text-secondary"></i></span>
+            <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="{{ _('common.search') }}" />
+            {% if active_status != 'all' %}<input type="hidden" name="status" value="{{ active_status }}" />{% endif %}
+            {% if active_tag %}<input type="hidden" name="tag" value="{{ active_tag }}" />{% endif %}
+          </div>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-auto">
+          <button type="submit" class="btn btn-sm btn-secondary w-100">{{ _('common.search') }}</button>
+        </div>
+      </form>
+
+      <!-- Tag Filter Pills (if any) -->
+      {% if all_tags %}
+      <div class="d-flex flex-wrap gap-1 align-items-center pt-2 mt-2 border-top">
+        <span class="small text-muted me-1"><i class="bi bi-tags"></i> Tags:</span>
+        <a href="{{ url_for('contract.index', status=active_status, q=search_query) }}" class="badge text-decoration-none {% if not active_tag %}bg-secondary text-white{% else %}bg-body-secondary text-body border{% endif %}">
+          {{ _('contracts.filter_all') }}
+        </a>
+        {% for t in all_tags %}
+        <a href="{{ url_for('contract.index', status=active_status, tag=t.name, q=search_query) }}" class="badge text-decoration-none {% if active_tag == t.name %}border border-dark shadow-sm{% endif %}" style="background-color: {{ t.color }}; color: white;">
+          {{ t.name }}
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Contracts List Table Card -->
+  <div class="card border shadow-sm">
+    <div class="card-body p-0">
+      {% if contracts %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light border-bottom">
+            <tr>
+              <th class="py-3 ps-3">{{ _('contracts.table.category') }}</th>
+              <th class="py-3">{{ _('contracts.table.provider') }}</th>
+              <th class="py-3">{{ _('contracts.table.amount') }}</th>
+              <th class="py-3">{{ _('contracts.table.anchor') }}</th>
+              <th class="py-3">{{ _('contracts.table.status') }}</th>
+              <th class="py-3 pe-3 text-end">{{ _('contracts.table.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contract in contracts %}
+            <tr>
+              <!-- Category, Number & Tags -->
+              <td class="ps-3">
+                <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
+                  {{ contract.category }}
+                </a>
+                <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                  {% if contract.contract_number %}
+                  <span class="text-muted small">#{{ contract.contract_number }}</span>
+                  {% endif %}
+                  {% for t in contract.tags %}
+                  <span class="badge rounded-pill" style="background-color: {{ t.color }}; font-size: 0.7rem; color: white;">
+                    {{ t.name }}
+                  </span>
+                  {% endfor %}
+                </div>
+              </td>
+
+              <!-- Provider -->
+              <td>
+                {% if contract.provider %}
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-building text-secondary"></i>
+                  <span>{{ contract.provider.name }}</span>
+                </div>
+                {% else %}
+                <span class="text-muted small">{{ _('common.none') }}</span>
+                {% endif %}
+              </td>
+
+              <!-- Amount & Rhythm -->
+              <td>
+                <div class="fw-semibold text-nowrap">
+                  {{ "%.2f"|format(contract.amount) }} {{ contract.currency }}
+                </div>
+                <small class="text-muted d-block">
+                  <span class="badge text-bg-light border text-secondary" style="font-size: 0.7rem;">
+                    {{ contract.frequency.value|capitalize }}
+                  </span>
+                </small>
+              </td>
+
+              <!-- Billing Anchor Date -->
+              <td>
+                {% if contract.billing_anchor_date %}
+                <span class="small font-monospace text-body">
+                  <i class="bi bi-calendar3 text-primary me-1"></i>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}
+                </span>
+                {% else %}
+                <span class="text-muted small">{{ _('common.none') }}</span>
+                {% endif %}
+              </td>
+
+              <!-- Status Badge -->
+              <td>
+                {% if contract.status.value == 'active' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
+                </span>
+                {% elif contract.status.value == 'canceled' %}
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ _('contracts.canceled') }}
+                </span>
+                {% else %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                  <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
+                </span>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="pe-3 text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('contract.detail', id=contract.id) }}" class="btn btn-outline-primary" title="{{ _('contracts.detail_title') }}">
+                    <i class="bi bi-arrow-right"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('dashboard.no_active_contracts') }}</h5>
+        <p class="small mb-3">{{ _('dashboard.no_contracts_hint') }}</p>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
+          <i class="bi bi-plus-lg me-1"></i>{{ _('modal.add_contract') }}
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Contract -->
+<div class="modal fade" id="addContractModal" tabindex="-1" aria-labelledby="addContractModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="addContractModalLabel">
+          <i class="bi bi-file-earmark-plus text-primary"></i>
           <span>{{ _('modal.add_contract') }}</span>
         </h5>
-        <form method="post" action="/contracts" enctype="multipart/form-data">
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.category') }}</label>
-            <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
-            <select name="provider_id" class="form-select">
-              <option value="">{{ _('form.no_provider_selected') }}</option>
-              {% for provider in providers %}
-              <option value="{{ provider.id }}">{{ provider.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
-            <input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" />
-          </div>
-          <div class="row g-2 mb-3">
-            <div class="col-6">
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.index') }}">
+        {{ form.hidden_tag() }}
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <!-- Category & Provider -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.category') }} <span class="text-danger">*</span></label>
+              <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
+              <select name="provider_id" class="form-select">
+                {% for val, label in form.provider_id.choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Contract Number & Status -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
+              <input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.status') }}</label>
+              <select name="status" class="form-select">
+                {% for val, label in form.status.choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Amount, Currency & Rhythm -->
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }} <span class="text-danger">*</span></label>
+              <input name="amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
+              <input name="currency" class="form-control" value="{{ current_user.currency or 'EUR' }}" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
+              <select name="frequency" class="form-select">
+                {% for val, label in form.frequency.choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Dates: Start, End & Billing Anchor Date -->
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
               <input name="start_date" type="date" class="form-control" />
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
+              <input name="billing_anchor_date" type="date" class="form-control" />
+            </div>
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
               <input name="end_date" type="date" class="form-control" />
             </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
-            <div class="input-group">
-              <input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" />
-              <select name="cancellation_notice_unit" class="form-select">
-                <option value="days">{{ _('form.days') }}</option>
-                <option value="weeks">{{ _('form.weeks') }}</option>
-                <option value="months">{{ _('form.months') }}</option>
-              </select>
+
+            <!-- Cancellation notice -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
+              <div class="input-group">
+                <input name="cancellation_notice_amount" type="number" min="0" class="form-control" value="0" />
+                <select name="cancellation_notice_unit" class="form-select">
+                  {% for val, label in form.cancellation_notice_unit.choices %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
+              <input name="tags" class="form-control" placeholder="z. B. HomeOffice, Wichtig, Internet" />
+            </div>
+
+            <!-- Payment Method & Terms -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
+              <input name="payment_method" class="form-control" placeholder="z. B. SEPA-Lastschrift, PayPal, Kreditkarte" />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.payment_term') }}</label>
+              <input name="payment_term" class="form-control" placeholder="z. B. 14 Tage netto" />
+            </div>
+
+            <!-- Notes -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="{{ _('form.notes') }}"></textarea>
             </div>
           </div>
-          <div class="row g-2 mb-3">
-            <div class="col-7">
-              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
-              <input name="amount" type="number" step="0.01" inputmode="decimal" class="form-control" placeholder="0.00" />
-            </div>
-            <div class="col-5">
-              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
-              <input name="currency" class="form-control" value="EUR" />
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
-            <select name="frequency" class="form-select">
-              <option value="monthly">{{ _('form.monthly') }}</option>
-              <option value="quarterly">{{ _('form.quarterly') }}</option>
-              <option value="yearly">{{ _('form.yearly') }}</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
-            <input name="payment_method" class="form-control" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
-            <input name="tags" class="form-control" />
-          </div>
-          <div class="mb-4">
-            <label class="form-label small fw-semibold">{{ _('form.document') }}</label>
-            <input name="document" type="file" class="form-control" accept="application/pdf" />
-          </div>
-          <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+          <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
             <i class="bi bi-check-lg"></i>
             <span>{{ _('contracts.save_contract') }}</span>
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </div>
 </div>

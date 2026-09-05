@@ -61,58 +61,91 @@
   "modal": {
     "close": "Schließen",
     "save": "Speichern",
+    "cancel": "Abbrechen",
     "add_contract": "Neuen Vertrag anlegen"
   },
   "form": {
     "provider": "Provider",
     "no_provider_selected": "Keinen Provider wählen",
     "category": "Kategorie",
-    "category_hint": "z. B. Internet, Nebenkosten",
+    "category_hint": "z. B. Internet, Nebenkosten, Streaming",
     "contract_number": "Vertragsnummer",
     "amount": "Betrag",
     "currency": "Währung",
-    "frequency": "Frequenz",
+    "frequency": "Zahlungsrhythmus",
     "monthly": "Monatlich",
     "quarterly": "Vierteljährlich",
     "yearly": "Jährlich",
-    "start_date": "Startdatum",
-    "end_date": "Enddatum",
+    "weekly": "Wöchentlich",
+    "biweekly": "Zweiwöchentlich",
+    "start_date": "Vertragsbeginn",
+    "end_date": "Vertragsende",
+    "billing_anchor_date": "Erste Fälligkeit / Ankerdatum",
     "cancellation_notice": "Kündigungsfrist",
     "unit": "Einheit",
     "days": "Tage",
     "weeks": "Wochen",
     "months": "Monate",
     "payment_method": "Zahlungsmethode",
+    "payment_term": "Zahlungsziel / Konditionen",
     "notes": "Notizen",
     "description": "Beschreibung",
     "tags": "Tags (kommagetrennt)",
     "document": "Dokument (PDF)",
     "optional": "Optional",
     "name": "Name",
-    "phone": "Telefon"
+    "phone": "Telefon",
+    "address": "Adresse",
+    "valid_from": "Gültig ab",
+    "valid_to": "Gültig bis (optional)",
+    "auto_adjust": "Bestehende Zeiträume automatisch anpassen",
+    "status": "Status"
   },
   "contracts": {
     "title": "Verträge",
     "list_title": "Vertragsliste",
+    "detail_title": "Vertragsdetails",
+    "price_history": "Preishistorie",
+    "add_price_entry": "Preisanpassung erfassen",
+    "current_price": "Aktuell",
+    "open_ended": "bis auf weiteres",
+    "filter_all": "Alle",
+    "filter_active": "Aktiv",
+    "filter_canceled": "Gekündigt",
+    "filter_archived": "Archiviert",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "delete_confirm": "Möchtest du diesen Vertrag wirklich unwiderruflich löschen?",
+    "portal_button": "Kundenportal öffnen",
+    "cancel_button": "Kündigungsformular öffnen",
+    "save_contract": "Vertrag speichern",
+    "save_changes": "Änderungen speichern",
+    "save_price": "Preis speichern",
     "table": {
       "category": "Kategorie",
       "provider": "Provider",
       "amount": "Betrag",
-      "status": "Status"
-    },
-    "save_contract": "Vertrag speichern"
+      "rhythm": "Rhythmus",
+      "anchor": "Erste Fälligkeit",
+      "status": "Status",
+      "actions": "Aktionen"
+    }
   },
   "providers": {
     "title": "Provider",
     "list_title": "Provider",
     "add_new_provider": "Provider hinzufügen",
+    "edit_provider": "Provider bearbeiten",
+    "delete": "Löschen",
+    "delete_confirm": "Möchtest du diesen Provider wirklich löschen? Verknüpfte Verträge bleiben erhalten.",
     "table": {
       "name": "Name",
       "email": "E-Mail",
-      "website": "Website"
+      "website": "Website",
+      "actions": "Aktionen"
     },
     "customer_number": "Kundennummer",
-    "customer_portal": "Kundenportal-Link",
+    "customer_portal": "Kundenportal",
     "cancellation_link": "Kündigungslink",
     "save": "Speichern"
   },
@@ -129,6 +162,8 @@
   },
   "common": {
     "none": "-",
-    "no_number": "keine Nummer"
+    "no_number": "keine Nummer",
+    "search": "Suchen...",
+    "actions": "Aktionen"
   }
 }

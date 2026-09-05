@@ -62,3 +62,96 @@ def test_list_providers_isolated_by_user(client, app):
     assert resp.status_code == 200
     assert b'AliceProvider' in resp.data
     assert b'BobSecretProvider' not in resp.data
+
+
+def test_edit_provider(client, app):
+    from app import db
+    with app.app_context():
+        u = User(username='edit_user', hashed_password=generate_password_hash('pass123'))
+        db.session.add(u)
+        db.session.commit()
+        p = Provider(user_id=u.id, name='Old Provider Name', customer_number='OLD-123')
+        db.session.add(p)
+        db.session.commit()
+        p_id = p.id
+
+    client.post('/login', data={'username': 'edit_user', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.post(f'/providers/{p_id}/edit', data={
+        'name': 'New Provider Name',
+        'customer_number': 'NEW-456',
+        'address': 'Musterstr. 123, Berlin',
+        'email': 'new@provider.de',
+        'phone': '030123456',
+        'website': 'https://provider.de',
+        'customer_portal': 'https://portal.provider.de',
+        'cancel_url': 'https://provider.de/cancel',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+    with app.app_context():
+        prov = db.session.get(Provider, p_id)
+        assert prov.name == 'New Provider Name'
+        assert prov.customer_number == 'NEW-456'
+        assert prov.address == 'Musterstr. 123, Berlin'
+        assert prov.email == 'new@provider.de'
+
+
+def test_edit_provider_forbidden_for_other_user(client, app):
+    from app import db
+    with app.app_context():
+        u1 = User(username='user_1', hashed_password=generate_password_hash('pass123'))
+        u2 = User(username='user_2', hashed_password=generate_password_hash('pass123'))
+        db.session.add_all([u1, u2])
+        db.session.commit()
+        p2 = Provider(user_id=u2.id, name='User2 Private Provider')
+        db.session.add(p2)
+        db.session.commit()
+        p2_id = p2.id
+
+    client.post('/login', data={'username': 'user_1', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.post(f'/providers/{p2_id}/edit', data={'name': 'Hacked Provider'})
+    assert resp.status_code == 404
+
+    with app.app_context():
+        prov = db.session.get(Provider, p2_id)
+        assert prov.name == 'User2 Private Provider'
+
+
+def test_delete_provider(client, app):
+    from app import db
+    with app.app_context():
+        u = User(username='del_user', hashed_password=generate_password_hash('pass123'))
+        db.session.add(u)
+        db.session.commit()
+        p = Provider(user_id=u.id, name='Provider to Delete')
+        db.session.add(p)
+        db.session.commit()
+        p_id = p.id
+
+    client.post('/login', data={'username': 'del_user', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.post(f'/providers/{p_id}/delete', follow_redirects=True)
+    assert resp.status_code == 200
+
+    with app.app_context():
+        assert db.session.get(Provider, p_id) is None
+
+
+def test_delete_provider_forbidden_for_other_user(client, app):
+    from app import db
+    with app.app_context():
+        u1 = User(username='del_u1', hashed_password=generate_password_hash('pass123'))
+        u2 = User(username='del_u2', hashed_password=generate_password_hash('pass123'))
+        db.session.add_all([u1, u2])
+        db.session.commit()
+        p2 = Provider(user_id=u2.id, name='Provider U2')
+        db.session.add(p2)
+        db.session.commit()
+        p2_id = p2.id
+
+    client.post('/login', data={'username': 'del_u1', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.post(f'/providers/{p2_id}/delete')
+    assert resp.status_code == 404
+
+    with app.app_context():
+        assert db.session.get(Provider, p2_id) is not None
+
