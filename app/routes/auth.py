@@ -1,61 +1,59 @@
-import os
-from pathlib import Path
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
-from app.db import get_db
-from app.i18n import TEMPLATES, gettext
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from app import db
 from app.models import User
-from app.auth import verify_password, get_password_hash, login_user, logout_user, get_current_user
+from app.forms import LoginForm, RegisterForm
 
-router = APIRouter()
+bp = Blueprint('auth', __name__)
 
+@bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.index'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        valid = False
+        if user and user.hashed_password:
+            try:
+                valid = check_password_hash(user.hashed_password, form.password.data)
+            except ValueError:
+                valid = False
 
-@router.get("/login")
-def login_page(request: Request):
-    return TEMPLATES.TemplateResponse(request, "login.html", {"error": None})
+        if valid:
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('dashboard.index'))
+        else:
+            flash('Invalid username or password', 'danger')
+            
+    return render_template('login.html', form=form)
 
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.index'))
+    
+    form = RegisterForm()
+    if form.validate_on_submit():
+        existing_user = User.query.filter_by(username=form.username.data).first()
+        if existing_user:
+            flash('Username already exists', 'danger')
+        else:
+            hashed_pw = generate_password_hash(form.password.data)
+            new_user = User(username=form.username.data, hashed_password=hashed_pw)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful. Please login.', 'success')
+            return redirect(url_for('auth.login'))
+            
+    return render_template('register.html', form=form)
 
-@router.post("/login")
-def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not verify_password(password, user.hashed_password):
-        return TEMPLATES.TemplateResponse(
-            request,
-            "login.html",
-            {"error": "auth.invalid_credentials"},
-        )
-    login_user(request, user)
-    return RedirectResponse(url="/", status_code=302)
-
-
-@router.get("/register")
-def register_page(request: Request):
-    return TEMPLATES.TemplateResponse(request, "register.html", {"error": None})
-
-
-@router.post("/register")
-def register(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    existing = db.query(User).filter(User.username == username).first()
-    if existing:
-        return TEMPLATES.TemplateResponse(
-            request,
-            "register.html",
-            {"error": "auth.username_exists"},
-        )
-    user = User(username=username, hashed_password=get_password_hash(password))
-    db.add(user)
-    db.commit()
-    login_user(request, user)
-    return RedirectResponse(url="/", status_code=302)
-
-
-@router.get("/logout")
-def logout(request: Request):
-    logout_user(request)
-    return RedirectResponse(url="/login", status_code=302)
+@bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('auth.login'))

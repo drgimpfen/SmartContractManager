@@ -2,9 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 import json
-
-from fastapi import Request
-from fastapi.templating import Jinja2Templates
+from flask import request
 
 DEFAULT_LOCALE = "en"
 LOCALE_DIR = Path(__file__).resolve().parent / "locales"
@@ -40,19 +38,38 @@ def normalize_locale(locale: str | None) -> str:
     return DEFAULT_LOCALE
 
 
-def get_locale(request: Request | None = None) -> str:
-    if request is None:
-        return DEFAULT_LOCALE
-    lang = request.query_params.get("lang") or request.cookies.get("lang")
-    if lang:
-        locale = normalize_locale(lang)
-        if locale in SUPPORTED_LOCALES:
-            return locale
-    accept = request.headers.get("accept-language", "")
-    for item in accept.split(","):
-        code = item.split(";")[0].strip().lower().split("-")[0]
-        if code in SUPPORTED_LOCALES:
-            return code
+def get_locale() -> str:
+    # 1. Query parameter ?lang=
+    try:
+        lang = request.args.get("lang")
+        if lang:
+            loc = normalize_locale(lang)
+            if loc in SUPPORTED_LOCALES:
+                return loc
+    except Exception:
+        pass
+
+    # 2. Cookie lang
+    try:
+        cookie_lang = request.cookies.get("lang")
+        if cookie_lang:
+            loc = normalize_locale(cookie_lang)
+            if loc in SUPPORTED_LOCALES:
+                return loc
+    except Exception:
+        pass
+
+    # 3. Accept-Language header
+    try:
+        accept = request.headers.get("Accept-Language", "")
+        for item in accept.split(","):
+            code = item.split(";")[0].strip().lower().split("-")[0]
+            if code in SUPPORTED_LOCALES:
+                return code
+    except Exception:
+        pass
+
+    # 4. Fallback: DEFAULT_LOCALE
     return DEFAULT_LOCALE
 
 
@@ -69,6 +86,9 @@ def _lookup_translation(translations: dict[str, Any], key: str) -> str | None:
 def translate(key: str, locale: str | None = None, **kwargs: Any) -> str:
     locale = normalize_locale(locale)
     translation = _lookup_translation(TRANSLATIONS.get(locale, {}), key)
+    # Fallback to default locale if not found
+    if translation is None and locale != DEFAULT_LOCALE:
+        translation = _lookup_translation(TRANSLATIONS.get(DEFAULT_LOCALE, {}), key)
     if translation is None:
         return key if not kwargs else key.format(**kwargs)
     if kwargs:
@@ -77,21 +97,3 @@ def translate(key: str, locale: str | None = None, **kwargs: Any) -> str:
         except Exception:
             return translation
     return translation
-
-
-def gettext(request: Request, key: str, **kwargs: Any) -> str:
-    return translate(key, get_locale(request), **kwargs)
-
-
-def translation_context(request: Request) -> dict[str, Any]:
-    return {
-        "_": lambda key, **kwargs: translate(key, get_locale(request), **kwargs),
-        "lang": get_locale(request),
-        "languages": {code: LANGUAGE_NAMES.get(code, code) for code in SUPPORTED_LOCALES},
-    }
-
-
-TEMPLATES = Jinja2Templates(
-    directory=str(Path(__file__).resolve().parent / "templates"),
-    context_processors=[translation_context],
-)

@@ -6,3 +6,4 @@ app/static/uploads/
 *.db
 .venv/
 venv/
+db_data/

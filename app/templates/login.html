@@ -6,20 +6,29 @@
     <div class="card shadow-sm">
       <div class="card-body">
         <h3 class="card-title mb-4">{{ _('login.title') }}</h3>
-        {% if error %}
-        <div class="alert alert-danger">{{ _(error) }}</div>
+        {% if form.errors %}
+        <div class="alert alert-danger">
+          <ul class="mb-0">
+            {% for field, errors in form.errors.items() %}
+              {% for error in errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
         {% endif %}
-        <form method="post" action="/login">
+        <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+          {{ form.hidden_tag() }}
           <div class="mb-3">
             <label for="username" class="form-label">{{ _('login.username') }}</label>
-            <input type="text" class="form-control" id="username" name="username" required />
+            <input type="text" class="form-control" id="username" name="username" value="{{ form.username.data or '' }}" required />
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">{{ _('login.password') }}</label>
             <input type="password" class="form-control" id="password" name="password" required />
           </div>
           <button type="submit" class="btn btn-primary">{{ _('login.submit') }}</button>
-          <a href="/register" class="btn btn-link">{{ _('login.register') }}</a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-link">{{ _('login.register') }}</a>
         </form>
       </div>
     </div>

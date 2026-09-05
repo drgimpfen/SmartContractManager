@@ -1,5 +1,6 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
+from flask_login import UserMixin
 from sqlalchemy import (
     Column,
     Integer,
@@ -13,7 +14,8 @@ from sqlalchemy import (
     Enum,
 )
 from sqlalchemy.orm import relationship
-from .db import Base
+
+from app import db
 
 
 class ContractStatus(str, enum.Enum):
@@ -32,13 +34,13 @@ class Frequency(str, enum.Enum):
 
 contract_tags = Table(
     "contract_tags",
-    Base.metadata,
+    db.metadata,
     Column("contract_id", ForeignKey("contracts.id"), primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True),
 )
 
 
-class User(Base):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -46,14 +48,14 @@ class User(Base):
     hashed_password = Column(String(256), nullable=False)
     timezone = Column(String(64), default="Europe/Berlin")
     currency = Column(String(8), default="EUR")
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     providers = relationship("Provider", back_populates="owner", cascade="all, delete-orphan")
     contracts = relationship("Contract", back_populates="owner", cascade="all, delete-orphan")
     tags = relationship("Tag", back_populates="owner", cascade="all, delete-orphan")
 
 
-class Provider(Base):
+class Provider(db.Model):
     __tablename__ = "providers"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -66,25 +68,25 @@ class Provider(Base):
     website = Column(String(255), nullable=True)
     customer_portal = Column(String(255), nullable=True)
     cancel_url = Column(String(255), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="providers")
     contracts = relationship("Contract", back_populates="provider")
 
 
-class Tag(Base):
+class Tag(db.Model):
     __tablename__ = "tags"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(64), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="tags")
     contracts = relationship("Contract", secondary=contract_tags, back_populates="tags")
 
 
-class Contract(Base):
+class Contract(db.Model):
     __tablename__ = "contracts"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -103,8 +105,8 @@ class Contract(Base):
     payment_term = Column(String(64), nullable=True)
     payment_method = Column(String(64), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", back_populates="contracts")
     provider = relationship("Provider", back_populates="contracts")
@@ -113,20 +115,20 @@ class Contract(Base):
     price_history = relationship("PriceEntry", back_populates="contract", cascade="all, delete-orphan")
 
 
-class Document(Base):
+class Document(db.Model):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True)
     contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=False)
     filename = Column(String(255), nullable=False)
     stored_filename = Column(String(255), nullable=False)
-    uploaded_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     extracted_text = Column(Text, nullable=True)
 
     contract = relationship("Contract", back_populates="documents")
 
 
-class PriceEntry(Base):
+class PriceEntry(db.Model):
     __tablename__ = "price_entries"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -135,6 +137,16 @@ class PriceEntry(Base):
     amount = Column(Float, nullable=False)
     currency = Column(String(8), nullable=False, default="EUR")
     note = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     contract = relationship("Contract", back_populates="price_history")
+
+
+class ExchangeRateCache(db.Model):
+    __tablename__ = "exchange_rate_cache"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    base_currency = Column(String(8), nullable=False)
+    target_currency = Column(String(8), nullable=False)
+    rate = Column(Float, nullable=False)
+    last_updated = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

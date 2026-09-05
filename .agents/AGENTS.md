@@ -42,7 +42,8 @@ Your code must be modular, secure, and performant. Implement features strictly a
   * Detailed testing conventions, mocking strategies, and strict coverage goals are defined in `.agents/rules/testing.md` and must be strictly followed.
 
 ## 4. UI/UX & Design Guidelines
-The system uses Server-Side Rendering (Jinja2) in strict combination with Bootstrap 5.3. There is no separate design agent; the Full-Stack Agent is responsible for adhering to the following UI rules:
+The system uses Server-Side Rendering (Jinja2) in strict combination with Bootstrap 5.3. There is no separate design agent; the Full-Stack Agent is responsible for adhering to the UI rules.
+Detailed UI/UX conventions, component standards, Chart.js palettes, form validation styling, and iconography are defined in `.agents/rules/design.md` and must be strictly followed:
 * **Bootstrap-Only:** Use exclusively native Bootstrap 5.3 components (cards for contracts, badges for status/tags, list groups for reminders).
 * **No Custom CSS:** Avoid custom CSS unless Bootstrap genuinely offers no utility class for the exact requirement.
 * **Mobile First:** The layout must strictly be responsive (utilize the grid system correctly).

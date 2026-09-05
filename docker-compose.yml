@@ -6,11 +6,12 @@ services:
       POSTGRES_PASSWORD: smartpass
       POSTGRES_DB: smartcontractdb
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ./db_data:/var/lib/postgresql/data
   web:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: flask run --host=0.0.0.0 --port=8000 --debug
     environment:
+      FLASK_APP: app
       DATABASE_URL: postgresql+psycopg://smartuser:smartpass@db:5432/smartcontractdb
       SESSION_SECRET: supersecretlocal
     ports:
@@ -19,5 +20,3 @@ services:
       - db
     volumes:
       - .:/app
-volumes:
-  db_data:

@@ -10,4 +10,7 @@ COPY . .
 RUN mkdir -p app/static/uploads
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+ENV FLASK_APP=app
+ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_RUN_PORT=8000
+CMD ["flask", "run", "--debug"]
