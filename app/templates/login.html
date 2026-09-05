@@ -1,34 +1,56 @@
 {% extends "base.html" %}
 {% block title %}{{ _('login.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h3 class="card-title mb-4">{{ _('login.title') }}</h3>
+<div class="row justify-content-center py-4 py-md-5">
+  <div class="col-12 col-sm-9 col-md-6 col-lg-5 col-xl-4">
+    <div class="card border shadow-sm rounded-4">
+      <div class="card-body p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 56px; height: 56px;">
+            <i class="bi bi-person-lock fs-2"></i>
+          </div>
+          <h3 class="fw-bold mb-1">{{ _('login.title') }}</h3>
+          <p class="text-muted small mb-0">{{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}</p>
+        </div>
+
         {% if form.errors %}
-        <div class="alert alert-danger">
-          <ul class="mb-0">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <ul class="mb-0 ps-3">
             {% for field, errors in form.errors.items() %}
               {% for error in errors %}
                 <li>{{ error }}</li>
               {% endfor %}
             {% endfor %}
           </ul>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('sidebar.close') }}"></button>
         </div>
         {% endif %}
+
         <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
           {{ form.hidden_tag() }}
           <div class="mb-3">
-            <label for="username" class="form-label">{{ _('login.username') }}</label>
-            <input type="text" class="form-control" id="username" name="username" value="{{ form.username.data or '' }}" required />
+            <label for="username" class="form-label small fw-semibold">{{ _('login.username') }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              <input type="text" class="form-control" id="username" name="username" value="{{ form.username.data or '' }}" autocomplete="username" required autofocus />
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">{{ _('login.password') }}</label>
-            <input type="password" class="form-control" id="password" name="password" required />
+          <div class="mb-4">
+            <label for="password" class="form-label small fw-semibold">{{ _('login.password') }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-key"></i></span>
+              <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required />
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary">{{ _('login.submit') }}</button>
-          <a href="{{ url_for('auth.register') }}" class="btn btn-link">{{ _('login.register') }}</a>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2 mb-3">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>{{ _('login.submit') }}</span>
+          </button>
+          <div class="text-center">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-link text-decoration-none small">
+              {{ _('login.register') }}
+            </a>
+          </div>
         </form>
       </div>
     </div>

@@ -1,126 +1,204 @@
 {% extends "base.html" %}
 {% block title %}{{ _('dashboard.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
-{% block page_title %}<h1 class="h3 mb-0">{{ _('dashboard.title') }}</h1>{% endblock %}
+{% block page_title %}<h1 class="h4 mb-0 fw-bold">{{ _('dashboard.title') }}</h1>{% endblock %}
 {% block content %}
-<div class="dashboard-header d-flex flex-column flex-md-row align-items-stretch justify-content-between gap-3 mb-4">
-  <div class="card flex-fill shadow-sm dashboard-hero">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h4 class="card-title mb-1">{{ _('dashboard.title') }}</h4>
-          <p class="text-muted mb-0">{{ _('dashboard.subtitle') }}</p>
-        </div>
-      </div>
-      <div class="row gy-2">
-        <div class="col-sm-4">
-          <div class="overview-metric">
-            <span class="metric-value">{{ monthly_budget }} {{ current_user.currency }}</span>
-            <div class="metric-label">{{ _('dashboard.monthly_budget') }}</div>
+<!-- Top Metrics & Quick Action Hero -->
+<div class="row g-3 mb-4">
+  <!-- Metrics Card -->
+  <div class="col-12 col-xl-8">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="card-title fw-bold mb-1">{{ _('dashboard.title') }}</h5>
+            <p class="text-muted small mb-0">{{ _('dashboard.subtitle') }}</p>
           </div>
         </div>
-        <div class="col-sm-4">
-          <div class="overview-metric">
-            <span class="metric-value">{{ contracts|length }}</span>
-            <div class="metric-label">{{ _('dashboard.contracts') }}</div>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
+              <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i class="bi bi-wallet2 fs-4"></i>
+              </div>
+              <div>
+                <div class="fs-4 fw-bold lh-1">{{ "%.2f"|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}</div>
+                <div class="text-muted small mt-1">{{ _('dashboard.monthly_budget') }}</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="col-sm-4">
-          <div class="overview-metric">
-            <span class="metric-value">{{ providers|length }}</span>
-            <div class="metric-label">{{ _('dashboard.providers') }}</div>
+          <div class="col-12 col-sm-4">
+            <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
+              <div class="rounded-3 bg-info bg-opacity-10 p-2 text-info d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i class="bi bi-file-earmark-text fs-4"></i>
+              </div>
+              <div>
+                <div class="fs-4 fw-bold lh-1">{{ contracts|length }}</div>
+                <div class="text-muted small mt-1">{{ _('dashboard.contracts') }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-4">
+            <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
+              <div class="rounded-3 bg-success bg-opacity-10 p-2 text-success d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <i class="bi bi-building fs-4"></i>
+              </div>
+              <div>
+                <div class="fs-4 fw-bold lh-1">{{ providers|length }}</div>
+                <div class="text-muted small mt-1">{{ _('dashboard.providers') }}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="card shadow-sm action-card">
-    <div class="card-body d-flex flex-column justify-content-between">
-      <div>
-        <h5 class="card-title">{{ _('dashboard.actions.title') }}</h5>
-        <p class="text-muted">{{ _('dashboard.actions.description') }}</p>
-      </div>
-      <div class="d-grid gap-2">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContractModal">{{ _('dashboard.actions.add_contract') }}</button>
-        <a class="btn btn-outline-primary" href="/contracts">{{ _('dashboard.actions.all_contracts') }}</a>
-        <a class="btn btn-outline-secondary" href="/providers">{{ _('dashboard.actions.manage_providers') }}</a>
+
+  <!-- Quick Actions Card -->
+  <div class="col-12 col-xl-4">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+        <div>
+          <h5 class="card-title fw-bold mb-1">{{ _('dashboard.actions.title') }}</h5>
+          <p class="text-muted small mb-3">{{ _('dashboard.actions.description') }}</p>
+        </div>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary d-flex align-items-center justify-content-center gap-2 py-2" data-bs-toggle="modal" data-bs-target="#addContractModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>{{ _('dashboard.actions.add_contract') }}</span>
+          </button>
+          <div class="row g-2">
+            <div class="col-6">
+              <a class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1 py-2 text-truncate" href="/contracts">
+                <i class="bi bi-file-text"></i>
+                <span>{{ _('sidebar.contracts') }}</span>
+              </a>
+            </div>
+            <div class="col-6">
+              <a class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1 py-2 text-truncate" href="/providers">
+                <i class="bi bi-building"></i>
+                <span>{{ _('sidebar.providers') }}</span>
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-<div class="row gy-4 mb-4">
-  <div class="col-lg-8">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">{{ _('dashboard.cashflow_title') }}</h5>
+
+<!-- Charts & Reminders Grid -->
+<div class="row g-3 mb-4">
+  <!-- Cashflow Forecast Chart -->
+  <div class="col-12 col-lg-8">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4">
+        <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-graph-up text-primary"></i>
+          <span>{{ _('dashboard.cashflow_title') }}</span>
+        </h5>
         {% if cashflow %}
         <div class="chart-container">
-          <canvas id="cashflowChart"></canvas>
+          <canvas id="cashflowChart" data-labels="{{ (cashflow | map(attribute='month') | list if cashflow else []) | tojson }}" data-values="{{ (cashflow | map(attribute='amount') | list if cashflow else []) | tojson }}" data-title="{{ _('dashboard.cashflow_title') }}"></canvas>
         </div>
         {% else %}
-        <div class="placeholder-card p-4 text-center text-muted">
-          <p class="mb-2">{{ _('dashboard.no_active_contracts') }}</p>
-          <p class="mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
+        <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
+          <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+          <p class="mb-1 fw-semibold">{{ _('dashboard.no_active_contracts') }}</p>
+          <p class="small mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
         </div>
         {% endif %}
       </div>
     </div>
   </div>
-  <div class="col-lg-4">
-    <div class="card mb-3 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">{{ _('dashboard.critical_deadlines') }}</h5>
+
+  <!-- Deadlines & Critical Notices -->
+  <div class="col-12 col-lg-4">
+    <div class="card border shadow-sm mb-3">
+      <div class="card-body p-3 p-md-4">
+        <h6 class="card-title fw-bold text-danger d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span>{{ _('dashboard.critical_deadlines') }}</span>
+        </h6>
         {% if critical_reminders %}
         <ul class="list-group list-group-flush">
           {% for contract in critical_reminders %}
-          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or _('common.no_number') }}</li>
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+            <span>{{ contract.category }}</span>
+            <span class="badge bg-danger">{{ contract.contract_number or _('common.no_number') }}</span>
+          </li>
           {% endfor %}
         </ul>
         {% else %}
-        <div class="text-muted">{{ _('dashboard.no_urgent_deadlines') }}</div>
+        <div class="text-muted small d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle text-success"></i>
+          <span>{{ _('dashboard.no_urgent_deadlines') }}</span>
+        </div>
         {% endif %}
       </div>
     </div>
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">{{ _('dashboard.missing_notice') }}</h5>
+
+    <div class="card border shadow-sm">
+      <div class="card-body p-3 p-md-4">
+        <h6 class="card-title fw-bold text-warning d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-clock-history"></i>
+          <span>{{ _('dashboard.missing_notice') }}</span>
+        </h6>
         {% if missing_notice %}
         <ul class="list-group list-group-flush">
           {% for contract in missing_notice %}
-          <li class="list-group-item">{{ contract.category }} - {{ contract.contract_number or _('common.no_number') }}</li>
+          <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+            <span>{{ contract.category }}</span>
+            <span class="badge bg-secondary">{{ contract.contract_number or _('common.no_number') }}</span>
+          </li>
           {% endfor %}
         </ul>
         {% else %}
-        <div class="text-muted">{{ _('dashboard.no_notice') }}</div>
+        <div class="text-muted small d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle text-success"></i>
+          <span>{{ _('dashboard.no_notice') }}</span>
+        </div>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h5 class="card-title">{{ _('dashboard.cost_distribution') }}</h5>
+
+<!-- Cost Distribution Chart -->
+<div class="card border shadow-sm mb-4">
+  <div class="card-body p-3 p-md-4">
+    <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
+      <i class="bi bi-pie-chart text-primary"></i>
+      <span>{{ _('dashboard.cost_distribution') }}</span>
+    </h5>
     {% if distribution %}
-    <div class="chart-container chart-container-small">
-      <canvas id="categoryChart"></canvas>
+    <div class="chart-container chart-container-sm">
+      <canvas id="categoryChart" data-labels="{{ (distribution | map(attribute='category') | list if distribution else []) | tojson }}" data-values="{{ (distribution | map(attribute='value') | list if distribution else []) | tojson }}"></canvas>
     </div>
     {% else %}
-    <div class="placeholder-card p-4 text-center text-muted">{{ _('dashboard.no_cost_distribution') }}</div>
+    <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
+      <i class="bi bi-pie-chart fs-1 d-block mb-2 text-secondary opacity-50"></i>
+      <span>{{ _('dashboard.no_cost_distribution') }}</span>
+    </div>
     {% endif %}
   </div>
 </div>
 
+<!-- Mobile-Friendly Add Contract Modal -->
 <div class="modal fade" id="addContractModal" tabindex="-1" aria-labelledby="addContractModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+    <div class="modal-content border shadow">
       <form action="/contracts" method="post" enctype="multipart/form-data">
-        <div class="modal-header">
-          <h5 class="modal-title" id="addContractModalLabel">{{ _('modal.add_contract') }}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="addContractModalLabel">
+            <i class="bi bi-plus-circle text-primary"></i>
+            <span>{{ _('modal.add_contract') }}</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body p-3 p-md-4">
           <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.provider') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
               <select name="provider_id" class="form-select">
                 <option value="" selected>{{ _('form.no_provider_selected') }}</option>
                 {% for provider in providers %}
@@ -128,40 +206,40 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.category') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.category') }}</label>
               <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.contract_number') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
               <input name="contract_number" class="form-control" placeholder="{{ _('form.optional') }}" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.amount') }}</label>
-              <input type="number" step="0.01" name="amount" class="form-control" value="0.00" required />
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
+              <input type="number" step="0.01" inputmode="decimal" name="amount" class="form-control" value="0.00" required />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.currency') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
               <input name="currency" class="form-control" value="EUR" required />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.frequency') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
               <select name="frequency" class="form-select">
                 <option value="monthly">{{ _('form.monthly') }}</option>
                 <option value="quarterly">{{ _('form.quarterly') }}</option>
                 <option value="yearly">{{ _('form.yearly') }}</option>
               </select>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.start_date') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
               <input type="date" name="start_date" class="form-control" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.end_date') }}</label>
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
               <input type="date" name="end_date" class="form-control" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ _('form.cancellation_notice') }}</label>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
               <div class="input-group">
                 <input type="number" name="cancellation_notice_amount" class="form-control" value="0" min="0" />
                 <select name="cancellation_notice_unit" class="form-select">
@@ -172,18 +250,21 @@
               </div>
             </div>
             <div class="col-12">
-              <label class="form-label">{{ _('form.notes') }}</label>
-              <textarea name="notes" class="form-control" rows="3" placeholder="{{ _('form.description') }}"></textarea>
+              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="{{ _('form.description') }}"></textarea>
             </div>
             <div class="col-12">
-              <label class="form-label">{{ _('form.document') }}</label>
+              <label class="form-label small fw-semibold">{{ _('form.document') }}</label>
               <input type="file" name="document" accept="application/pdf" class="form-control" />
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('modal.close') }}</button>
-          <button type="submit" class="btn btn-primary">{{ _('modal.save') }}</button>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          <button type="submit" class="btn btn-primary d-flex align-items-center gap-1">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('modal.save') }}</span>
+          </button>
         </div>
       </form>
     </div>
@@ -193,26 +274,49 @@
 
 {% block extra_scripts %}
 <script>
-const cashflowLabels = {{ cashflow | map(attribute='month') | list | safe }};
-const cashflowValues = {{ cashflow | map(attribute='amount') | list | safe }};
-const categoryLabels = {{ distribution | map(attribute='category') | list | safe }};
-const categoryValues = {{ distribution | map(attribute='value') | list | safe }};
+  const cashflowEl = document.getElementById('cashflowChart');
+  if (cashflowEl && typeof Chart !== 'undefined') {
+    const labels = JSON.parse(cashflowEl.getAttribute('data-labels') || '[]');
+    const values = JSON.parse(cashflowEl.getAttribute('data-values') || '[]');
+    const labelTitle = cashflowEl.getAttribute('data-title') || 'Cashflow';
 
-new Chart(document.getElementById('cashflowChart'), {
-  type: 'bar',
-  data: {
-    labels: cashflowLabels,
-    datasets: [{ label: '{{ _('dashboard.cashflow_title') }}', data: cashflowValues, backgroundColor: '#0d6efd' }],
-  },
-  options: { responsive: true, maintainAspectRatio: false },
-});
-new Chart(document.getElementById('categoryChart'), {
-  type: 'doughnut',
-  data: {
-    labels: categoryLabels,
-    datasets: [{ data: categoryValues, backgroundColor: ['#0d6efd', '#6610f2', '#198754', '#fd7e14'] }],
-  },
-  options: { responsive: true, maintainAspectRatio: false },
-});
+    new Chart(cashflowEl, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: labelTitle,
+          data: values,
+          backgroundColor: '#0d6efd',
+          borderRadius: 4
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      },
+    });
+  }
+
+  const categoryEl = document.getElementById('categoryChart');
+  if (categoryEl && typeof Chart !== 'undefined') {
+    const catLabels = JSON.parse(categoryEl.getAttribute('data-labels') || '[]');
+    const catValues = JSON.parse(categoryEl.getAttribute('data-values') || '[]');
+
+    new Chart(categoryEl, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catValues,
+          backgroundColor: ['#0d6efd', '#6f42c1', '#198754', '#fd7e14', '#20c997', '#ffc107']
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      },
+    });
+  }
 </script>
 {% endblock %}

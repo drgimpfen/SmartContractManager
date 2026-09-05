@@ -1,58 +1,143 @@
 {% extends "base.html" %}
 {% block title %}{{ _('contracts.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
-{% block page_title %}<h1 class="h3 mb-0">{{ _('contracts.title') }}</h1>{% endblock %}
+{% block page_title %}<h1 class="h4 mb-0 fw-bold">{{ _('contracts.title') }}</h1>{% endblock %}
 {% block content %}
-<div class="row">
-  <div class="col-lg-7 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">{{ _('contracts.list_title') }}</h5>
-        <table class="table table-sm align-middle">
-          <thead>
-            <tr>
-              <th>{{ _('contracts.table.category') }}</th>
-              <th>{{ _('contracts.table.provider') }}</th>
-              <th>{{ _('contracts.table.amount') }}</th>
-              <th>{{ _('contracts.table.status') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for contract in contracts %}
-            <tr>
-              <td>{{ contract.category }}</td>
-              <td>{{ contract.provider.name if contract.provider else _('common.none') }}</td>
-              <td>{{ contract.amount }} {{ contract.currency }}</td>
-              <td>{{ contract.status.value }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+<div class="row g-3">
+  <!-- Contracts List Table -->
+  <div class="col-12 col-xl-7">
+    <div class="card border shadow-sm">
+      <div class="card-body p-3 p-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-text text-primary"></i>
+            <span>{{ _('contracts.list_title') }}</span>
+          </h5>
+          <span class="badge bg-primary rounded-pill">{{ contracts|length }}</span>
+        </div>
+
+        {% if contracts %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="py-2">{{ _('contracts.table.category') }}</th>
+                <th class="py-2">{{ _('contracts.table.provider') }}</th>
+                <th class="py-2">{{ _('contracts.table.amount') }}</th>
+                <th class="py-2 text-end">{{ _('contracts.table.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for contract in contracts %}
+              <tr>
+                <td class="fw-semibold">{{ contract.category }}</td>
+                <td>{{ contract.provider.name if contract.provider else _('common.none') }}</td>
+                <td class="text-nowrap">{{ "%.2f"|format(contract.amount|default(0.0, true)) }} {{ contract.currency }}</td>
+                <td class="text-end">
+                  {% if contract.status.value == 'active' %}
+                  <span class="badge bg-success">{{ contract.status.value }}</span>
+                  {% elif contract.status.value == 'canceled' %}
+                  <span class="badge bg-warning text-dark">{{ contract.status.value }}</span>
+                  {% else %}
+                  <span class="badge bg-secondary">{{ contract.status.value }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+          <p class="mb-1 fw-semibold">{{ _('dashboard.no_active_contracts') }}</p>
+          <p class="small mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
-  <div class="col-lg-5 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">{{ _('modal.add_contract') }}</h5>
+
+  <!-- Add Contract Form Card -->
+  <div class="col-12 col-xl-5">
+    <div class="card border shadow-sm">
+      <div class="card-body p-3 p-md-4">
+        <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-plus-circle text-primary"></i>
+          <span>{{ _('modal.add_contract') }}</span>
+        </h5>
         <form method="post" action="/contracts" enctype="multipart/form-data">
-          <div class="mb-3"><label class="form-label">{{ _('form.category') }}</label><input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required /></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.provider') }}</label><select name="provider_id" class="form-select"><option value="">{{ _('form.no_provider_selected') }}</option>{% for provider in providers %}<option value="{{ provider.id }}">{{ provider.name }}</option>{% endfor %}</select></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.contract_number') }}</label><input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" /></div>
-          <div class="row">
-            <div class="col"><label class="form-label">{{ _('form.start_date') }}</label><input name="start_date" type="date" class="form-control" /></div>
-            <div class="col"><label class="form-label">{{ _('form.end_date') }}</label><input name="end_date" type="date" class="form-control" /></div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.category') }}</label>
+            <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
           </div>
-          <div class="row mt-3">
-            <div class="col"><label class="form-label">{{ _('form.cancellation_notice') }}</label><input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" /></div>
-            <div class="col"><label class="form-label">{{ _('form.unit') }}</label><select name="cancellation_notice_unit" class="form-select"><option value="days">{{ _('form.days') }}</option><option value="weeks">{{ _('form.weeks') }}</option><option value="months">{{ _('form.months') }}</option></select></div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
+            <select name="provider_id" class="form-select">
+              <option value="">{{ _('form.no_provider_selected') }}</option>
+              {% for provider in providers %}
+              <option value="{{ provider.id }}">{{ provider.name }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <div class="mb-3 mt-3"><label class="form-label">{{ _('form.amount') }}</label><input name="amount" type="number" step="0.01" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.currency') }}</label><input name="currency" class="form-control" value="EUR" /></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.frequency') }}</label><select name="frequency" class="form-select"><option value="monthly">{{ _('form.monthly') }}</option><option value="quarterly">{{ _('form.quarterly') }}</option><option value="yearly">{{ _('form.yearly') }}</option></select></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.payment_method') }}</label><input name="payment_method" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.tags') }}</label><input name="tags" class="form-control" /></div>
-          <div class="mb-3"><label class="form-label">{{ _('form.document') }}</label><input name="document" type="file" class="form-control" accept="application/pdf" /></div>
-          <button class="btn btn-primary">{{ _('contracts.save_contract') }}</button>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
+            <input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" />
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
+              <input name="start_date" type="date" class="form-control" />
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
+              <input name="end_date" type="date" class="form-control" />
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
+            <div class="input-group">
+              <input name="cancellation_notice_amount" type="number" min="0" class="form-control" placeholder="0" />
+              <select name="cancellation_notice_unit" class="form-select">
+                <option value="days">{{ _('form.days') }}</option>
+                <option value="weeks">{{ _('form.weeks') }}</option>
+                <option value="months">{{ _('form.months') }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-7">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
+              <input name="amount" type="number" step="0.01" inputmode="decimal" class="form-control" placeholder="0.00" />
+            </div>
+            <div class="col-5">
+              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
+              <input name="currency" class="form-control" value="EUR" />
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
+            <select name="frequency" class="form-select">
+              <option value="monthly">{{ _('form.monthly') }}</option>
+              <option value="quarterly">{{ _('form.quarterly') }}</option>
+              <option value="yearly">{{ _('form.yearly') }}</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
+            <input name="payment_method" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
+            <input name="tags" class="form-control" />
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">{{ _('form.document') }}</label>
+            <input name="document" type="file" class="form-control" accept="application/pdf" />
+          </div>
+          <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.save_contract') }}</span>
+          </button>
         </form>
       </div>
     </div>

@@ -1,20 +1,59 @@
-const themeToggle = document.getElementById('themeToggle');
-const root = document.documentElement;
+(function () {
+  'use strict';
 
-function setTheme(theme) {
-  root.setAttribute('data-bs-theme', theme);
-  root.setAttribute('data-theme', theme);
-  localStorage.setItem('smartcontract-theme', theme);
-}
+  const STORAGE_KEY = 'smartcontract-theme';
 
-const savedTheme = localStorage.getItem('smartcontract-theme');
-if (savedTheme) {
-  setTheme(savedTheme);
-}
+  function getStoredTheme() {
+    return localStorage.getItem(STORAGE_KEY);
+  }
 
-if (themeToggle) {
-  themeToggle.addEventListener('click', () => {
-    const current = root.getAttribute('data-bs-theme') || 'light';
-    setTheme(current === 'light' ? 'dark' : 'light');
+  function getPreferredTheme() {
+    const storedTheme = getStoredTheme();
+    if (storedTheme) {
+      return storedTheme;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    localStorage.setItem(STORAGE_KEY, theme);
+    updateThemeUI(theme);
+  }
+
+  function updateThemeUI(theme) {
+    const isDark = theme === 'dark';
+    
+    // Toggle sun/moon icons across all theme buttons
+    document.querySelectorAll('.theme-icon-light').forEach(el => {
+      el.classList.toggle('d-none', !isDark);
+    });
+    document.querySelectorAll('.theme-icon-dark').forEach(el => {
+      el.classList.toggle('d-none', isDark);
+    });
+  }
+
+  // Initialize theme immediately to prevent flashing
+  const currentTheme = getPreferredTheme();
+  setTheme(currentTheme);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateThemeUI(getPreferredTheme());
+
+    document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const activeTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+        const newTheme = activeTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+      });
+    });
+
+    // Listen for OS color scheme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      const stored = getStoredTheme();
+      if (!stored) {
+        setTheme(getPreferredTheme());
+      }
+    });
   });
-}
+})();

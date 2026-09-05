@@ -4,79 +4,164 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}{{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="/static/css/theme.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
-  <body>
-    <div class="app-shell d-flex">
-      <aside class="sidebar bg-primary text-white d-flex flex-column">
-        <div class="sidebar-brand p-4 border-bottom border-white-10">
-          <a href="/" class="text-decoration-none text-white">
-            <div class="brand-title">{{ _('app.brand.title') }}</div>
-            <div class="brand-subtitle">{{ _('app.brand.subtitle') }}</div>
-          </a>
-        </div>
-        <nav class="nav flex-column px-3 py-4 gap-1">
-          {% if user %}
-          <a class="nav-link text-white" href="/">{{ _('sidebar.dashboard') }}</a>
-          <a class="nav-link text-white" href="/contracts">{{ _('sidebar.contracts') }}</a>
-          <a class="nav-link text-white" href="/providers">{{ _('sidebar.providers') }}</a>
-          <a class="nav-link text-white" href="/settings">{{ _('sidebar.settings') }}</a>
+  <body class="bg-body-tertiary d-flex flex-column min-vh-100">
+    <!-- Modern Top Navigation Bar (Zero Duplication, Mobile First) -->
+    <nav class="navbar navbar-expand-lg bg-body border-bottom sticky-top shadow-sm py-2">
+      <div class="container-xl">
+        <!-- Brand / Logo -->
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-body" href="/">
+          <i class="bi bi-file-earmark-check-fill fs-3 text-primary"></i>
+          <span>{{ _('app.brand.title') }} <span class="text-primary">{{ _('app.brand.subtitle') }}</span></span>
+        </a>
+
+        <!-- Mobile Hamburger Toggle -->
+        <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="{{ _('topbar.toggle_nav') }}" style="min-width: 44px; min-height: 44px;">
+          <i class="bi bi-list fs-1"></i>
+        </button>
+
+        <!-- Navbar Collapsible Menu -->
+        <div class="collapse navbar-collapse" id="mainNavbar">
+          <!-- Main Links (When authenticated) -->
+          {% if current_user.is_authenticated %}
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 pt-2 pt-lg-0">
+            <li class="nav-item">
+              <a class="nav-link px-3 py-2 rounded-3 d-flex align-items-center gap-2 {% if request.path == '/' %}active fw-semibold text-primary bg-primary bg-opacity-10{% endif %}" href="/">
+                <i class="bi bi-speedometer2"></i>
+                <span>{{ _('sidebar.dashboard') }}</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link px-3 py-2 rounded-3 d-flex align-items-center gap-2 {% if request.path.startswith('/contracts') %}active fw-semibold text-primary bg-primary bg-opacity-10{% endif %}" href="/contracts">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>{{ _('sidebar.contracts') }}</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link px-3 py-2 rounded-3 d-flex align-items-center gap-2 {% if request.path.startswith('/providers') %}active fw-semibold text-primary bg-primary bg-opacity-10{% endif %}" href="/providers">
+                <i class="bi bi-building"></i>
+                <span>{{ _('sidebar.providers') }}</span>
+              </a>
+            </li>
+          </ul>
           {% endif %}
-        </nav>
-        <div class="sidebar-footer mt-auto px-3 pb-4">
-          {% if user %}
-          <div class="user-card d-flex align-items-center gap-3 mb-3">
-            <div class="user-initial">{{ user.username[:1]|upper }}</div>
-            <div>
-              <div class="user-name">{{ user.username }}</div>
-              <div class="text-white-50 small">{{ _('sidebar.logged_in') }}</div>
-            </div>
-          </div>
-          <button class="btn btn-outline-light btn-sm w-100 mb-2" id="themeToggle">{{ _('sidebar.theme') }}</button>
-          <a class="btn btn-light btn-sm w-100 mb-2" href="/logout">{{ _('sidebar.logout') }}</a>
-          <div class="language-select mt-3">
-            <label for="lang-select" class="form-label small text-white-50">{{ _('sidebar.language') }}</label>
-            <select id="lang-select" class="form-select form-select-sm" onchange="window.location.href='/set-language/' + this.value + '?next=' + encodeURIComponent(window.location.pathname)">
-              {% for code, name in languages.items() %}
-              <option value="{{ code }}" {% if lang == code %}selected{% endif %}>{{ name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% endif %}
-        </div>
-      </aside>
-      <div class="content-shell flex-fill d-flex flex-column">
-        <header class="topbar border-bottom bg-white">
-          <div class="container-fluid d-flex align-items-center justify-content-between py-3">
-            <div class="page-title">
-              {% block page_title %}{% endblock %}
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              {% if user %}
-              <span class="small text-muted d-none d-md-inline">{{ _('topbar.hello') }} {{ user.username }}</span>
-              {% endif %}
-            </div>
-          </div>
-        </header>
-        <main class="content-area flex-fill">
-          <div class="container-fluid py-4">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>
+
+          <!-- Right Utilities: Language Switcher, Theme Toggle, User Menu / Auth Buttons -->
+          <div class="d-flex align-items-lg-center flex-column flex-lg-row gap-1 gap-lg-2 ms-lg-auto pt-2 pt-lg-0">
+            <hr class="d-lg-none my-2 text-secondary opacity-25" />
+
+            <!-- Language Dropdown -->
+            <div class="dropdown">
+              <button class="btn btn-sm text-body d-flex align-items-center gap-1 py-2 py-lg-1 px-2 rounded-3 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-globe text-secondary"></i>
+                <span class="small fw-medium">{{ languages.get(lang, lang|upper) }}</span>
+                <i class="bi bi-chevron-down small text-secondary ms-1" style="font-size: 0.65rem;"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm border">
+                {% for code, name in languages.items() %}
+                <li>
+                  <a class="dropdown-item d-flex align-items-center justify-content-between py-2 {% if lang == code %}active fw-semibold{% endif %}" href="/set-language/{{ code }}?next={{ request.path|urlencode }}">
+                    <span>{{ name }}</span>
+                    {% if lang == code %}<i class="bi bi-check2 text-primary"></i>{% endif %}
+                  </a>
+                </li>
                 {% endfor %}
-              {% endif %}
-            {% endwith %}
-            {% block content %}{% endblock %}
+              </ul>
+            </div>
+
+            <!-- Theme Toggle Button (Desktop) -->
+            <button class="btn btn-sm text-body rounded-circle d-none d-lg-flex align-items-center justify-content-center theme-toggle-btn border-0 p-0" type="button" aria-label="{{ _('topbar.toggle_theme') }}" style="width: 36px; height: 36px;">
+              <i class="bi bi-sun-fill theme-icon-light d-none fs-5 text-warning"></i>
+              <i class="bi bi-moon-stars-fill theme-icon-dark fs-5 text-secondary"></i>
+            </button>
+            <!-- Mobile theme toggle button (with label) -->
+            <button class="btn btn-outline-secondary btn-sm w-100 d-flex d-lg-none align-items-center justify-content-center gap-2 py-2 theme-toggle-btn" type="button" aria-label="{{ _('topbar.toggle_theme') }}">
+              <i class="bi bi-sun-fill theme-icon-light d-none text-warning"></i>
+              <i class="bi bi-moon-stars-fill theme-icon-dark text-secondary"></i>
+              <span>{{ _('sidebar.theme') }}</span>
+            </button>
+
+            <!-- User Menu or Auth Buttons -->
+            {% if current_user.is_authenticated %}
+            <div class="dropdown">
+              <button class="btn btn-sm text-body d-flex align-items-center gap-2 p-1 pe-2 rounded-pill border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                  {{ current_user.username[:1]|upper }}
+                </span>
+                <span class="small fw-semibold d-none d-sm-inline">{{ current_user.username }}</span>
+                <i class="bi bi-chevron-down small text-secondary ms-1" style="font-size: 0.65rem;"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm border">
+                <li>
+                  <div class="px-3 py-2 border-bottom">
+                    <div class="fw-semibold text-truncate small">{{ current_user.username }}</div>
+                    <div class="text-muted small text-truncate" style="font-size: 0.75rem;">{{ current_user.currency }} &bull; {{ current_user.timezone }}</div>
+                  </div>
+                </li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="/settings">
+                    <i class="bi bi-gear text-secondary"></i>
+                    <span>{{ _('sidebar.settings') }}</span>
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider my-1"></li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="/logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>{{ _('sidebar.logout') }}</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            {% else %}
+            <div class="d-flex align-items-center gap-2 w-100 pt-2 pt-lg-0">
+              <a href="/login" class="btn btn-sm btn-outline-primary w-100 py-1 d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>{{ _('login.title') }}</span>
+              </a>
+              <a href="/register" class="btn btn-sm btn-primary w-100 py-1 d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-person-plus"></i>
+                <span>{{ _('register.title') }}</span>
+              </a>
+            </div>
+            {% endif %}
           </div>
-        </main>
+        </div>
       </div>
-    </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow-1 py-4">
+      <div class="container-xl">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
+                <div>{{ message }}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('sidebar.close') }}"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+    <!-- Sticky Footer -->
+    <footer class="footer mt-auto py-3 border-top bg-body text-center text-muted small">
+      <div class="container-xl d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+        <div>&copy; {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}</div>
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge text-bg-secondary text-opacity-75">v0.2.0</span>
+        </div>
+      </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/theme.js"></script>

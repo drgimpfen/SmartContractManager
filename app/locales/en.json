@@ -13,10 +13,13 @@
     "logged_in": "logged in",
     "theme": "Theme",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "close": "Close"
   },
   "topbar": {
-    "hello": "Hello,"
+    "hello": "Hello,",
+    "toggle_nav": "Toggle navigation",
+    "toggle_theme": "Toggle color mode"
   },
   "login": {
     "title": "Login",
