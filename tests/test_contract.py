@@ -140,7 +140,7 @@ def test_contract_edit_and_status_change(client, app):
     resp = client.post(f'/contracts/{c_id}/edit', data={
         'category': 'Premium Streaming',
         'frequency': 'yearly',
-        'status': 'archived',
+        'status': 'canceled',
         'tags': 'TV, Entertainment',
         'notes': 'Canceled due to price increase',
     }, follow_redirects=True)
@@ -150,9 +150,16 @@ def test_contract_edit_and_status_change(client, app):
         c = db.session.get(Contract, c_id)
         assert c.category == 'Premium Streaming'
         assert c.frequency == Frequency.yearly
-        assert c.status == ContractStatus.archived
+        assert c.status == ContractStatus.canceled
         assert c.notes == 'Canceled due to price increase'
         assert len(c.tags) == 2
+
+    # Test archiving via dedicated archive endpoint
+    archive_resp = client.post(f'/contracts/{c_id}/archive', follow_redirects=True)
+    assert archive_resp.status_code == 200
+    with app.app_context():
+        c = db.session.get(Contract, c_id)
+        assert c.is_archived is True
 
 
 def test_price_adjustment_auto_close_open_ended(client, app):

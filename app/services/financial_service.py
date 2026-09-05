@@ -1,6 +1,6 @@
 import calendar
 from datetime import date, timedelta
-from app.models import Contract, ContractStatus, Frequency, PriceEntry, add_months, calculate_next_billing_date
+from app.models import Contract, ContractStatus, Frequency, PriceEntry, add_months, snap_to_target_period, calculate_next_billing_date
 from app.services.currency_service import CurrencyService
 
 
@@ -38,8 +38,10 @@ def get_contract_price_on_date(contract: Contract, on_date: date) -> tuple[float
 
 
 def is_contract_active_on_date(contract: Contract, check_date: date) -> bool:
-    """Check whether an active contract is in force on the given date (respecting start_date & end_date)."""
-    if contract.status != ContractStatus.active:
+    """Check whether a contract is in force on the given date (respecting start_date & end_date)."""
+    if getattr(contract, "is_archived", False):
+        return False
+    if contract.status not in (ContractStatus.active, ContractStatus.scheduled):
         return False
     if contract.start_date and contract.start_date > check_date:
         return False
@@ -386,12 +388,39 @@ class FinancialService:
                 eff_amt, _ = get_contract_price_on_date(contract, ref_date)
                 annual_amount = normalize_to_monthly(eff_amt, contract.frequency) * 12.0
 
+            initial_commitment = None
+            has_term = bool(contract.initial_term_end_date or (contract.initial_term_months and contract.initial_term_months > 0))
+            if has_term:
+                target_period = getattr(contract, "cancellation_target_period", "exact") or "exact"
+                if contract.initial_term_end_date:
+                    initial_end = snap_to_target_period(contract.initial_term_end_date, target_period)
+                    m_diff = (initial_end.year - calc_start.year) * 12 + (initial_end.month - calc_start.month)
+                    term_months = contract.initial_term_months or max(1, m_diff)
+                else:
+                    initial_end = snap_to_target_period(add_months(calc_start, contract.initial_term_months), target_period)
+                    term_months = contract.initial_term_months
+
+                range_end = initial_end - timedelta(days=1) if initial_end > calc_start else initial_end
+                initial_due_dates = self._get_due_dates_in_range(
+                    contract, calc_start, range_end, override_anchor=anchor
+                )
+                initial_total = sum(get_contract_price_on_date(contract, d)[0] for d in initial_due_dates)
+                initial_commitment = {
+                    "months": term_months,
+                    "end_date": initial_end,
+                    "total_amount": round(initial_total, 2),
+                    "currency": curr,
+                    "total_payments": len(initial_due_dates),
+                    "is_active": ref_date < initial_end,
+                }
+
             return {
                 "is_fixed_term": False,
                 "currency": curr,
                 "paid_amount": round(paid_amount, 2),
                 "annual_amount": round(annual_amount, 2),
                 "paid_payments": len(due_dates),
+                "initial_commitment": initial_commitment,
             }
 
     def calculate_provider_summary(
@@ -408,7 +437,7 @@ class FinancialService:
         total_contracts = len(contracts)
         active_contracts = [c for c in contracts if c.status == ContractStatus.active]
         canceled_contracts = [c for c in contracts if c.status == ContractStatus.canceled]
-        archived_contracts = [c for c in contracts if c.status == ContractStatus.archived]
+        archived_contracts = [c for c in contracts if getattr(c, "is_archived", False) or c.status == ContractStatus.archived]
 
         monthly_spend = self.calculate_monthly_budget(active_contracts, target_currency, as_of_date)
         annual_projected = round(monthly_spend * 12.0, 2)

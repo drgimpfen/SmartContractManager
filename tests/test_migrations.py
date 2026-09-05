@@ -32,8 +32,12 @@ def test_alembic_migrations_lifecycle():
             "documents",
             "price_entries",
             "exchange_rate_cache",
+            "notes",
         }
         assert expected_tables.issubset(tables), f"Missing tables: {expected_tables - tables}"
+        contract_cols = {c["name"] for c in inspector.get_columns("contracts")}
+        assert "is_archived" in contract_cols, "is_archived column missing from contracts table"
+        assert "title" in contract_cols, "title column missing from contracts table"
 
         # 2. Downgrade from head back to base
         command.downgrade(alembic_cfg, "base")

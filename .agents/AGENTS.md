@@ -80,10 +80,16 @@ For any code creation, refactoring, or architectural modification, the following
 - **Execution via Terminal:**
   - After explicit user confirmation, execute the commit directly via the terminal (`git add` & `git commit`).
 
-### 5.4 Documentation Language Standards
-- All project documentation files (`*.md`), including `README.md`, `ROADMAP.md`, architectural decisions, and rule definitions, must strictly be authored in **English**.
-- Internal code documentation, comments, and docstrings must strictly be written in **English**.
-- (Note: Application UI localization remains managed via the translation catalogs in `app/locales/*.json` as specified in Section 3).
+### 5.4 Documentation & Communication Language Standards
+- **User Interaction & Planning Artifacts (Strictly German):**
+  - All direct communication with the user (chat conversations, discussions, explanations, summaries, status updates, and questions) must strictly be conducted in **German**.
+  - Interactive planning and review artifacts presented to the user (specifically `implementation_plan.md` and `walkthrough.md`) must strictly be authored in **German**.
+- **Codebase Documentation & Commits (Strictly English):**
+  - Project repository documentation files (`README.md`, `ROADMAP.md`, architectural decisions, and rule definitions) must strictly be authored in **English**.
+  - Internal code documentation, comments, and docstrings must strictly be written in **English**.
+  - Git commit messages (subject line and description) must strictly be written in **English** (per Section 5.3).
+- **UI Localization:**
+  - Application UI strings remain managed via the structured JSON translation catalogs in `app/locales/*.json` as specified in Section 3.
 
 ## 6. Core Data Model (Reference)
 The following entities must be modeled in SQLAlchemy:

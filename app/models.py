@@ -21,7 +21,11 @@ from app import db
 
 
 class ContractStatus(str, enum.Enum):
+    scheduled = "scheduled"
     active = "active"
+    pending_cancellation = "pending_cancellation"
+    cancellation_confirmed = "cancellation_confirmed"
+    paused = "paused"
     canceled = "canceled"
     archived = "archived"
 
@@ -48,6 +52,8 @@ class User(UserMixin, db.Model):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
     hashed_password = Column(String(256), nullable=False)
+    full_name = Column(String(120), nullable=True)
+    address = Column(Text, nullable=True)
     timezone = Column(String(64), default="Europe/Berlin")
     currency = Column(String(8), default="EUR")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -55,6 +61,7 @@ class User(UserMixin, db.Model):
     providers = relationship("Provider", back_populates="owner", cascade="all, delete-orphan")
     contracts = relationship("Contract", back_populates="owner", cascade="all, delete-orphan")
     tags = relationship("Tag", back_populates="owner", cascade="all, delete-orphan")
+    notes = relationship("Note", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Provider(db.Model):
@@ -74,6 +81,7 @@ class Provider(db.Model):
 
     owner = relationship("User", back_populates="providers")
     contracts = relationship("Contract", back_populates="provider")
+    notes_list = relationship("Note", back_populates="provider", cascade="all, delete-orphan", order_by="Note.created_at.desc()")
 
 
 class Tag(db.Model):
@@ -89,6 +97,21 @@ class Tag(db.Model):
     contracts = relationship("Contract", secondary=contract_tags, back_populates="tags")
 
 
+class Note(db.Model):
+    __tablename__ = "notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True, index=True)
+    provider_id = Column(Integer, ForeignKey("providers.id"), nullable=True, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    owner = relationship("User", back_populates="notes")
+    contract = relationship("Contract", back_populates="notes_list")
+    provider = relationship("Provider", back_populates="notes_list")
+
+
 def add_months(sourcedate: date, months: int) -> date:
     """Add months to a date, pinning to the last day of the month if overflow occurs."""
     month = sourcedate.month - 1 + months
@@ -96,6 +119,33 @@ def add_months(sourcedate: date, months: int) -> date:
     month = month % 12 + 1
     day = min(sourcedate.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
+
+
+def subtract_notice(target_date: date, notice_amount: int, notice_unit: str) -> date:
+    """Subtract a notice duration from a target date."""
+    unit = (notice_unit or "days").lower()
+    if unit == "months":
+        return add_months(target_date, -notice_amount)
+    elif unit == "weeks":
+        return target_date - timedelta(weeks=notice_amount)
+    else:
+        return target_date - timedelta(days=notice_amount)
+
+
+def snap_to_target_period(target_date: date, period_type: str | None) -> date:
+    """Snaps a date to the relevant termination anchor according to contract terms."""
+    if not period_type or period_type == "exact":
+        return target_date
+    if period_type == "end_of_month":
+        last_day = calendar.monthrange(target_date.year, target_date.month)[1]
+        return date(target_date.year, target_date.month, last_day)
+    elif period_type == "end_of_quarter":
+        q_month = ((target_date.month - 1) // 3 + 1) * 3
+        last_day = calendar.monthrange(target_date.year, q_month)[1]
+        return date(target_date.year, q_month, last_day)
+    elif period_type == "end_of_year":
+        return date(target_date.year, 12, 31)
+    return target_date
 
 
 def calculate_next_billing_date(anchor_date: date, frequency: Frequency, as_of: date) -> date:
@@ -135,6 +185,7 @@ class Contract(db.Model):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     provider_id = Column(Integer, ForeignKey("providers.id"), nullable=True)
+    title = Column(String(120), nullable=False, default="")
     category = Column(String(80), nullable=False, default="Sonstiges")
     status = Column(Enum(ContractStatus), default=ContractStatus.active, nullable=False)
     contract_number = Column(String(120), nullable=True)
@@ -143,11 +194,19 @@ class Contract(db.Model):
     billing_anchor_date = Column(Date, nullable=True)
     cancellation_notice_amount = Column(Integer, default=0)
     cancellation_notice_unit = Column(String(16), default="days")
+    cancellation_target_period = Column(String(32), default="exact", nullable=False)
+    initial_term_months = Column(Integer, default=0, nullable=True)
+    initial_term_end_date = Column(Date, nullable=True)
+    renewal_period_months = Column(Integer, default=1, nullable=True)
+    renewal_type = Column(String(32), default="monthly_rolling", nullable=True)
+    cancellation_sent_date = Column(Date, nullable=True)
+    confirmed_end_date = Column(Date, nullable=True)
     amount = Column(Float, default=0.0)
     currency = Column(String(8), default="EUR")
     frequency = Column(Enum(Frequency), default=Frequency.monthly, nullable=False)
     payment_method = Column(String(64), nullable=True)
     notes = Column(Text, nullable=True)
+    is_archived = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -155,6 +214,7 @@ class Contract(db.Model):
     provider = relationship("Provider", back_populates="contracts")
     tags = relationship("Tag", secondary=contract_tags, back_populates="contracts")
     documents = relationship("Document", back_populates="contract", cascade="all, delete-orphan")
+    notes_list = relationship("Note", back_populates="contract", cascade="all, delete-orphan", order_by="Note.created_at.desc()")
     price_history = relationship(
         "PriceEntry",
         back_populates="contract",
@@ -166,17 +226,20 @@ class Contract(db.Model):
         """Returns the effective (amount, currency) on a given date."""
         if self.price_history:
             for p in self.price_history:
-                if p.valid_from <= on_date and (p.valid_to is None or p.valid_to >= on_date):
-                    return float(p.amount), p.currency
-        return float(self.amount or 0.0), (self.currency or "EUR")
+                if p.valid_from <= on_date:
+                    if p.valid_to is None or p.valid_to >= on_date:
+                        return float(p.amount), p.currency
+        return float(self.amount or 0.0), self.currency or "EUR"
 
     @property
     def current_price_entry(self):
-        """Returns the PriceEntry active today."""
+        """Returns the PriceEntry effective as of today, if any."""
         today = date.today()
-        if self.price_history:
-            for p in self.price_history:
-                if p.valid_from <= today and (p.valid_to is None or p.valid_to >= today):
+        if not self.price_history:
+            return None
+        for p in self.price_history:
+            if p.valid_from <= today:
+                if p.valid_to is None or p.valid_to >= today:
                     return p
         return None
 
@@ -198,11 +261,18 @@ class Contract(db.Model):
 
     @property
     def upcoming_price_entries(self):
-        """Returns future price entries (valid_from > today) ordered chronologically ascending."""
+        """Returns future price entries representing an actual price change."""
         today = date.today()
         if not self.price_history:
             return []
-        futures = [p for p in self.price_history if p.valid_from > today]
+        ref_date = self.start_date if (self.start_date and self.start_date > today) else today
+        curr_amt = self.current_amount
+        curr_curr = self.current_currency
+
+        futures = [
+            p for p in self.price_history
+            if p.valid_from > ref_date and (round(float(p.amount), 2) != round(curr_amt, 2) or p.currency != curr_curr)
+        ]
         return sorted(futures, key=lambda p: p.valid_from)
 
     @property
@@ -248,18 +318,41 @@ class Contract(db.Model):
         """Calculate the next billing date >= as_of based on billing_anchor_date and frequency."""
         if not self.billing_anchor_date:
             return None
+        if self.is_archived or self.status in (ContractStatus.paused, ContractStatus.canceled, ContractStatus.archived):
+            return None
         if as_of is None:
             as_of = date.today()
+        if self.start_date and self.start_date > as_of:
+            as_of = self.start_date
 
-        if self.end_date and self.end_date < as_of:
+        effective_end = self.confirmed_end_date or self.end_date
+        if effective_end and effective_end < as_of:
             return None
 
         next_date = calculate_next_billing_date(self.billing_anchor_date, self.frequency, as_of)
 
-        if self.end_date and next_date > self.end_date:
+        if effective_end and next_date > effective_end:
             return None
 
         return next_date
+
+    def sync_contract_status(self, as_of: date | None = None) -> bool:
+        """Auto-transitions contract statuses based on dates:
+        1. scheduled -> active if start_date is reached (today >= start_date).
+        2. cancellation_confirmed -> canceled if effective end date is in the past.
+        """
+        today = as_of if as_of is not None else date.today()
+        if self.status == ContractStatus.scheduled:
+            if not self.start_date or today >= self.start_date:
+                self.status = ContractStatus.active
+                return True
+
+        if self.status == ContractStatus.cancellation_confirmed:
+            effective_end = self.confirmed_end_date or self.end_date
+            if effective_end and today > effective_end:
+                self.status = ContractStatus.canceled
+                return True
+        return False
 
     @property
     def days_until_next_billing(self) -> int | None:
@@ -272,24 +365,104 @@ class Contract(db.Model):
     @property
     def days_until_end(self) -> int | None:
         """Number of calendar days until contract end date from today, or None if open-ended."""
-        if not self.end_date:
+        effective_end = self.confirmed_end_date or self.end_date
+        if not effective_end:
             return None
-        return (self.end_date - date.today()).days
+        return (effective_end - date.today()).days
+
+    def get_earliest_cancellation_date(self, as_of: date | None = None) -> date | None:
+        """
+        Calculates the earliest legally possible contract termination date based on:
+        - confirmed_end_date (if cancellation confirmed or explicitly set)
+        - end_date (if set and deadline not passed, or renewal_type == 'none')
+        - start_date, initial_term_months, renewal_type, renewal_period_months, and notice period
+        """
+        if self.status == ContractStatus.cancellation_confirmed and self.confirmed_end_date:
+            return self.confirmed_end_date
+
+        if self.confirmed_end_date:
+            return self.confirmed_end_date
+
+        ref = as_of or date.today()
+
+        # Pure open-ended contract without dates or commitment
+        if not self.end_date and not self.start_date and not self.billing_anchor_date and not (self.initial_term_months and self.initial_term_months > 0):
+            return None
+
+        notice_amt = self.cancellation_notice_amount or 0
+        notice_unit = self.cancellation_notice_unit or "days"
+
+        # Explicit end_date takes priority if no rollover or if deadline not yet passed
+        if self.end_date:
+            dl = subtract_notice(self.end_date, notice_amt, notice_unit) if notice_amt > 0 else self.end_date
+            if self.renewal_type == "none" or ref <= dl:
+                return self.end_date
+
+        start = self.start_date or self.billing_anchor_date or ref
+        target_period = getattr(self, "cancellation_target_period", "exact") or "exact"
+
+        # Calculate initial term end
+        if self.initial_term_end_date:
+            initial_end = snap_to_target_period(self.initial_term_end_date, target_period)
+        elif self.initial_term_months and self.initial_term_months > 0:
+            initial_end = snap_to_target_period(add_months(start, self.initial_term_months), target_period)
+        else:
+            initial_end = start
+
+        # Check deadline for initial term
+        initial_deadline = subtract_notice(initial_end, notice_amt, notice_unit) if notice_amt > 0 else initial_end
+
+        if initial_end > start and ref <= initial_deadline:
+            return initial_end
+
+        # If past initial term or initial deadline passed:
+        r_type = self.renewal_type or "monthly_rolling"
+        if r_type == "none":
+            return self.end_date or initial_end
+
+        step_months = self.renewal_period_months or (1 if r_type == "monthly_rolling" else 12)
+        if step_months < 1:
+            step_months = 1
+
+        cand_end = self.end_date or initial_end
+        cycles = 0
+        while cycles < 120:
+            cycles += 1
+            cand_end = snap_to_target_period(cand_end, target_period)
+            if cand_end > ref or (cycles > 1 and cand_end >= ref):
+                deadline = subtract_notice(cand_end, notice_amt, notice_unit) if notice_amt > 0 else cand_end
+                if deadline >= ref:
+                    return cand_end
+            cand_end = add_months(cand_end, step_months)
+
+        return snap_to_target_period(cand_end, target_period)
+
+    @property
+    def earliest_cancellation_date(self) -> date | None:
+        """Earliest possible contract termination date from today."""
+        return self.get_earliest_cancellation_date()
+
+    def get_cancellation_deadline(self, as_of: date | None = None) -> date | None:
+        """Calculates the deadline by which notice must be received."""
+        if self.is_archived or (self.status and self.status in (ContractStatus.canceled, ContractStatus.archived, ContractStatus.cancellation_confirmed)):
+            return None
+        if not self.cancellation_notice_amount or self.cancellation_notice_amount <= 0:
+            return None
+
+        # If an explicit end_date is set, its notice deadline takes precedence
+        if self.end_date:
+            return subtract_notice(self.end_date, self.cancellation_notice_amount, self.cancellation_notice_unit)
+
+        earliest_end = self.get_earliest_cancellation_date(as_of=as_of)
+        if not earliest_end:
+            return None
+
+        return subtract_notice(earliest_end, self.cancellation_notice_amount, self.cancellation_notice_unit)
 
     @property
     def cancellation_deadline(self) -> date | None:
-        """Calculates the latest cancellation date: end_date minus notice period for active contracts."""
-        if self.status and self.status != ContractStatus.active:
-            return None
-        if not self.end_date or not self.cancellation_notice_amount or self.cancellation_notice_amount <= 0:
-            return None
-        unit = (self.cancellation_notice_unit or "days").lower()
-        if unit == "months":
-            return add_months(self.end_date, -self.cancellation_notice_amount)
-        elif unit == "weeks":
-            return self.end_date - timedelta(weeks=self.cancellation_notice_amount)
-        else:
-            return self.end_date - timedelta(days=self.cancellation_notice_amount)
+        """Calculates the next cancellation deadline from today."""
+        return self.get_cancellation_deadline()
 
     @property
     def days_until_cancellation_deadline(self) -> int | None:
@@ -300,23 +473,50 @@ class Contract(db.Model):
         return (dl - date.today()).days
 
     @property
+    def is_monthly_flexible(self) -> bool:
+        """Returns True if the contract rolls monthly without an active longer lock-in period."""
+        if self.renewal_type == "none" or self.end_date:
+            return False
+        r_type = self.renewal_type or "monthly_rolling"
+        period = self.renewal_period_months or 1
+        if r_type != "monthly_rolling" and period > 1:
+            return False
+        today = date.today()
+        # Check if currently locked in by initial term
+        if self.initial_term_end_date:
+            if today < self.initial_term_end_date:
+                return False
+        elif self.initial_term_months and self.initial_term_months > 0:
+            start = self.start_date or self.billing_anchor_date
+            if start:
+                target_period = getattr(self, "cancellation_target_period", "exact") or "exact"
+                initial_end = snap_to_target_period(add_months(start, self.initial_term_months), target_period)
+                if today < initial_end:
+                    return False
+        return True
+
+    @property
     def cancellation_status(self) -> str:
         """
         Status of the cancellation deadline:
-        - 'none': No deadline defined (open-ended, no notice specified, or contract not active)
-        - 'missed': Deadline has passed, but contract end_date is still in future
+        - 'none': No deadline defined (no notice specified, or contract not active/pending)
+        - 'flexible': Monthly flexible rolling contract (no urgent lock-in deadline)
+        - 'missed': Deadline has passed
         - 'due_today': Deadline is today (0 days left)
         - 'urgent': Deadline is within the next 30 days
         - 'safe': Deadline is more than 30 days in the future
-        - 'ended': Contract end_date is in the past
+        - 'ended': Contract has ended
         """
-        if self.status and self.status != ContractStatus.active:
+        if self.status and self.status not in (ContractStatus.active, ContractStatus.pending_cancellation):
             return 'none'
-        if not self.end_date or not self.cancellation_deadline:
+        if not self.cancellation_notice_amount or not self.cancellation_deadline:
             return 'none'
+        effective_end = self.confirmed_end_date or self.end_date or self.earliest_cancellation_date
         today = date.today()
-        if self.end_date < today:
+        if effective_end and effective_end < today:
             return 'ended'
+        if self.is_monthly_flexible:
+            return 'flexible'
         days = self.days_until_cancellation_deadline
         if days is None:
             return 'none'
@@ -331,12 +531,13 @@ class Contract(db.Model):
 
     def get_remaining_term_human(self, as_of: date | None = None) -> str:
         """Returns a human-readable remaining term representation token."""
-        if not self.end_date:
+        effective_end = self.confirmed_end_date or self.end_date or self.earliest_cancellation_date
+        if not effective_end:
             return "unlimited"
         ref_date = as_of or date.today()
-        if self.end_date < ref_date:
+        if effective_end < ref_date:
             return "ended"
-        diff_days = (self.end_date - ref_date).days
+        diff_days = (effective_end - ref_date).days
         if diff_days == 0:
             return "ends_today"
         if diff_days < 30:

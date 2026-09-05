@@ -2,8 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import Provider
-from app.forms import ProviderForm, ContractForm
+from app.models import Provider, Note, Contract
+from app.forms import ProviderForm, ContractForm, NoteForm
 from app.routes.contract import populate_provider_choices
 from app.services.financial_service import FinancialService
 
@@ -54,6 +54,11 @@ def detail(id):
         provider.contracts,
         target_currency=current_user.currency or "EUR",
     )
+    note_form = NoteForm()
+
+    all_user_contracts = Contract.query.filter_by(user_id=current_user.id, is_archived=False).all()
+    user_categories = sorted(list(set(c.category for c in all_user_contracts if c.category)))
+    user_payment_methods = sorted(list(set(c.payment_method for c in all_user_contracts if c.payment_method)))
 
     return render_template(
         'provider_detail.html',
@@ -61,6 +66,9 @@ def detail(id):
         form=form,
         contract_form=contract_form,
         summary=summary,
+        note_form=note_form,
+        user_categories=user_categories,
+        user_payment_methods=user_payment_methods,
     )
 
 
@@ -106,4 +114,37 @@ def delete(id):
     db.session.commit()
     flash('Provider successfully deleted.', 'success')
     return redirect(url_for('provider.index'))
+
+
+@bp.route('/<int:id>/notes', methods=['POST'])
+@login_required
+def add_note(id):
+    provider = db.session.get(Provider, id)
+    if not provider or provider.user_id != current_user.id:
+        abort(404)
+
+    content = request.form.get('content', '').strip()
+    if content:
+        note = Note(user_id=current_user.id, provider_id=provider.id, content=content)
+        db.session.add(note)
+        db.session.commit()
+        flash('Notiz erfolgreich hinzugefügt.', 'success')
+
+    return redirect(url_for('provider.detail', id=provider.id))
+
+
+@bp.route('/<int:id>/notes/<int:note_id>/delete', methods=['POST'])
+@login_required
+def delete_note(id, note_id):
+    provider = db.session.get(Provider, id)
+    if not provider or provider.user_id != current_user.id:
+        abort(404)
+
+    note = db.session.get(Note, note_id)
+    if note and note.user_id == current_user.id and note.provider_id == provider.id:
+        db.session.delete(note)
+        db.session.commit()
+        flash('Notiz gelöscht.', 'success')
+
+    return redirect(url_for('provider.detail', id=provider.id))
 

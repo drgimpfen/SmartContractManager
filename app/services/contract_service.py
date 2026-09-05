@@ -24,10 +24,21 @@ def pick_tag_color(tag_name: str) -> str:
     return TAG_COLORS[hash_val % len(TAG_COLORS)]
 
 
+def prune_orphaned_tags(user_id: int) -> int:
+    """Delete any tags belonging to user_id that are not associated with any contract."""
+    db.session.flush()
+    orphans = Tag.query.filter_by(user_id=user_id).filter(~Tag.contracts.any()).all()
+    count = len(orphans)
+    for t in orphans:
+        db.session.delete(t)
+    return count
+
+
 def sync_contract_tags(contract: Contract, user_id: int, tags_input: str) -> None:
-    """Synchronize tags from a comma-separated string to the contract."""
+    """Synchronize tags from a comma-separated string to the contract and clean up unreferenced tags."""
     if not tags_input:
         contract.tags = []
+        prune_orphaned_tags(user_id)
         return
 
     raw_names = [t.strip() for t in tags_input.split(",") if t.strip()]
@@ -42,6 +53,7 @@ def sync_contract_tags(contract: Contract, user_id: int, tags_input: str) -> Non
         synced_tags.append(tag)
 
     contract.tags = synced_tags
+    prune_orphaned_tags(user_id)
 
 
 def check_price_overlap(contract_id: int, valid_from: date, valid_to: date | None, exclude_id: int | None = None):

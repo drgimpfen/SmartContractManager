@@ -38,6 +38,7 @@ class ProviderForm(FlaskForm):
 
 
 class ContractForm(FlaskForm):
+    title = StringField('Title', validators=[Optional(), Length(max=120)])
     category = StringField('Category', validators=[DataRequired(), Length(max=80)])
     provider_id = SelectField('Provider', coerce=int, validators=[Optional()])
     contract_number = StringField('Contract Number', validators=[Optional(), Length(max=120)])
@@ -49,6 +50,16 @@ class ContractForm(FlaskForm):
         'Notice Unit',
         choices=[('days', 'Days'), ('weeks', 'Weeks'), ('months', 'Months')],
         default='days',
+    )
+    cancellation_target_period = SelectField(
+        'Cancellation Target Period',
+        choices=[
+            ('exact', 'Exact / Cycle End'),
+            ('end_of_month', 'End of Month'),
+            ('end_of_quarter', 'End of Quarter'),
+            ('end_of_year', 'End of Year (31.12.)'),
+        ],
+        default='exact',
     )
     amount = FloatField('Amount', default=0.0, validators=[Optional(), NumberRange(min=0.0)])
     currency = StringField('Currency', default='EUR', validators=[Optional(), Length(max=8)])
@@ -66,12 +77,57 @@ class ContractForm(FlaskForm):
     payment_method = StringField('Payment Method', validators=[Optional(), Length(max=64)])
     status = SelectField(
         'Status',
-        choices=[('active', 'Active'), ('canceled', 'Canceled'), ('archived', 'Archived')],
+        choices=[
+            ('scheduled', 'Scheduled'),
+            ('active', 'Active'),
+            ('pending_cancellation', 'Pending Cancellation'),
+            ('cancellation_confirmed', 'Cancellation Confirmed'),
+            ('paused', 'Paused'),
+            ('canceled', 'Terminated'),
+        ],
         default='active',
     )
+    initial_term_months = IntegerField('Initial Term (Months)', default=0, validators=[Optional(), NumberRange(min=0)])
+    initial_term_end_date = DateField('Initial Term End Date', validators=[Optional()])
+    renewal_type = SelectField(
+        'Renewal Type',
+        choices=[
+            ('monthly_rolling', 'Monthly Rolling (§ 309 Nr. 9 BGB)'),
+            ('fixed_period', 'Fixed Period'),
+            ('none', 'No Renewal (Ends on Date)'),
+        ],
+        default='monthly_rolling',
+    )
+    renewal_period_months = IntegerField('Renewal Period (Months)', default=1, validators=[Optional(), NumberRange(min=1)])
+    cancellation_sent_date = DateField('Cancellation Sent Date', validators=[Optional()])
+    confirmed_end_date = DateField('Confirmed End Date', validators=[Optional()])
     tags = StringField('Tags', validators=[Optional(), Length(max=255)])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Save')
+
+
+class ContractExtendForm(FlaskForm):
+    extension_months = SelectField(
+        'Extension Period',
+        choices=[
+            ('12', '12 Monate'),
+            ('24', '24 Monate'),
+            ('custom', 'Individuell (Datum)'),
+        ],
+        default='24',
+    )
+    extension_start_mode = SelectField(
+        'Extension Start Mode',
+        choices=[
+            ('append', 'Im Anschluss an bisherige Mindestlaufzeit'),
+            ('from_today', 'Ab heute neu'),
+        ],
+        default='append',
+    )
+    custom_end_date = DateField('Custom End Date', validators=[Optional()])
+    new_amount = FloatField('New Monthly Amount', validators=[Optional(), NumberRange(min=0.0)])
+    note = TextAreaField('Note', validators=[Optional(), Length(max=1000)])
+    submit = SubmitField('Extend Contract')
 
 
 class PriceEntryForm(FlaskForm):
@@ -82,3 +138,8 @@ class PriceEntryForm(FlaskForm):
     note = StringField('Note', validators=[Optional(), Length(max=255)])
     auto_adjust = BooleanField('Auto Adjust Overlapping Periods', default=False)
     submit = SubmitField('Save Price')
+
+
+class NoteForm(FlaskForm):
+    content = TextAreaField('Note', validators=[DataRequired(), Length(min=1, max=5000)])
+    submit = SubmitField('Add Note')

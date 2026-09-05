@@ -196,7 +196,8 @@
             <table class="table table-hover align-middle mb-0">
               <thead class="border-bottom text-secondary small text-uppercase fw-semibold">
                 <tr>
-                  <th class="py-3 ps-3">{{ _('contracts.table.category') }}</th>
+                  <th class="py-3 ps-3">{{ _('contracts.table.title') }}</th>
+                  <th class="py-3">{{ _('contracts.table.category') }}</th>
                   <th class="py-3">{{ _('contracts.table.status') }}</th>
                   <th class="py-3">{{ _('contracts.table.amount') }}</th>
                   <th class="py-3">{{ _('contracts.table.anchor') }}</th>
@@ -207,31 +208,55 @@
               <tbody>
                 {% for contract in provider.contracts|sort(attribute='created_at', reverse=True) %}
                 <tr>
-                  <!-- Category & Contract Number -->
+                  <!-- Title & Contract Number -->
                   <td class="ps-3 py-3">
                     <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
-                      {{ contract.category }}
+                      {{ contract.title or contract.category }}
                     </a>
                     {% if contract.contract_number %}
-                    <small class="text-muted d-block" style="font-size: 0.75rem;">
-                      {{ contract.contract_number }}
+                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                      #{{ contract.contract_number }}
                     </small>
                     {% endif %}
                   </td>
 
+                  <!-- Category (Dedicated Column) -->
+                  <td class="py-3">
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">
+                      <i class="bi bi-tag me-1"></i>{{ contract.category }}
+                    </span>
+                  </td>
+
                   <!-- Status Badge -->
                   <td class="py-3">
+                    {% if contract.is_archived %}
+                    <span class="badge bg-secondary bg-opacity-15 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                      <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
+                    </span>
+                    {% endif %}
                     {% if contract.status.value == 'active' %}
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
                       <i class="bi bi-check-circle me-1"></i>{{ _('contracts.active') }}
                     </span>
-                    {% elif contract.status.value == 'canceled' %}
-                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
-                      <i class="bi bi-exclamation-triangle me-1"></i>{{ _('contracts.canceled') }}
+                    {% elif contract.status.value == 'scheduled' %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                      <i class="bi bi-calendar-plus me-1"></i>{{ _('contracts.scheduled') }}
+                    </span>
+                    {% elif contract.status.value == 'pending_cancellation' %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1">
+                      <i class="bi bi-hourglass-split me-1"></i>{{ _('contracts.pending_cancellation') }}
+                    </span>
+                    {% elif contract.status.value == 'cancellation_confirmed' %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">
+                      <i class="bi bi-calendar-x me-1"></i>{{ _('contracts.cancellation_confirmed') }}
+                    </span>
+                    {% elif contract.status.value == 'paused' %}
+                    <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1">
+                      <i class="bi bi-pause-circle me-1"></i>{{ _('contracts.paused') }}
                     </span>
                     {% else %}
                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
-                      <i class="bi bi-archive me-1"></i>{{ _('contracts.archived') }}
+                      <i class="bi bi-x-circle me-1"></i>{{ _('contracts.canceled') }}
                     </span>
                     {% endif %}
                   </td>
@@ -413,6 +438,61 @@
             </div>
             {% endif %}
           </div>
+        </div>
+      </div>
+
+      <!-- Notes & Timeline Card -->
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text text-primary"></i>
+            <span>{{ _('notes.timeline_title') }}</span>
+          </h5>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">
+            {{ provider.notes_list|length }}
+          </span>
+        </div>
+        <div class="card-body p-4 d-flex flex-column gap-3">
+          <!-- Add Note Form -->
+          <form method="post" action="{{ url_for('provider.add_note', id=provider.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+            <div class="mb-2">
+              <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="{{ _('notes.placeholder') }}" required></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i>
+                <span>{{ _('notes.save') }}</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Notes Timeline List -->
+          {% if provider.notes_list %}
+          <div class="d-flex flex-column gap-2 pt-2 border-top">
+            {% for n in provider.notes_list %}
+            <div class="p-3 bg-body-tertiary rounded-3 border position-relative">
+              <div class="d-flex align-items-center justify-content-between text-muted small mb-1">
+                <span class="d-inline-flex align-items-center gap-1">
+                  <i class="bi bi-clock"></i>
+                  <span>{{ n.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </span>
+                <form method="post" action="{{ url_for('provider.delete_note', id=provider.id, note_id=n.id) }}" class="d-inline" onsubmit="return confirm('Möchtest du diese Notiz wirklich löschen?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+                  <button type="submit" class="btn btn-link text-danger p-0 border-0" title="{{ _('notes.delete') }}">
+                    <i class="bi bi-trash small"></i>
+                  </button>
+                </form>
+              </div>
+              <div class="text-body small" style="white-space: pre-wrap;">{{ n.content }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-muted text-center py-3 border-top">
+            <p class="small mb-0">{{ _('notes.empty') }}</p>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>

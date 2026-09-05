@@ -14,20 +14,40 @@
         </a>
       </nav>
       <div class="d-flex align-items-center gap-2 flex-wrap">
-        <h1 class="h3 fw-bold mb-0">{{ contract.category }}</h1>
-          {% if contract.status.value == 'active' %}
-          <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
-            <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
-          </span>
-          {% elif contract.status.value == 'canceled' %}
-          <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ _('contracts.canceled') }}
-          </span>
-          {% else %}
-          <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
-            <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
-          </span>
-          {% endif %}
+        <h1 class="h3 fw-bold mb-0">{{ contract.title or contract.category }}</h1>
+        <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">
+          <i class="bi bi-tag me-1"></i>{{ contract.category }}
+        </span>
+        {% if contract.is_archived %}
+        <span class="badge bg-secondary bg-opacity-15 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+          <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
+        </span>
+        {% endif %}
+        {% if contract.status.value == 'active' %}
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+          <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
+        </span>
+        {% elif contract.status.value == 'scheduled' %}
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+          <i class="bi bi-calendar-plus me-1"></i>{{ _('contracts.scheduled') }}
+        </span>
+        {% elif contract.status.value == 'pending_cancellation' %}
+        <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1">
+          <i class="bi bi-hourglass-split me-1"></i>{{ _('contracts.pending_cancellation') }}
+        </span>
+        {% elif contract.status.value == 'cancellation_confirmed' %}
+        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">
+          <i class="bi bi-calendar-x me-1"></i>{{ _('contracts.cancellation_confirmed') }}
+        </span>
+        {% elif contract.status.value == 'paused' %}
+        <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1">
+          <i class="bi bi-pause-circle-fill me-1"></i>{{ _('contracts.paused') }}
+        </span>
+        {% else %}
+        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+          <i class="bi bi-x-circle-fill me-1"></i>{{ _('contracts.canceled') }}
+        </span>
+        {% endif %}
 
           <!-- Remaining Term Badge -->
           {% if contract.remaining_term_human == 'unlimited' %}
@@ -76,23 +96,73 @@
           <li>
             <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
-              <input type="hidden" name="status" value="canceled" />
-              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-warning py-2 {% if contract.status.value == 'canceled' %}fw-bold bg-warning bg-opacity-10{% endif %}">
-                <i class="bi bi-exclamation-triangle"></i>{{ _('contracts.canceled') }}
+              <input type="hidden" name="status" value="scheduled" />
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-primary py-2 {% if contract.status.value == 'scheduled' %}fw-bold bg-primary bg-opacity-10{% endif %}">
+                <i class="bi bi-calendar-plus"></i>{{ _('contracts.scheduled') }}
               </button>
             </form>
           </li>
           <li>
             <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
-              <input type="hidden" name="status" value="archived" />
-              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-secondary py-2 {% if contract.status.value == 'archived' %}fw-bold bg-secondary bg-opacity-10{% endif %}">
-                <i class="bi bi-archive"></i>{{ _('contracts.archived') }}
+              <input type="hidden" name="status" value="pending_cancellation" />
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-warning py-2 {% if contract.status.value == 'pending_cancellation' %}fw-bold bg-warning bg-opacity-10{% endif %}">
+                <i class="bi bi-hourglass-split"></i>{{ _('contracts.pending_cancellation') }}
+              </button>
+            </form>
+          </li>
+          <li>
+            <button type="button" class="dropdown-item d-flex align-items-center gap-2 text-danger py-2 {% if contract.status.value == 'cancellation_confirmed' %}fw-bold bg-danger bg-opacity-10{% endif %}" data-bs-toggle="modal" data-bs-target="#confirmCancellationModal">
+              <i class="bi bi-calendar-x"></i>{{ _('contracts.cancellation_confirmed') }}
+            </button>
+          </li>
+          <li>
+            <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+              <input type="hidden" name="status" value="paused" />
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-info py-2 {% if contract.status.value == 'paused' %}fw-bold bg-info bg-opacity-10{% endif %}">
+                <i class="bi bi-pause-circle"></i>{{ _('contracts.paused') }}
+              </button>
+            </form>
+          </li>
+          <li>
+            <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+              <input type="hidden" name="status" value="canceled" />
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-secondary py-2 {% if contract.status.value == 'canceled' %}fw-bold bg-secondary bg-opacity-10{% endif %}">
+                <i class="bi bi-x-circle"></i>{{ _('contracts.canceled') }}
               </button>
             </form>
           </li>
         </ul>
       </div>
+
+      <!-- Archive / Unarchive Action -->
+      {% if contract.is_archived %}
+      <form method="post" action="{{ url_for('contract.unarchive', id=contract.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+        <button type="submit" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-2 px-3" title="{{ _('contracts.unarchive_action') }}">
+          <i class="bi bi-arrow-counterclockwise"></i>
+          <span class="d-none d-md-inline">{{ _('contracts.unarchive_action') }}</span>
+        </button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('contract.archive', id=contract.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+        <button type="submit" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-2 px-3 {% if contract.status.value != 'canceled' %}disabled{% endif %}" {% if contract.status.value != 'canceled' %}disabled title="{{ _('contracts.archive_only_when_ended') }}"{% else %}title="{{ _('contracts.archive_action') }}"{% endif %}>
+          <i class="bi bi-archive"></i>
+          <span class="d-none d-md-inline">{{ _('contracts.archive_action') }}</span>
+        </button>
+      </form>
+      {% endif %}
+
+      <!-- Extend Contract Button (VVL) -->
+      {% if contract.renewal_type != 'none' and contract.status.value != 'canceled' and not contract.is_archived %}
+      <button class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#extendContractModal" title="{{ _('contracts.extend_title') }}">
+        <i class="bi bi-arrow-repeat"></i>
+        <span>{{ _('contracts.extend_action') }}</span>
+      </button>
+      {% endif %}
 
       <!-- Edit Button -->
       <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#editContractModal">
@@ -248,12 +318,29 @@
             <div class="col-12 col-sm-4 border-top pt-3">
               <span class="text-muted small d-block mb-1">{{ _('form.cancellation_notice') }}</span>
               {% if contract.cancellation_notice_amount and contract.cancellation_notice_amount > 0 %}
+              {% set unit_key = contract.cancellation_notice_unit %}
+              {% if contract.cancellation_notice_amount == 1 %}
+                {% if unit_key == 'days' %}{% set unit_key = 'day' %}
+                {% elif unit_key == 'weeks' %}{% set unit_key = 'week' %}
+                {% elif unit_key == 'months' %}{% set unit_key = 'month' %}
+                {% endif %}
+              {% endif %}
               <div class="d-flex flex-column">
                 <span class="fw-semibold text-body d-flex align-items-center gap-1">
+                  {% if contract.is_monthly_flexible %}
+                  <i class="bi bi-arrow-repeat text-secondary"></i>
+                  {% else %}
                   <i class="bi bi-bell text-warning"></i>
-                  <span>{{ contract.cancellation_notice_amount }} {{ _('form.' ~ contract.cancellation_notice_unit) }}</span>
+                  {% endif %}
+                  <span>{{ contract.cancellation_notice_amount }} {{ _('form.' ~ unit_key) }}</span>
                 </span>
-                {% if contract.status.value == 'active' and contract.cancellation_deadline %}
+                {% if contract.is_monthly_flexible %}
+                <div class="mt-1">
+                  <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                    <i class="bi bi-arrow-repeat"></i>{{ _('contracts.flexible_monthly') }}
+                  </span>
+                </div>
+                {% elif contract.status.value in ('active', 'pending_cancellation') and contract.cancellation_deadline %}
                 <div class="mt-2 pt-2 border-top border-light-subtle">
                   <span class="text-muted d-block" style="font-size: 0.75rem;">
                     {{ _('contracts.cancellation_deadline') }}:
@@ -290,6 +377,52 @@
               {% else %}
               <span class="text-muted">-</span>
               {% endif %}
+            </div>
+
+            <!-- Rollover & Lifecycle Info Row -->
+            <div class="col-12 border-top pt-3">
+              <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-3">
+                  <span class="text-muted small d-block mb-1"><i class="bi bi-clock me-1"></i>{{ _('form.initial_term_months') }}</span>
+                  <span class="fw-semibold text-body">
+                    {% if contract.initial_term_months and contract.initial_term_months > 0 %}
+                    {{ contract.initial_term_months }} Monate
+                    {% else %}
+                    Keine Mindestlaufzeit
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                  <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-event me-1"></i>{{ _('form.cancellation_target_period') }}</span>
+                  <span class="fw-semibold text-body">
+                    {{ _('form.' ~ (contract.cancellation_target_period or 'exact')) }}
+                  </span>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                  <span class="text-muted small d-block mb-1"><i class="bi bi-arrow-repeat me-1"></i>{{ _('form.renewal_type') }}</span>
+                  <span class="fw-semibold text-body">
+                    {% if contract.renewal_type == 'none' %}
+                    Endet ohne Verlängerung
+                    {% elif contract.renewal_type == 'fixed_period' %}
+                    Feste Periode (+{{ contract.renewal_period_months }} Monate)
+                    {% else %}
+                    Monatlich rollierend (§ 309 Nr. 9 BGB)
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                  <span class="text-muted small d-block mb-1"><i class="bi bi-calendar2-check me-1"></i>{{ _('contracts.earliest_cancellation') }}</span>
+                  <span class="fw-semibold text-body">
+                    {% if contract.status.value == 'cancellation_confirmed' and contract.confirmed_end_date %}
+                    <span class="text-danger fw-bold"><i class="bi bi-calendar-x me-1"></i>Bestätigt zum {{ contract.confirmed_end_date.strftime('%d.%m.%Y') }}</span>
+                    {% elif contract.earliest_cancellation_date %}
+                    {{ contract.earliest_cancellation_date.strftime('%d.%m.%Y') }}
+                    {% else %}
+                    -
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <!-- Tags -->
@@ -396,6 +529,53 @@
           {% else %}
           <!-- Open ended breakdown -->
           <div class="row g-3 text-center">
+            {% if cost_summary.initial_commitment %}
+            <!-- Guaranteed Minimum Commitment -->
+            <div class="col-12 col-md-4">
+              <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-primary-emphasis small mb-1 fw-semibold d-flex align-items-center justify-content-center gap-1">
+                  <i class="bi bi-shield-lock"></i>{{ _('contracts.initial_commitment.title') }}
+                </span>
+                <div class="h4 fw-bold text-primary mb-1">
+                  {{ "%.2f"|format(cost_summary.initial_commitment.total_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-muted small">
+                  {{ cost_summary.initial_commitment.months }} Monate (bis {{ cost_summary.initial_commitment.end_date.strftime('%d.%m.%Y') }})
+                </span>
+                <div class="mt-1">
+                  {% if cost_summary.initial_commitment.is_active %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">{{ _('contracts.initial_commitment.active_badge') }}</span>
+                  {% else %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.68rem;">{{ _('contracts.initial_commitment.passed_badge') }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <!-- Paid So Far -->
+            <div class="col-6 col-md-4">
+              <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-success-emphasis small mb-1">{{ _('contracts.cost_summary.paid_amount') }}</span>
+                <div class="h4 fw-bold text-success mb-1">
+                  {{ "%.2f"|format(cost_summary.paid_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-muted small">
+                  {{ _('contracts.cost_summary.payments_done', count=cost_summary.paid_payments) }}
+                </span>
+              </div>
+            </div>
+            <!-- Projected Annual -->
+            <div class="col-6 col-md-4">
+              <div class="p-3 bg-body-tertiary border rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-muted small mb-1">{{ _('contracts.cost_summary.annual_amount') }}</span>
+                <div class="h4 fw-bold text-body mb-1">
+                  {{ "%.2f"|format(cost_summary.annual_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-secondary small">
+                  {{ _('contracts.cost_summary.annual_amount') }} danach
+                </span>
+              </div>
+            </div>
+            {% else %}
             <!-- Paid So Far -->
             <div class="col-12 col-sm-6">
               <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
@@ -420,6 +600,7 @@
                 </span>
               </div>
             </div>
+            {% endif %}
           </div>
           {% endif %}
         </div>
@@ -690,6 +871,61 @@
           {% endif %}
         </div>
       </div>
+
+      <!-- Notes & Timeline Card -->
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text text-primary"></i>
+            <span>{{ _('notes.timeline_title') }}</span>
+          </h5>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">
+            {{ contract.notes_list|length }}
+          </span>
+        </div>
+        <div class="card-body p-4 d-flex flex-column gap-3">
+          <!-- Add Note Form -->
+          <form method="post" action="{{ url_for('contract.add_note', id=contract.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+            <div class="mb-2">
+              <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="{{ _('notes.placeholder') }}" required></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i>
+                <span>{{ _('notes.save') }}</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Notes Timeline List -->
+          {% if contract.notes_list %}
+          <div class="d-flex flex-column gap-2 pt-2 border-top">
+            {% for n in contract.notes_list %}
+            <div class="p-3 bg-body-tertiary rounded-3 border position-relative">
+              <div class="d-flex align-items-center justify-content-between text-muted small mb-1">
+                <span class="d-inline-flex align-items-center gap-1">
+                  <i class="bi bi-clock"></i>
+                  <span>{{ n.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </span>
+                <form method="post" action="{{ url_for('contract.delete_note', id=contract.id, note_id=n.id) }}" class="d-inline" onsubmit="return confirm('Möchtest du diese Notiz wirklich löschen?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+                  <button type="submit" class="btn btn-link text-danger p-0 border-0" title="{{ _('notes.delete') }}">
+                    <i class="bi bi-trash small"></i>
+                  </button>
+                </form>
+              </div>
+              <div class="text-body small" style="white-space: pre-wrap;">{{ n.content }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-muted text-center py-3 border-top">
+            <p class="small mb-0">{{ _('notes.empty') }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -719,28 +955,23 @@
             </div>
             <div class="col-6">
               <label class="form-label small fw-semibold">{{ _('form.valid_from') }} <span class="text-danger">*</span></label>
-              <input name="valid_from" type="date" class="form-control" value="{{ price_form.valid_from.data }}" required />
+              <input name="valid_from" type="date" class="form-control" required />
             </div>
             <div class="col-6">
               <label class="form-label small fw-semibold">{{ _('form.valid_to') }}</label>
               <input name="valid_to" type="date" class="form-control" />
             </div>
             <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
-              <input name="note" class="form-control" placeholder="z. B. Reguläre Preiserhöhung 2025" />
-            </div>
-
-            <!-- Smart Auto-Adjustment Checkbox -->
-            <div class="col-12 pt-2">
-              <div class="form-check p-3 bg-body-tertiary rounded-3 border">
-                <input class="form-check-input ms-0 me-2" type="checkbox" name="auto_adjust" value="y" id="autoAdjustCheck" checked />
-                <label class="form-check-label small fw-semibold text-body" for="autoAdjustCheck">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="auto_adjust_overlap" id="autoAdjustDetail" checked />
+                <label class="form-check-label small" for="autoAdjustDetail">
                   {{ _('form.auto_adjust') }}
                 </label>
-                <div class="text-muted small ps-4 mt-1" style="font-size: 0.75rem;">
-                  Verkürzt einen bestehenden offenen Vorpreis automatisch zum Vortag, um Überschneidungen zu verhindern.
-                </div>
               </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
+              <input name="note" class="form-control" placeholder="z. B. Preiserhöhung nach 12 Monaten" />
             </div>
           </div>
         </div>
@@ -770,10 +1001,35 @@
       <form method="post" action="{{ url_for('contract.edit', id=contract.id) }}">
         {{ edit_form.hidden_tag() }}
         <div class="modal-body p-4">
-          <div class="row g-3">
+          <div class="row g-3 contract-term-group">
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.title') }} <span class="text-danger">*</span></label>
+              <input name="title" class="form-control" value="{{ contract.title }}" placeholder="{{ _('form.title_hint') }}" required />
+            </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.category') }} <span class="text-danger">*</span></label>
-              <input name="category" class="form-control" value="{{ contract.category }}" required />
+              <div class="position-relative combobox-container">
+                <input name="category" class="form-control pe-5 combobox-input" value="{{ contract.category }}" required autocomplete="off" />
+                <button type="button" class="btn p-0 pe-3 position-absolute end-0 top-50 translate-middle-y text-secondary d-flex align-items-center combobox-toggle" data-bs-toggle="dropdown" data-bs-reference="parent" aria-expanded="false" title="{{ _('form.select_option') }}" style="border: none; background: transparent; box-shadow: none;">
+                  <i class="bi bi-chevron-down small"></i>
+                  <span class="visually-hidden">{{ _('form.category') }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                  {% if user_categories is defined and user_categories %}
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.existing_entries') }}</li>
+                    {% for cat in user_categories %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ cat }}">{{ cat }}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.suggestions') }}</li>
+                  {% endif %}
+                  {% for default_cat in ['Streaming', 'Wohnen & Miete', 'Internet & Mobilfunk', 'Versicherung', 'Mobilität & Kfz', 'Fitness & Sport', 'Software & Cloud', 'Finanzen & Bank', 'Energie & Strom', 'Abonnement'] %}
+                    {% if not (user_categories is defined and default_cat in user_categories) %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ default_cat }}">{{ default_cat }}</button></li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </div>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
@@ -796,6 +1052,31 @@
               </select>
             </div>
             <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
+              <div class="position-relative combobox-container">
+                <input name="payment_method" class="form-control pe-5 combobox-input" value="{{ contract.payment_method or '' }}" placeholder="SEPA-Lastschrift, PayPal, Kreditkarte..." autocomplete="off" />
+                <button type="button" class="btn p-0 pe-3 position-absolute end-0 top-50 translate-middle-y text-secondary d-flex align-items-center combobox-toggle" data-bs-toggle="dropdown" data-bs-reference="parent" aria-expanded="false" title="{{ _('form.select_option') }}" style="border: none; background: transparent; box-shadow: none;">
+                  <i class="bi bi-chevron-down small"></i>
+                  <span class="visually-hidden">{{ _('form.payment_method') }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                  {% if user_payment_methods is defined and user_payment_methods %}
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.existing_entries') }}</li>
+                    {% for pm in user_payment_methods %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ pm }}">{{ pm }}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.suggestions') }}</li>
+                  {% endif %}
+                  {% for default_pm in ['SEPA-Lastschrift', 'Kreditkarte', 'PayPal', 'Dauerauftrag / Überweisung', 'Apple Pay / Google Pay', 'Rechnung'] %}
+                    {% if not (user_payment_methods is defined and default_pm in user_payment_methods) %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ default_pm }}">{{ default_pm }}</button></li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
               <select name="frequency" class="form-select">
                 {% for val, label in edit_form.frequency.choices %}
@@ -804,28 +1085,111 @@
               </select>
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
-              <input name="billing_anchor_date" type="date" class="form-control" value="{{ contract.billing_anchor_date or '' }}" />
-              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
-            </div>
-            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
               <input name="start_date" type="date" class="form-control" value="{{ contract.start_date or '' }}" />
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
-              <input name="end_date" type="date" class="form-control" value="{{ contract.end_date or '' }}" />
+              <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
+              <input name="billing_anchor_date" type="date" class="form-control" value="{{ contract.billing_anchor_date or '' }}" />
+              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
+            </div>
+
+            <!-- Term Mode Selector (3 Vertragstypen) -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold d-block mb-1">{{ _('form.term_model') }}</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check term-mode-radio-monthly" name="contract_term_mode_edit" id="term_mode_monthly_edit" value="monthly_rolling" {% if contract.renewal_type == 'monthly_rolling' %}checked{% endif %} autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_monthly_edit">
+                  <div class="fw-semibold small"><i class="bi bi-arrow-repeat me-1"></i>{{ _('form.term_auto') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_auto_hint') }}</div>
+                </label>
+
+                <input type="radio" class="btn-check term-mode-radio-fixed-cycle" name="contract_term_mode_edit" id="term_mode_fixed_cycle_edit" value="fixed_period" {% if contract.renewal_type == 'fixed_period' %}checked{% endif %} autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_fixed_cycle_edit">
+                  <div class="fw-semibold small"><i class="bi bi-clock-history me-1"></i>{{ _('form.term_cycle') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_cycle_hint') }}</div>
+                </label>
+
+                <input type="radio" class="btn-check term-mode-radio-none" name="contract_term_mode_edit" id="term_mode_none_edit" value="none" {% if contract.renewal_type == 'none' %}checked{% endif %} autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_none_edit">
+                  <div class="fw-semibold small"><i class="bi bi-calendar-x me-1"></i>{{ _('form.term_fixed') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_fixed_hint') }}</div>
+                </label>
+              </div>
+              <input type="hidden" name="renewal_type" value="{{ contract.renewal_type or 'monthly_rolling' }}" />
+            </div>
+
+            <!-- Fixed Term Container (Visible only in fixed mode) -->
+            <div class="col-12 term-mode-fixed-container {% if contract.renewal_type != 'none' %}d-none{% endif %}">
+              <label class="form-label small fw-semibold">{{ _('form.end_date') }} <span class="text-danger">*</span></label>
+              <input name="end_date" type="date" class="form-control" value="{{ contract.end_date.isoformat() if contract.end_date else '' }}" />
+              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.term_fixed_desc') }}</div>
+            </div>
+
+            <!-- Auto-Renewing & Cycle Container (Visible in auto / cycle mode) -->
+            <div class="col-12 term-mode-auto-container {% if contract.renewal_type == 'none' %}d-none{% endif %}">
+              <div class="row g-3">
+                <div class="col-12 col-md-7">
+                  <label class="form-label small fw-semibold">{{ _('form.initial_term_end_date') }}</label>
+                  <input name="initial_term_end_date" type="date" class="form-control" value="{{ contract.initial_term_end_date.isoformat() if contract.initial_term_end_date else '' }}" />
+                  <input name="initial_term_months" type="hidden" value="{{ contract.initial_term_months or 0 }}" />
+                  <div class="d-flex gap-1 mt-1">
+                    <button type="button" class="btn btn-xs {% if not contract.initial_term_end_date and not contract.initial_term_months %}btn-primary active{% else %}btn-outline-secondary{% endif %} py-0 px-2" style="font-size: 0.72rem;" data-set-months="0">{{ _('form.quick_months_0') }}</button>
+                    <button type="button" class="btn btn-xs {% if contract.initial_term_months == 12 %}btn-primary active{% else %}btn-outline-secondary{% endif %} py-0 px-2" style="font-size: 0.72rem;" data-set-months="12">{{ _('form.quick_months_12') }}</button>
+                    <button type="button" class="btn btn-xs {% if contract.initial_term_months == 24 %}btn-primary active{% else %}btn-outline-secondary{% endif %} py-0 px-2" style="font-size: 0.72rem;" data-set-months="24">{{ _('form.quick_months_24') }}</button>
+                  </div>
+                  <div class="form-text small text-muted" style="font-size: 0.70rem;">{{ _('form.initial_term_hint') }}</div>
+                </div>
+                <div class="col-12 col-md-5 renewal-period-wrapper {% if contract.renewal_type != 'fixed_period' %}d-none{% endif %}">
+                  <label class="form-label small fw-semibold">{{ _('form.renewal_period_months') }}</label>
+                  <div class="input-group">
+                    <input name="renewal_period_months" type="number" min="1" class="form-control" value="{{ contract.renewal_period_months or 12 }}" />
+                    <span class="input-group-text small">Mon.</span>
+                  </div>
+                  <div class="form-text small text-muted" style="font-size: 0.70rem;">{{ _('form.cycle_hint') }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cancellation Notice & Target Anchor -->
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
+              <input name="cancellation_notice_amount" type="number" min="0" class="form-control" value="{{ contract.cancellation_notice_amount }}" />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.unit') }}</label>
+              <select name="cancellation_notice_unit" class="form-select">
+                {% for val, label in edit_form.cancellation_notice_unit.choices %}
+                <option value="{{ val }}" {% if contract.cancellation_notice_unit == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_target_period') }}</label>
+              <select name="cancellation_target_period" class="form-select">
+                {% for val, label in edit_form.cancellation_target_period.choices %}
+                <option value="{{ val }}" {% if (contract.cancellation_target_period or 'exact') == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Live Calculation Preview Alert -->
+            <div class="col-12">
+              <div class="term-live-preview alert alert-light border small py-2 px-3 mb-0">
+                <div class="term-live-preview-text">
+                  <i class="bi bi-info-circle me-1 text-primary"></i>{{ _('form.live_preview_hint') }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Cancellation Tracking Dates -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_sent_date') }}</label>
+              <input name="cancellation_sent_date" type="date" class="form-control" value="{{ contract.cancellation_sent_date or '' }}" />
             </div>
             <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
-              <div class="input-group">
-                <input name="cancellation_notice_amount" type="number" min="0" class="form-control" value="{{ contract.cancellation_notice_amount }}" />
-                <select name="cancellation_notice_unit" class="form-select">
-                  {% for val, label in edit_form.cancellation_notice_unit.choices %}
-                  <option value="{{ val }}" {% if contract.cancellation_notice_unit == val %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+              <label class="form-label small fw-semibold">{{ _('form.confirmed_end_date') }}</label>
+              <input name="confirmed_end_date" type="date" class="form-control" value="{{ contract.confirmed_end_date or '' }}" />
             </div>
             <!-- Compact Inline Tags Picker with Dropdown Autocomplete -->
             <div class="col-12 col-md-6">
@@ -837,21 +1201,138 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
-              <input name="payment_method" class="form-control" value="{{ contract.payment_method or '' }}" />
-            </div>
             <div class="col-12">
               <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
               <textarea name="notes" class="form-control" rows="2">{{ contract.notes or '' }}</textarea>
             </div>
           </div>
         </div>
+
+
+
         <div class="modal-footer border-top bg-body-tertiary">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
           <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
             <i class="bi bi-check-lg"></i>
             <span>{{ _('contracts.save_changes') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm Cancellation -->
+<div class="modal fade" id="confirmCancellationModal" tabindex="-1" aria-labelledby="confirmCancellationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="confirmCancellationModalLabel">
+          <i class="bi bi-calendar-x"></i>
+          <span>{{ _('contracts.confirm_cancellation.title') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+        <input type="hidden" name="status" value="cancellation_confirmed" />
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">{{ _('contracts.confirm_cancellation.subtitle') }}</p>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.confirm_cancellation.date_label') }} <span class="text-danger">*</span></label>
+            {% set default_end = contract.confirmed_end_date or contract.earliest_cancellation_date or contract.end_date %}
+            <input type="date" name="confirmed_end_date" class="form-control" value="{{ default_end.isoformat() if default_end else '' }}" required />
+            <div class="form-text small text-muted">
+              {% if contract.earliest_cancellation_date %}
+              Vorberechnet anhand Kündigungsfrist: {{ contract.earliest_cancellation_date.strftime('%d.%m.%Y') }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.confirm_cancellation.submit') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Extend Contract (VVL) -->
+<div class="modal fade" id="extendContractModal" tabindex="-1" aria-labelledby="extendContractModalLabel" aria-hidden="true" data-current-end="{{ (contract.initial_term_end_date or contract.earliest_cancellation_date or '').isoformat() if (contract.initial_term_end_date or contract.earliest_cancellation_date) else '' }}">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-success d-flex align-items-center gap-2" id="extendContractModalLabel">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>{{ _('contracts.extend.title') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.extend_contract', id=contract.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">{{ _('contracts.extend.subtitle') }}</p>
+
+          <!-- Extension Period -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.period_label') }}</label>
+            <select name="extension_months" class="form-select">
+              <option value="12">12 Monate</option>
+              <option value="24" selected>24 Monate</option>
+              <option value="custom">Individuelles Enddatum</option>
+            </select>
+          </div>
+
+          <!-- Custom End Date Wrapper (hidden by default) -->
+          <div class="mb-3 custom-date-wrapper d-none">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.custom_date_label') }}</label>
+            <input type="date" name="custom_end_date" class="form-control" />
+          </div>
+
+          <!-- Start Mode: Append vs From Today -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.start_mode_label') }}</label>
+            <select name="extension_start_mode" class="form-select">
+              <option value="append" selected>{{ _('contracts.extend.mode_append') }}</option>
+              <option value="from_today">{{ _('contracts.extend.mode_from_today') }}</option>
+            </select>
+            <div class="form-text small text-muted" style="font-size: 0.72rem;">
+              {{ _('contracts.extend.mode_hint') }}
+            </div>
+          </div>
+
+          <!-- Live Preview Box -->
+          <div class="mb-3">
+            <div class="extend-live-preview alert alert-success-subtle border border-success-subtle small py-2 px-3 mb-0">
+              <i class="bi bi-info-circle text-muted me-1"></i>Berechne Vorschau...
+            </div>
+          </div>
+
+          <!-- New Amount (Optional) -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.amount_label') }}</label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" name="new_amount" class="form-control" placeholder="{{ '%.2f'|format(contract.current_amount) }}" />
+              <span class="input-group-text small">{{ contract.currency }}</span>
+            </div>
+            <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('contracts.extend.amount_hint') }}</div>
+          </div>
+
+          <!-- Note -->
+          <div class="mb-0">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.note_label') }}</label>
+            <textarea name="note" class="form-control" rows="2" placeholder="{{ _('contracts.extend.note_placeholder') }}"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          <button type="submit" class="btn btn-success d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.extend.submit') }}</span>
           </button>
         </div>
       </form>

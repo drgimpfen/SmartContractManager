@@ -17,26 +17,103 @@
       <form method="post" action="{{ target_action }}">
         {{ active_form.hidden_tag() }}
         <div class="modal-body p-4">
-          <div class="row g-3">
-            <!-- Category & Provider -->
+          <div class="row g-3 contract-term-group">
+            <!-- Title & Category -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.title') }} <span class="text-danger">*</span></label>
+              <input name="title" class="form-control" placeholder="{{ _('form.title_hint') }}" required />
+            </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.category') }} <span class="text-danger">*</span></label>
-              <input name="category" class="form-control" placeholder="{{ _('form.category_hint') }}" required />
+              <!-- Single Combined Form Field with Embedded Combobox Chevron Button -->
+              <div class="position-relative combobox-container">
+                <input 
+                  type="text" 
+                  name="category" 
+                  class="form-control pe-5 combobox-input" 
+                  placeholder="{{ _('form.category_hint') }}" 
+                  required 
+                  autocomplete="off" 
+                />
+                <button type="button" class="btn p-0 pe-3 position-absolute end-0 top-50 translate-middle-y text-secondary d-flex align-items-center combobox-toggle" data-bs-toggle="dropdown" data-bs-reference="parent" aria-expanded="false" title="{{ _('form.select_option') }}" style="border: none; background: transparent; box-shadow: none;">
+                  <i class="bi bi-chevron-down small"></i>
+                  <span class="visually-hidden">{{ _('form.category') }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                  {% if user_categories is defined and user_categories %}
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.existing_entries') }}</li>
+                    {% for cat in user_categories %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ cat }}">{{ cat }}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.suggestions') }}</li>
+                  {% endif %}
+                  {% for default_cat in ['Streaming', 'Wohnen & Miete', 'Internet & Mobilfunk', 'Versicherung', 'Mobilität & Kfz', 'Fitness & Sport', 'Software & Cloud', 'Finanzen & Bank', 'Energie & Strom', 'Abonnement'] %}
+                    {% if not (user_categories is defined and default_cat in user_categories) %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ default_cat }}">{{ default_cat }}</button></li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </div>
             </div>
+
+            <!-- Provider & Contract Number -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
               <select name="provider_id" class="form-select">
+                <option value="" {% if not active_form.provider_id.data %}selected{% endif %}>{{ _('form.no_provider_selected') }}</option>
                 {% for val, label in active_form.provider_id.choices %}
-                <option value="{{ val }}" {% if preselected_provider_id is defined and preselected_provider_id == val %}selected{% elif active_form.provider_id.data == val %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ val }}" {% if active_form.provider_id.data is not none and active_form.provider_id.data|string == val|string %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
-
-            <!-- Contract Number & Status -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
-              <input name="contract_number" class="form-control" placeholder="{{ _('common.no_number') }}" />
+              <input name="contract_number" class="form-control" placeholder="{{ _('form.optional') }}" />
             </div>
+
+            <!-- Amount, Currency & Payment Method -->
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
+              <input type="number" step="0.01" inputmode="decimal" name="amount" class="form-control" value="0.00" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
+              <input name="currency" class="form-control" value="EUR" required />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
+              <div class="position-relative combobox-container">
+                <input 
+                  type="text" 
+                  name="payment_method" 
+                  class="form-control pe-5 combobox-input" 
+                  placeholder="z. B. SEPA-Lastschrift" 
+                  autocomplete="off" 
+                />
+                <button type="button" class="btn p-0 pe-3 position-absolute end-0 top-50 translate-middle-y text-secondary d-flex align-items-center combobox-toggle" data-bs-toggle="dropdown" data-bs-reference="parent" aria-expanded="false" title="{{ _('form.select_option') }}" style="border: none; background: transparent; box-shadow: none;">
+                  <i class="bi bi-chevron-down small"></i>
+                  <span class="visually-hidden">{{ _('form.payment_method') }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                  {% if user_payment_methods is defined and user_payment_methods %}
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.existing_entries') }}</li>
+                    {% for pm in user_payment_methods %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ pm }}">{{ pm }}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.suggestions') }}</li>
+                  {% endif %}
+                  {% for default_pm in ['SEPA-Lastschrift', 'Kreditkarte', 'PayPal', 'Dauerauftrag', 'Überweisung', 'Apple Pay', 'Google Pay', 'Barzahlung'] %}
+                    {% if not (user_payment_methods is defined and default_pm in user_payment_methods) %}
+                    <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ default_pm }}">{{ default_pm }}</button></li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            <!-- Status & Frequency -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.status') }}</label>
               <select name="status" class="form-select">
@@ -45,17 +122,7 @@
                 {% endfor %}
               </select>
             </div>
-
-            <!-- Amount, Currency & Rhythm -->
-            <div class="col-12 col-md-4">
-              <label class="form-label small fw-semibold">{{ _('form.amount') }} <span class="text-danger">*</span></label>
-              <input name="amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required />
-            </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
-              <input name="currency" class="form-control" value="{{ current_user.currency or 'EUR' }}" required />
-            </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
               <select name="frequency" class="form-select">
                 {% for val, label in active_form.frequency.choices %}
@@ -64,27 +131,80 @@
               </select>
             </div>
 
-            <!-- Dates: Start, End & Billing Anchor Date -->
-            <div class="col-12 col-md-4">
+            <!-- Dates: Start Date & Billing Anchor Date -->
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
               <input name="start_date" type="date" class="form-control" />
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
               <input name="billing_anchor_date" type="date" class="form-control" />
               <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
             </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
-              <input name="end_date" type="date" class="form-control" />
+
+            <!-- Term Mode Selector (3 Vertragstypen) -->
+            <div class="col-12">
+              <label class="form-label small fw-semibold d-block mb-1">{{ _('form.term_model') }}</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check term-mode-radio-monthly" name="contract_term_mode_{{ target_modal_id }}" id="term_mode_monthly_{{ target_modal_id }}" value="monthly_rolling" checked autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_monthly_{{ target_modal_id }}">
+                  <div class="fw-semibold small"><i class="bi bi-arrow-repeat me-1"></i>{{ _('form.term_auto') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_auto_hint') }}</div>
+                </label>
+
+                <input type="radio" class="btn-check term-mode-radio-fixed-cycle" name="contract_term_mode_{{ target_modal_id }}" id="term_mode_fixed_cycle_{{ target_modal_id }}" value="fixed_period" autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_fixed_cycle_{{ target_modal_id }}">
+                  <div class="fw-semibold small"><i class="bi bi-clock-history me-1"></i>{{ _('form.term_cycle') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_cycle_hint') }}</div>
+                </label>
+
+                <input type="radio" class="btn-check term-mode-radio-none" name="contract_term_mode_{{ target_modal_id }}" id="term_mode_none_{{ target_modal_id }}" value="none" autocomplete="off" />
+                <label class="btn btn-outline-primary btn-sm py-2 px-2 text-start flex-fill" for="term_mode_none_{{ target_modal_id }}">
+                  <div class="fw-semibold small"><i class="bi bi-calendar-x me-1"></i>{{ _('form.term_fixed') }}</div>
+                  <div class="text-muted" style="font-size: 0.68rem;">{{ _('form.term_fixed_hint') }}</div>
+                </label>
+              </div>
+              <input type="hidden" name="renewal_type" value="monthly_rolling" />
             </div>
 
-            <!-- Cancellation Notice -->
-            <div class="col-12 col-md-6">
+            <!-- Fixed Term Container (Visible only in fixed mode) -->
+            <div class="col-12 term-mode-fixed-container d-none">
+              <label class="form-label small fw-semibold">{{ _('form.end_date') }} <span class="text-danger">*</span></label>
+              <input name="end_date" type="date" class="form-control" />
+              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.term_fixed_desc') }}</div>
+            </div>
+
+            <!-- Auto-Renewing & Fixed-Cycle Container (Visible in auto / cycle mode) -->
+            <div class="col-12 term-mode-auto-container">
+              <div class="row g-3">
+                <div class="col-12 col-md-7">
+                  <label class="form-label small fw-semibold">{{ _('form.initial_term_end_date') }}</label>
+                  <input name="initial_term_end_date" type="date" class="form-control" />
+                  <input name="initial_term_months" type="hidden" value="0" />
+                  <div class="d-flex gap-1 mt-1">
+                    <button type="button" class="btn btn-xs btn-primary active py-0 px-2" style="font-size: 0.72rem;" data-set-months="0">{{ _('form.quick_months_0') }}</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 0.72rem;" data-set-months="12">{{ _('form.quick_months_12') }}</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 0.72rem;" data-set-months="24">{{ _('form.quick_months_24') }}</button>
+                  </div>
+                  <div class="form-text small text-muted" style="font-size: 0.70rem;">{{ _('form.initial_term_hint') }}</div>
+                </div>
+                <div class="col-12 col-md-5 renewal-period-wrapper d-none">
+                  <label class="form-label small fw-semibold">{{ _('form.renewal_period_months') }}</label>
+                  <div class="input-group">
+                    <input name="renewal_period_months" type="number" min="1" value="12" class="form-control" />
+                    <span class="input-group-text small">Mon.</span>
+                  </div>
+                  <div class="form-text small text-muted" style="font-size: 0.70rem;">{{ _('form.cycle_hint') }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cancellation Notice & Target Anchor -->
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.cancellation_notice') }}</label>
               <input name="cancellation_notice_amount" type="number" min="0" value="0" class="form-control" placeholder="0" />
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.unit') }}</label>
               <select name="cancellation_notice_unit" class="form-select">
                 {% for val, label in active_form.cancellation_notice_unit.choices %}
@@ -92,13 +212,26 @@
                 {% endfor %}
               </select>
             </div>
-
-            <!-- Payment Method & Tags -->
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
-              <input name="payment_method" class="form-control" placeholder="SEPA-Lastschrift, PayPal, Kreditkarte..." />
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.cancellation_target_period') }}</label>
+              <select name="cancellation_target_period" class="form-select">
+                {% for val, label in active_form.cancellation_target_period.choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <div class="col-12 col-md-6">
+
+            <!-- Live Calculation Preview Alert -->
+            <div class="col-12">
+              <div class="term-live-preview alert alert-light border small py-2 px-3 mb-0">
+                <div class="term-live-preview-text">
+                  <i class="bi bi-info-circle me-1 text-primary"></i>{{ _('form.live_preview_hint') }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="col-12">
               <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
               {% if all_tags is defined and all_tags %}
               <div class="tag-picker-inline position-relative" data-available-tags='[{% for t in all_tags %}{"name": {{ t.name|tojson }}, "color": {{ (t.color or '')|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]'>
@@ -119,6 +252,9 @@
             </div>
           </div>
         </div>
+
+
+
         <div class="modal-footer border-top bg-body-tertiary">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
           <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
