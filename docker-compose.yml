@@ -9,7 +9,7 @@ services:
       - ./db_data:/var/lib/postgresql/data
   web:
     build: .
-    command: flask run --host=0.0.0.0 --port=8000 --debug
+    command: sh -c "alembic upgrade head && flask run --host=0.0.0.0 --port=8000 --debug"
     environment:
       FLASK_APP: app
       DATABASE_URL: postgresql+psycopg://smartuser:smartpass@db:5432/smartcontractdb

@@ -70,13 +70,4 @@ def create_app(test_config=None):
     application.register_blueprint(provider.bp)
     application.register_blueprint(settings.bp)
 
-    # Initialize tables automatically if not in testing mode
-    if not application.config.get('TESTING'):
-        with application.app_context():
-            try:
-                from app import models  # noqa: F401
-                db.create_all()
-            except Exception as exc:
-                application.logger.warning(f"db.create_all() skipped or deferred: {exc}")
-
     return application

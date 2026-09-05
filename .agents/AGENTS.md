@@ -80,6 +80,11 @@ For any code creation, refactoring, or architectural modification, the following
 - **Execution via Terminal:**
   - After explicit user confirmation, execute the commit directly via the terminal (`git add` & `git commit`).
 
+### 5.4 Documentation Language Standards
+- All project documentation files (`*.md`), including `README.md`, `ROADMAP.md`, architectural decisions, and rule definitions, must strictly be authored in **English**.
+- Internal code documentation, comments, and docstrings must strictly be written in **English**.
+- (Note: Application UI localization remains managed via the translation catalogs in `app/locales/*.json` as specified in Section 3).
+
 ## 6. Core Data Model (Reference)
 The following entities must be modeled in SQLAlchemy:
 1. `User`: ID, username, password_hash (optional with OIDC), oidc_sub (for OpenID Connect identification), timezone, base_currency, created_at.
@@ -90,33 +95,34 @@ The following entities must be modeled in SQLAlchemy:
 6. `Tag`: ID, name, color. (Many-to-Many with Contract via `contract_tags`).
 7. `Document`: ID, contract_id, file_name, file_path, ocr_content, uploaded_at.
 
-## 7. Modules to Implement (Epics)
-### Epic 1: Basic Infrastructure & Auth
-* Set up `docker-compose.yml` (PostgreSQL DB + Python web app).
-* SQLAlchemy base setup and Alembic for migrations.
-* User registration and login system.
-* OIDC (OpenID Connect) integration via `Authlib`: Endpoints and logic for user identification via `oidc_sub`.
+## 7. Functional Architecture & System Scope
+The system is divided into cohesive functional domains. Note: For milestone tracking, sprint planning, and active epic statuses, refer strictly to `ROADMAP.md`.
 
-### Epic 2: CRUD Operations (Core)
-* Management for `Provider` (contract partners).
-* Management for `Contract` (contracts) including assignment of `Tags`.
-* Tracking price changes (`PriceEntry`), updating main contract + storing history.
+### 7.1 Infrastructure & Core Authentication
+* Containerized PostgreSQL database and Flask web application via Docker Compose.
+* Versioned database migrations managed via Alembic.
+* Local session authentication (registration, password hashing, login, logout).
+* External identity provider authentication (OIDC via Authlib) with user mapping via `oidc_sub`.
 
-### Epic 3: Financial Dashboard & Logic (Test-Driven via pytest)
-* **Cash Flow Mode:** Algorithm (next 12 months, actual payments starting from `billing_anchor_date` and `interval`), displayed as a bar chart.
-* **Budget Mode:** Algorithm (normalized to monthly costs), displayed as a pie chart by `category`.
-* **Currency Service:** Automatic fetch (e.g., Frankfurter API) with 24h DB cache via `ExchangeRateCache`. Must be used by dashboard algorithms.
-* *Prerequisite:* Write `pytest` unit tests for cash flow and budget calculation functions before the UI is built.
+### 7.2 Core Contract & Provider Management
+* Provider management (contact details, customer numbers, portal and cancellation links).
+* Contract lifecycle management (categories, intervals, notice periods, `billing_anchor_date`).
+* Tagging system (many-to-many relationship between contracts and tags).
+* Price change tracking (`PriceEntry`) maintaining full historic pricing and effective dates.
 
-### Epic 4: Document Management & OCR Preparation
-* Upload endpoint for PDFs strictly enforcing the security guidelines defined in Section 3 (5 MB limit, `secure_filename`, MIME type check).
-* Storage in secure file system and creation of a `Document` record.
-* Placeholder/integration (`pytesseract`/`ocrmypdf`) for OCR extraction into `ocr_content`.
-* Creation of an authenticated route (`/documents/download/<id>`) for file downloads.
+### 7.3 Financial Engine & Analytics
+* Dynamic currency conversion utilizing the external exchange rate service (e.g., Frankfurter API) backed by a 24-hour database cache (`ExchangeRateCache`).
+* Cash flow projection: 12-month projection calculating exact payment dates from `billing_anchor_date` and payment frequency.
+* Budget analysis: Monthly normalized cost distributions categorized for spending insights.
 
-### Epic 5: Export & Import
-* CSV upload endpoint for bulk creation (including validation).
-* PDF export endpoint (rendering an HTML table into PDF format as a budget plan).
+### 7.4 Document Vault & OCR Pipeline
+* Secure file storage with strict validation (5 MB limit, `secure_filename`, `application/pdf` MIME type verification).
+* Authenticated document delivery preventing unauthorized static access.
+* Asynchronous/background OCR text extraction (`ocr_content`) for searchability.
+
+### 7.5 Data Portability
+* Bulk import via CSV validation pipelines.
+* Budget and contract export to formatted PDF reports.
 
 ## 8. Multi-Agent System Architecture
 The project is orchestrated via an optimized multi-agent structure tailored to Server-Side Rendering (Jinja2) and the ORM (SQLAlchemy).
