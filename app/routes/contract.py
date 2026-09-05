@@ -121,12 +121,14 @@ def detail(id):
     price_form = PriceEntryForm()
     price_form.currency.data = contract.currency
     price_form.valid_from.data = date.today()
+    all_tags = Tag.query.filter_by(user_id=current_user.id).order_by(Tag.name.asc()).all()
 
     return render_template(
         'contract_detail.html',
         contract=contract,
         edit_form=edit_form,
         price_form=price_form,
+        all_tags=all_tags,
     )
 
 

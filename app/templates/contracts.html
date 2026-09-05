@@ -27,16 +27,16 @@
         <!-- Status Filter Pills -->
         <div class="col-12 col-lg-auto me-lg-auto">
           <div class="btn-group btn-group-sm w-100" role="group" aria-label="Status Filter">
-            <a href="{{ url_for('contract.index', status='all', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'all' %}active fw-semibold text-white bg-primary border-primary{% endif %}">
+            <a href="{{ url_for('contract.index', status='all', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'all' %}active fw-semibold text-white bg-primary border-primary{% endif %}">
               {{ _('contracts.filter_all') }}
             </a>
-            <a href="{{ url_for('contract.index', status='active', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'active' %}active fw-semibold text-white bg-success border-success{% endif %}">
+            <a href="{{ url_for('contract.index', status='active', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'active' %}active fw-semibold text-white bg-success border-success{% endif %}">
               {{ _('contracts.active') }}
             </a>
-            <a href="{{ url_for('contract.index', status='canceled', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'canceled' %}active fw-semibold text-white bg-warning border-warning{% endif %}">
+            <a href="{{ url_for('contract.index', status='canceled', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'canceled' %}active fw-semibold text-white bg-warning border-warning{% endif %}">
               {{ _('contracts.canceled') }}
             </a>
-            <a href="{{ url_for('contract.index', status='archived', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'archived' %}active fw-semibold text-white bg-secondary border-secondary{% endif %}">
+            <a href="{{ url_for('contract.index', status='archived', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'archived' %}active fw-semibold text-white bg-secondary border-secondary{% endif %}">
               {{ _('contracts.archived') }}
             </a>
           </div>
@@ -95,56 +95,79 @@
           <tbody>
             {% for contract in contracts %}
             <tr>
-              <!-- Category, Number & Tags -->
+              <!-- Category & Tags -->
               <td class="ps-3 py-3">
                 <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
                   {{ contract.category }}
                 </a>
+                {% if contract.tags %}
                 <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
-                  {% if contract.contract_number %}
-                  <span class="text-muted small">#{{ contract.contract_number }}</span>
-                  {% endif %}
                   {% for t in contract.tags %}
                   <span class="badge rounded-pill" style="background-color: {{ t.color }}; font-size: 0.7rem; color: #ffffff;">
                     {{ t.name }}
                   </span>
                   {% endfor %}
                 </div>
+                {% endif %}
               </td>
 
-              <!-- Provider -->
+              <!-- Provider & Contract Number -->
               <td class="py-3">
                 {% if contract.provider %}
-                <div class="d-flex align-items-center gap-2">
-                  <i class="bi bi-building text-secondary"></i>
+                <div class="d-flex align-items-center gap-1 fw-semibold text-body">
+                  <i class="bi bi-building text-secondary small"></i>
                   <span>{{ contract.provider.name }}</span>
                 </div>
                 {% else %}
                 <span class="text-muted small">{{ _('common.none') }}</span>
                 {% endif %}
+                {% if contract.contract_number %}
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                  #{{ contract.contract_number }}
+                </div>
+                {% endif %}
               </td>
 
               <!-- Amount & Rhythm -->
               <td class="py-3">
-                <div class="fw-semibold text-nowrap">
+                <div class="fw-bold text-nowrap text-body">
                   {{ "%.2f"|format(contract.amount) }} {{ contract.currency }}
                 </div>
-                <small class="d-block mt-1">
-                  <span class="badge bg-body-secondary text-body border" style="font-size: 0.72rem;">
-                    {{ _('form.' ~ contract.frequency.value) }}
-                  </span>
-                </small>
+                <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                  {{ _('form.' ~ contract.frequency.value) }}
+                </div>
               </td>
 
-              <!-- Billing Anchor Date -->
+              <!-- Due Date -->
               <td class="py-3">
-                {% if contract.billing_anchor_date %}
-                <span class="small text-body d-flex align-items-center gap-1">
-                  <i class="bi bi-calendar3 text-primary"></i>
-                  <span>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}</span>
-                </span>
+                {% set next_bill = contract.next_billing_date %}
+                {% if next_bill %}
+                  {% set days_left = contract.days_until_next_billing %}
+                  <div>
+                    <span class="small fw-semibold text-body d-flex align-items-center gap-1">
+                      <i class="bi bi-calendar-event text-primary"></i>
+                      <span>{{ next_bill.strftime('%d.%m.%Y') }}</span>
+                    </span>
+                    {% if days_left is not none %}
+                      {% if days_left == 0 %}
+                      <div class="text-warning small fw-semibold mt-1" style="font-size: 0.75rem;">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i>{{ _('contracts.due_today') }}
+                      </div>
+                      {% elif days_left > 0 and days_left <= 7 %}
+                      <div class="text-info-emphasis small fw-semibold mt-1" style="font-size: 0.75rem;">
+                        {{ _('contracts.due_in_days', days=days_left) }}
+                      </div>
+                      {% else %}
+                      <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                        {{ _('contracts.due_in_days', days=days_left) }}
+                      </div>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                {% elif contract.billing_anchor_date %}
+                  <span class="text-muted small">{{ _('contracts.no_further_billing') }}</span>
                 {% else %}
-                <span class="text-muted small">-</span>
+                  <span class="text-muted small">-</span>
                 {% endif %}
               </td>
 
@@ -179,12 +202,36 @@
       </div>
       {% else %}
       <div class="p-5 text-center text-muted">
+        {% if search_query or active_tag %}
+        <i class="bi bi-search fs-1 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('contracts.empty_search') }}</h5>
+        <p class="small mb-3">{{ _('contracts.empty_search_hint') }}</p>
+        <a href="{{ url_for('contract.index') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-x-circle me-1"></i>{{ _('contracts.reset_filters') }}
+        </a>
+        {% elif active_status == 'canceled' %}
+        <i class="bi bi-calendar-x fs-1 d-block mb-3 text-warning opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('contracts.empty_canceled') }}</h5>
+        <p class="small mb-3">{{ _('contracts.empty_canceled_hint') }}</p>
+        {% elif active_status == 'archived' %}
+        <i class="bi bi-archive fs-1 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('contracts.empty_archived') }}</h5>
+        <p class="small mb-3">{{ _('contracts.empty_archived_hint') }}</p>
+        {% elif active_status == 'active' %}
         <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
-        <h5 class="fw-semibold mb-1">{{ _('dashboard.no_active_contracts') }}</h5>
+        <h5 class="fw-semibold mb-1">{{ _('contracts.empty_active') }}</h5>
         <p class="small mb-3">{{ _('dashboard.no_contracts_hint') }}</p>
         <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
           <i class="bi bi-plus-lg me-1"></i>{{ _('modal.add_contract') }}
         </button>
+        {% else %}
+        <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('contracts.empty_all') }}</h5>
+        <p class="small mb-3">{{ _('dashboard.no_contracts_hint') }}</p>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
+          <i class="bi bi-plus-lg me-1"></i>{{ _('modal.add_contract') }}
+        </button>
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -260,6 +307,7 @@
             <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
               <input name="billing_anchor_date" type="date" class="form-control" />
+              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
             </div>
             <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.end_date') }}</label>
@@ -279,10 +327,15 @@
               </div>
             </div>
 
-            <!-- Tags -->
+            <!-- Compact Inline Tags Picker with Dropdown Autocomplete -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
-              <input name="tags" class="form-control" placeholder="z. B. HomeOffice, Wichtig, Internet" />
+              <div class="tag-picker-inline position-relative" data-available-tags='[{% for t in all_tags %}{"name": {{ t.name|tojson }}, "color": {{ (t.color or '')|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]'>
+                <input type="hidden" name="tags" class="tag-picker-hidden-input" value="{{ form.tags.data or '' }}" />
+                <div class="tag-input-box form-control d-flex flex-wrap align-items-center gap-1 p-1" style="min-height: 38px; cursor: text;">
+                  <input type="text" class="tag-inline-input border-0 bg-transparent text-body p-0 m-1" style="outline: none; min-width: 120px; flex: 1;" placeholder="z. B. HomeOffice, Internet..." data-placeholder="z. B. HomeOffice, Internet..." autocomplete="off" />
+                </div>
+              </div>
             </div>
 
             <!-- Payment Method & Terms -->

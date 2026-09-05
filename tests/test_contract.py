@@ -393,3 +393,107 @@ def test_delete_provider_preserves_contract(client, app):
         c = db.session.get(Contract, c_id)
         assert c is not None
         assert c.provider_id is None
+
+
+def test_interactive_tag_sync_and_creation(client, app):
+    from app import db
+    with app.app_context():
+        u = User(username='tag_user', hashed_password=generate_password_hash('pass123'))
+        db.session.add(u)
+        db.session.commit()
+        # Pre-existing tag
+        t1 = Tag(user_id=u.id, name='Internet', color='#0d6efd')
+        db.session.add(t1)
+        db.session.commit()
+        u_id = u.id
+
+    client.post('/login', data={'username': 'tag_user', 'password': 'pass123'}, follow_redirects=True)
+
+    # Post new contract with pre-existing tag plus new free-text tags
+    resp = client.post('/contracts', data={
+        'category': 'Car Insurance',
+        'amount': '80.00',
+        'currency': 'EUR',
+        'frequency': 'yearly',
+        'tags': 'Internet, Versicherung, Auto',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+
+    with app.app_context():
+        c = Contract.query.filter_by(category='Car Insurance', user_id=u_id).first()
+        assert c is not None
+        tag_names = {t.name for t in c.tags}
+        assert tag_names == {'Internet', 'Versicherung', 'Auto'}
+
+        # Verify new tags exist in database
+        v_tag = Tag.query.filter_by(user_id=u_id, name='Versicherung').first()
+        assert v_tag is not None
+        assert v_tag.color.startswith('#')
+
+        # Test detail route provides all_tags
+        c_id = c.id
+
+    resp_detail = client.get(f'/contracts/{c_id}')
+    assert resp_detail.status_code == 200
+    assert b'Versicherung' in resp_detail.data
+    assert b'data-available-tags' in resp_detail.data
+    assert b'tag-picker-inline' in resp_detail.data
+
+
+def test_next_billing_date_calculation():
+    from datetime import date
+    from app.models import add_months, calculate_next_billing_date, Frequency, Contract
+    # 1. Test add_months
+    assert add_months(date(2024, 1, 15), 1) == date(2024, 2, 15)
+    assert add_months(date(2024, 1, 31), 1) == date(2024, 2, 29)  # 2024 is leap year
+    assert add_months(date(2023, 1, 31), 1) == date(2023, 2, 28)  # 2023 is non-leap
+    assert add_months(date(2024, 11, 10), 3) == date(2025, 2, 10)
+
+    # 2. Test calculate_next_billing_date
+    # Future anchor: returns anchor
+    assert calculate_next_billing_date(date(2026, 12, 1), Frequency.monthly, date(2026, 9, 1)) == date(2026, 12, 1)
+
+    # Past anchor monthly:
+    assert calculate_next_billing_date(date(2024, 1, 15), Frequency.monthly, date(2026, 9, 5)) == date(2026, 9, 15)
+    assert calculate_next_billing_date(date(2024, 1, 15), Frequency.monthly, date(2026, 9, 20)) == date(2026, 10, 15)
+
+    # Past anchor yearly:
+    assert calculate_next_billing_date(date(2022, 3, 15), Frequency.yearly, date(2026, 9, 5)) == date(2027, 3, 15)
+    assert calculate_next_billing_date(date(2022, 11, 15), Frequency.yearly, date(2026, 9, 5)) == date(2026, 11, 15)
+
+    # Past anchor quarterly:
+    assert calculate_next_billing_date(date(2024, 1, 10), Frequency.quarterly, date(2026, 9, 5)) == date(2026, 10, 10)
+
+    # Past anchor weekly:
+    assert calculate_next_billing_date(date(2026, 8, 1), Frequency.weekly, date(2026, 9, 1)) == date(2026, 9, 5)
+
+    # 3. Test Contract model integration with end_date
+    c = Contract(
+        billing_anchor_date=date(2024, 1, 15),
+        frequency=Frequency.monthly,
+        end_date=None,
+    )
+    assert c.get_next_billing_date(as_of=date(2026, 9, 5)) == date(2026, 9, 15)
+
+    # Contract ended in the past:
+    c_ended = Contract(
+        billing_anchor_date=date(2024, 1, 15),
+        frequency=Frequency.monthly,
+        end_date=date(2025, 1, 1),
+    )
+    assert c_ended.get_next_billing_date(as_of=date(2026, 9, 5)) is None
+
+    # Next billing would be after end_date:
+    c_ending_soon = Contract(
+        billing_anchor_date=date(2024, 1, 15),
+        frequency=Frequency.monthly,
+        end_date=date(2026, 9, 10),
+    )
+    assert c_ending_soon.get_next_billing_date(as_of=date(2026, 9, 5)) is None
+
+    # No anchor date:
+    c_no_anchor = Contract(billing_anchor_date=None, frequency=Frequency.monthly)
+    assert c_no_anchor.get_next_billing_date(as_of=date(2026, 9, 5)) is None
+
+

@@ -1,5 +1,6 @@
+import calendar
 import enum
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from flask_login import UserMixin
 from sqlalchemy import (
     Column,
@@ -88,6 +89,46 @@ class Tag(db.Model):
     contracts = relationship("Contract", secondary=contract_tags, back_populates="tags")
 
 
+def add_months(sourcedate: date, months: int) -> date:
+    """Add months to a date, pinning to the last day of the month if overflow occurs."""
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def calculate_next_billing_date(anchor_date: date, frequency: Frequency, as_of: date) -> date:
+    """Calculate the next payment date on or after `as_of` according to payment frequency."""
+    if anchor_date >= as_of:
+        return anchor_date
+
+    if frequency == Frequency.weekly:
+        diff_days = (as_of - anchor_date).days
+        steps = (diff_days + 6) // 7
+        return anchor_date + timedelta(weeks=steps)
+    elif frequency == Frequency.biweekly:
+        diff_days = (as_of - anchor_date).days
+        steps = (diff_days + 13) // 14
+        return anchor_date + timedelta(weeks=2 * steps)
+    elif frequency == Frequency.monthly:
+        m_step = 1
+    elif frequency == Frequency.quarterly:
+        m_step = 3
+    elif frequency == Frequency.yearly:
+        m_step = 12
+    else:
+        m_step = 1
+
+    month_diff = (as_of.year - anchor_date.year) * 12 + (as_of.month - anchor_date.month)
+    steps = max(0, month_diff // m_step)
+    candidate = add_months(anchor_date, steps * m_step)
+    while candidate < as_of:
+        steps += 1
+        candidate = add_months(anchor_date, steps * m_step)
+    return candidate
+
+
 class Contract(db.Model):
     __tablename__ = "contracts"
 
@@ -121,6 +162,36 @@ class Contract(db.Model):
         cascade="all, delete-orphan",
         order_by="PriceEntry.valid_from.desc()",
     )
+
+    @property
+    def next_billing_date(self) -> date | None:
+        """Returns the next upcoming billing date for the contract, or None if contract ended or has no anchor."""
+        return self.get_next_billing_date()
+
+    def get_next_billing_date(self, as_of: date | None = None) -> date | None:
+        """Calculate the next billing date >= as_of based on billing_anchor_date and frequency."""
+        if not self.billing_anchor_date:
+            return None
+        if as_of is None:
+            as_of = date.today()
+
+        if self.end_date and self.end_date < as_of:
+            return None
+
+        next_date = calculate_next_billing_date(self.billing_anchor_date, self.frequency, as_of)
+
+        if self.end_date and next_date > self.end_date:
+            return None
+
+        return next_date
+
+    @property
+    def days_until_next_billing(self) -> int | None:
+        """Number of calendar days until next billing date from today."""
+        nbd = self.next_billing_date
+        if not nbd:
+            return None
+        return (nbd - date.today()).days
 
 
 class Document(db.Model):

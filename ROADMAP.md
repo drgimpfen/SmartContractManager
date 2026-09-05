@@ -9,7 +9,7 @@ This document tracks project milestones, active epics, and progress across the a
 | Epic | Name | Status | Progress |
 | :--- | :--- | :---: | :--- |
 | **Epic 1** | Basic Infrastructure & Core Auth | **Completed** | 100% (Docker, SQLAlchemy, Classic Auth, Alembic Baseline Migrations) |
-| **Epic 2** | CRUD Operations (Core) | **Completed** | 100% (Contracts, Providers, Tags with colors, Price History with validity & auto-adjust) |
+| **Epic 2** | CRUD Operations (Core) | **Completed** | 100% (Contracts, Providers, Inline Tag Dropdown, Price Overlap Auto-Adjust, Dynamic Next Billing Calculation) |
 | **Epic 3** | Financial Dashboard & Calculations | **Planned** | 0% (TDD specifications ready) |
 | **Epic 4** | Document Management & OCR | **Planned** | 0% |
 | **Epic 5** | Export & Import | **Planned** | 0% |
@@ -34,9 +34,12 @@ This document tracks project milestones, active epics, and progress across the a
 *Objective: Full management of providers, contracts, tags, and price histories.*
 
 - [x] Management of `Provider` entities with contact information, customer numbers, customer portals, cancellation URLs, edit, and delete actions.
-- [x] Management of `Contract` entities including `billing_anchor_date`, payment rhythms, categories, notice periods, search, status filtering, and tag filtering.
-- [x] Tagging system (`Tag`) with many-to-many contract association (`contract_tags`) and deterministic color assignment.
+- [x] Management of `Contract` entities including payment rhythms, categories, notice periods, search, status filtering, and tag filtering.
+- [x] Dynamic next billing date calculation (`contract.next_billing_date`) with month arithmetic, end date handling, and smart due date status indicators (`contracts.due_today`, `contracts.due_in_days`).
+- [x] Tagging system (`Tag`) with many-to-many contract association (`contract_tags`), deterministic color assignment, and 100% inline autocomplete dropdown tag picker (Select2/TomSelect style with keyboard navigation).
 - [x] Price history tracking (`PriceEntry`) maintaining validity ranges (`valid_from`, `valid_to`, `is_current`), overlap collision detection, and smart auto-adjustment.
+- [x] UI/UX harmonization: Balanced 2-column contract cockpit, responsive table layout with provider contract numbers, clean typography, centered filter buttons, and context-aware empty states.
+- [x] Full test coverage with 28 passing unit and integration tests (`tests/test_contract.py`, `tests/test_provider.py`).
 
 ### Epic 3: Financial Dashboard & Calculations (Test-Driven via pytest)
 *Objective: Deterministic cash flow projections and monthly budget normalization with automated currency conversion.*

@@ -113,14 +113,35 @@
               </div>
             </div>
 
-            <!-- Billing Anchor Date -->
+            <!-- Next Billing Date -->
             <div class="col-12 col-sm-4">
               <span class="text-muted small d-block mb-1">{{ _('contracts.table.anchor') }}</span>
-              {% if contract.billing_anchor_date %}
-              <span class="fw-semibold text-body d-flex align-items-center gap-1">
-                <i class="bi bi-calendar-check text-primary"></i>
-                <span>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}</span>
-              </span>
+              {% set next_bill = contract.next_billing_date %}
+              {% if next_bill %}
+              <div class="d-flex flex-column">
+                <span class="fw-semibold text-body d-flex align-items-center gap-1">
+                  <i class="bi bi-calendar-check text-primary"></i>
+                  <span>{{ next_bill.strftime('%d.%m.%Y') }}</span>
+                </span>
+                {% set days_left = contract.days_until_next_billing %}
+                {% if days_left is not none %}
+                  {% if days_left == 0 %}
+                  <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-25 px-1 py-0 mt-1 d-inline-block" style="font-size: 0.65rem; width: fit-content;">
+                    {{ _('contracts.due_today') }}
+                  </span>
+                  {% elif days_left > 0 and days_left <= 7 %}
+                  <span class="badge bg-info bg-opacity-25 text-info-emphasis border border-info border-opacity-25 px-1 py-0 mt-1 d-inline-block" style="font-size: 0.65rem; width: fit-content;">
+                    {{ _('contracts.due_in_days', days=days_left) }}
+                  </span>
+                  {% elif days_left > 7 %}
+                  <span class="text-muted mt-1" style="font-size: 0.72rem;">
+                    {{ _('contracts.due_in_days', days=days_left) }}
+                  </span>
+                  {% endif %}
+                {% endif %}
+              </div>
+              {% elif contract.billing_anchor_date %}
+              <span class="text-muted small">{{ _('contracts.no_further_billing') }}</span>
               {% else %}
               <span class="text-muted">-</span>
               {% endif %}
@@ -437,6 +458,7 @@
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
               <input name="billing_anchor_date" type="date" class="form-control" value="{{ contract.billing_anchor_date or '' }}" />
+              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
@@ -457,9 +479,15 @@
                 </select>
               </div>
             </div>
+            <!-- Compact Inline Tags Picker with Dropdown Autocomplete -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
-              <input name="tags" class="form-control" value="{{ edit_form.tags.data or '' }}" />
+              <div class="tag-picker-inline position-relative" data-available-tags='[{% for t in all_tags %}{"name": {{ t.name|tojson }}, "color": {{ (t.color or '')|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]'>
+                <input type="hidden" name="tags" class="tag-picker-hidden-input" value="{{ edit_form.tags.data or '' }}" />
+                <div class="tag-input-box form-control d-flex flex-wrap align-items-center gap-1 p-1" style="min-height: 38px; cursor: text;">
+                  <input type="text" class="tag-inline-input border-0 bg-transparent text-body p-0 m-1" style="outline: none; min-width: 120px; flex: 1;" placeholder="z. B. HomeOffice, Internet..." data-placeholder="z. B. HomeOffice, Internet..." autocomplete="off" />
+                </div>
+              </div>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>

@@ -29,6 +29,18 @@ body {
   min-height: 42px;
 }
 
+/* Compact controls scaling */
+.btn-sm, .btn-group-sm > .btn, .input-group-sm > .form-control, .input-group-sm > .btn, .input-group-sm > .input-group-text {
+  min-height: 34px;
+}
+
+/* Perfect vertical and horizontal text centering for buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Smooth dark/light transitions */
 .card, .navbar, .table, .dropdown-menu {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
