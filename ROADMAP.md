@@ -10,7 +10,7 @@ This document tracks project milestones, active epics, and progress across the a
 | :--- | :--- | :---: | :--- |
 | **Epic 1** | Basic Infrastructure & Core Auth | **Completed** | 100% (Docker, SQLAlchemy, Classic Auth, Alembic Baseline Migrations) |
 | **Epic 2** | CRUD Operations (Core) | **Completed** | 100% (Contracts, Providers, Inline Tag Dropdown, Price Overlap Auto-Adjust, Dynamic Next Billing Calculation) |
-| **Epic 3** | Financial Dashboard & Calculations | **Planned** | 0% (TDD specifications ready) |
+| **Epic 3** | Financial Dashboard & Calculations | **Completed** | 100% (CurrencyService with 24h DB cache, TDD 100% coverage, Cashflow 12M, Option A Budget Toggles, Chart.js dual-theme) |
 | **Epic 4** | Document Management & OCR | **Planned** | 0% |
 | **Epic 5** | Export & Import | **Planned** | 0% |
 | **Epic 6** | OIDC Integration (OpenID Connect via Authlib) | **Planned** | 0% (Extracted from Epic 1 into dedicated epic) |
@@ -44,10 +44,10 @@ This document tracks project milestones, active epics, and progress across the a
 ### Epic 3: Financial Dashboard & Calculations (Test-Driven via pytest)
 *Objective: Deterministic cash flow projections and monthly budget normalization with automated currency conversion.*
 
-- [ ] **Currency Service (`CurrencyService`):** Automated exchange rate retrieval (e.g. Frankfurter API) with 24-hour database caching in `ExchangeRateCache`.
-- [ ] **TDD Unit Tests:** Pytest test suite covering cash flow and budget algorithms prior to UI integration.
-- [ ] **Cash Flow Mode:** 12-month forward projection of actual payment dates derived from `billing_anchor_date` and payment frequency (bar chart via Chart.js).
-- [ ] **Budget Mode:** Normalized monthly cost distribution grouped by category (pie chart via Chart.js).
+- [x] **Currency Service (`CurrencyService`):** Automated exchange rate retrieval (Frankfurter API) with 24-hour database caching in `ExchangeRateCache` and resilient fallback.
+- [x] **TDD Unit Tests:** Pytest test suite with 100% branch/logic coverage covering cash flow, budget normalization, edge cases (leap years, month-end pinning, price changes).
+- [x] **Cash Flow Mode:** 12-month forward projection of actual payment dates derived from `billing_anchor_date` and payment frequency (bar chart via Chart.js with theme awareness).
+- [x] **Budget Mode (Option A):** Interactive client-side switcher between normalized monthly average (Ø), actual current month expenses, and annual total budget with category distribution doughnut chart.
 
 ### Epic 4: Document Vault & OCR Pipeline
 *Objective: Secure PDF contract storage with server-side validation and automated text extraction.*

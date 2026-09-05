@@ -25,6 +25,25 @@
             <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
           </span>
           {% endif %}
+
+          <!-- Remaining Term Badge -->
+          {% if contract.remaining_term_human == 'unlimited' %}
+          <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1" title="{{ _('contracts.remaining_term') }}">
+            <i class="bi bi-infinity me-1 text-secondary"></i>{{ _('contracts.unlimited') }}
+          </span>
+          {% elif contract.remaining_term_human == 'ends_today' %}
+          <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1" title="{{ _('contracts.remaining_term') }}">
+            <i class="bi bi-hourglass-bottom me-1"></i>{{ _('contracts.ends_today') }}
+          </span>
+          {% elif contract.remaining_term_human == 'ended' %}
+          <span class="badge bg-secondary bg-opacity-15 text-muted border px-2 py-1" title="{{ _('contracts.remaining_term') }}">
+            <i class="bi bi-stop-circle me-1"></i>{{ _('contracts.ended') }}
+          </span>
+          {% else %}
+          <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1" title="{{ _('contracts.remaining_term') }}">
+            <i class="bi bi-hourglass-split me-1 text-info"></i>{{ _('contracts.remaining_term') }}: {{ contract.remaining_term_human }}
+          </span>
+          {% endif %}
         </div>
         {% if contract.contract_number %}
         <small class="text-muted d-block mt-1">
@@ -147,14 +166,49 @@
               {% endif %}
             </div>
 
-            <!-- Cancellation Notice -->
+            <!-- Cancellation Notice & Deadline -->
             <div class="col-12 col-sm-4">
               <span class="text-muted small d-block mb-1">{{ _('form.cancellation_notice') }}</span>
               {% if contract.cancellation_notice_amount and contract.cancellation_notice_amount > 0 %}
-              <span class="fw-semibold text-body d-flex align-items-center gap-1">
-                <i class="bi bi-bell text-warning"></i>
-                <span>{{ contract.cancellation_notice_amount }} {{ _('form.' ~ contract.cancellation_notice_unit) }}</span>
-              </span>
+              <div class="d-flex flex-column">
+                <span class="fw-semibold text-body d-flex align-items-center gap-1">
+                  <i class="bi bi-bell text-warning"></i>
+                  <span>{{ contract.cancellation_notice_amount }} {{ _('form.' ~ contract.cancellation_notice_unit) }}</span>
+                </span>
+                {% if contract.status.value == 'active' and contract.cancellation_deadline %}
+                <div class="mt-2 pt-2 border-top border-light-subtle">
+                  <span class="text-muted d-block" style="font-size: 0.75rem;">
+                    {{ _('contracts.cancellation_deadline') }}:
+                  </span>
+                  <span class="small fw-bold text-body">
+                    {{ contract.cancellation_deadline.strftime('%d.%m.%Y') }}
+                  </span>
+                  {% set c_stat = contract.cancellation_status %}
+                  {% set dl_days = contract.days_until_cancellation_deadline %}
+                  {% if c_stat == 'missed' %}
+                  <div class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2 py-1 mt-1 d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-exclamation-octagon-fill"></i>
+                    <span>{{ _('contracts.cancellation_traffic.missed') }}</span>
+                  </div>
+                  {% elif c_stat == 'due_today' %}
+                  <div class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1 mt-1 d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>{{ _('contracts.cancellation_traffic.due_today') }}</span>
+                  </div>
+                  {% elif c_stat == 'urgent' %}
+                  <div class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1 mt-1 d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-hourglass-top"></i>
+                    <span>{{ _('contracts.cancellation_traffic.urgent', days=dl_days) }}</span>
+                  </div>
+                  {% elif c_stat == 'safe' %}
+                  <div class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 mt-1 d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-shield-check"></i>
+                    <span>{{ _('contracts.cancellation_traffic.safe') }} ({{ dl_days }} T.)</span>
+                  </div>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
               {% else %}
               <span class="text-muted">-</span>
               {% endif %}
@@ -169,9 +223,33 @@
             </div>
             <div class="col-6 col-sm-6 border-top pt-3">
               <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-x me-1"></i>{{ _('form.end_date') }}</span>
-              <span class="fw-semibold text-body">
-                {{ contract.end_date.strftime('%d.%m.%Y') if contract.end_date else '-' }}
-              </span>
+              {% if contract.end_date %}
+              <div class="d-flex flex-column">
+                <span class="fw-semibold text-body">{{ contract.end_date.strftime('%d.%m.%Y') }}</span>
+                {% set days_end = contract.days_until_end %}
+                {% if days_end is not none %}
+                  {% if days_end > 1 %}
+                  <span class="text-muted small mt-1">
+                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.days_left', days=days_end) }}
+                  </span>
+                  {% elif days_end == 1 %}
+                  <span class="text-warning-emphasis small fw-semibold mt-1">
+                    <i class="bi bi-clock-history me-1"></i>{{ _('contracts.day_left') }}
+                  </span>
+                  {% elif days_end == 0 %}
+                  <span class="text-warning-emphasis small fw-semibold mt-1">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>{{ _('contracts.ends_today') }}
+                  </span>
+                  {% else %}
+                  <span class="text-muted small mt-1">
+                    <i class="bi bi-check-all me-1"></i>{{ _('contracts.ended_ago', days=-days_end) }}
+                  </span>
+                  {% endif %}
+                {% endif %}
+              </div>
+              {% else %}
+              <span class="fw-semibold text-muted">{{ _('contracts.unlimited') }}</span>
+              {% endif %}
             </div>
 
             <!-- Payment Method & Term -->
@@ -210,6 +288,113 @@
           </div>
         </div>
       </div>
+
+      <!-- Card: Contract Cost Summary & Lifetime Calculation -->
+      {% if cost_summary %}
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div>
+            <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-calculator text-primary"></i>
+              <span>{{ _('contracts.cost_summary.title') }}</span>
+            </h5>
+            <small class="text-muted">{{ _('contracts.cost_summary.subtitle') }}</small>
+          </div>
+          {% if cost_summary.is_fixed_term %}
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+            <i class="bi bi-calendar-check me-1"></i>{{ _('contracts.cost_summary.fixed_term_badge') }}
+          </span>
+          {% else %}
+          <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+            <i class="bi bi-infinity me-1"></i>{{ _('contracts.cost_summary.open_ended_badge') }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="card-body p-4">
+          {% if cost_summary.is_fixed_term %}
+          <div class="row g-3 text-center">
+            <!-- Total Lifetime Cost -->
+            <div class="col-12 col-sm-4">
+              <div class="p-3 bg-body-tertiary rounded-3 border h-100 d-flex flex-column justify-content-center">
+                <span class="text-muted small mb-1">{{ _('contracts.cost_summary.total_amount') }}</span>
+                <div class="h4 fw-bold text-body mb-1">
+                  {{ "%.2f"|format(cost_summary.total_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-secondary small">
+                  {{ _('contracts.cost_summary.payments_count', paid=cost_summary.paid_payments, total=cost_summary.total_payments) }}
+                </span>
+              </div>
+            </div>
+            <!-- Paid Amount -->
+            <div class="col-6 col-sm-4">
+              <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-success-emphasis small mb-1">{{ _('contracts.cost_summary.paid_amount') }}</span>
+                <div class="h4 fw-bold text-success mb-1">
+                  {{ "%.2f"|format(cost_summary.paid_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-muted small">
+                  {{ _('contracts.cost_summary.payments_done', count=cost_summary.paid_payments) }}
+                </span>
+              </div>
+            </div>
+            <!-- Remaining Amount -->
+            <div class="col-6 col-sm-4">
+              <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-primary-emphasis small mb-1">{{ _('contracts.cost_summary.remaining_amount') }}</span>
+                <div class="h4 fw-bold text-primary mb-1">
+                  {{ "%.2f"|format(cost_summary.remaining_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-muted small">
+                  {{ _('contracts.cost_summary.payments_count', paid=cost_summary.remaining_payments, total=cost_summary.total_payments) }}
+                </span>
+              </div>
+            </div>
+          </div>
+          {% if cost_summary.total_amount > 0 %}
+          <!-- Progress bar showing paid vs remaining percentage -->
+          {% set paid_pct = ((cost_summary.paid_amount / cost_summary.total_amount) * 100)|round(1) %}
+          <div class="mt-3 pt-2">
+            <div class="d-flex justify-content-between text-muted small mb-1">
+              <span>{{ _('contracts.cost_summary.paid_amount') }}</span>
+              <span class="fw-semibold text-body">{{ paid_pct }}%</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-success" role="progressbar" style="width: {{ paid_pct }}%;" aria-valuenow="{{ paid_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+          {% endif %}
+          {% else %}
+          <!-- Open ended breakdown -->
+          <div class="row g-3 text-center">
+            <!-- Paid So Far -->
+            <div class="col-12 col-sm-6">
+              <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-success-emphasis small mb-1">{{ _('contracts.cost_summary.paid_amount') }}</span>
+                <div class="h4 fw-bold text-success mb-1">
+                  {{ "%.2f"|format(cost_summary.paid_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-muted small">
+                  {{ _('contracts.cost_summary.payments_done', count=cost_summary.paid_payments) }}
+                </span>
+              </div>
+            </div>
+            <!-- Projected Annual -->
+            <div class="col-12 col-sm-6">
+              <div class="p-3 bg-body-tertiary border rounded-3 h-100 d-flex flex-column justify-content-center">
+                <span class="text-muted small mb-1">{{ _('contracts.cost_summary.annual_amount') }}</span>
+                <div class="h4 fw-bold text-body mb-1">
+                  {{ "%.2f"|format(cost_summary.annual_amount) }} {{ cost_summary.currency }}
+                </div>
+                <span class="text-secondary small">
+                  {{ _('contracts.cost_summary.subtitle') }}
+                </span>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Card 2: Price History Timeline -->
       <div class="card border shadow-sm">

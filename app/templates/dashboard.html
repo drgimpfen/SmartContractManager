@@ -16,13 +16,26 @@
         </div>
         <div class="row g-3">
           <div class="col-12 col-sm-4">
-            <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
-              <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                <i class="bi bi-wallet2 fs-4"></i>
+            <div class="p-3 rounded-3 border bg-body-tertiary d-flex flex-column justify-content-between h-100">
+              <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                  <i class="bi bi-wallet2 fs-4"></i>
+                </div>
+                <div>
+                  <div id="budgetValueDisplay" class="fs-4 fw-bold lh-1">{{ "%.2f"|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}</div>
+                  <div id="budgetLabelDisplay" class="text-muted small mt-1">{{ _('dashboard.budget_label_monthly_avg') }}</div>
+                </div>
               </div>
-              <div>
-                <div class="fs-4 fw-bold lh-1">{{ "%.2f"|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}</div>
-                <div class="text-muted small mt-1">{{ _('dashboard.monthly_budget') }}</div>
+              <div class="btn-group btn-group-sm w-100 mt-2" role="group" aria-label="{{ _('dashboard.monthly_budget') }}">
+                <button type="button" class="btn btn-outline-primary active py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_monthly_avg') }}">
+                  {{ _('dashboard.budget_toggle.monthly_avg') }}
+                </button>
+                <button type="button" class="btn btn-outline-primary py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(current_month_expenses|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_current_month') }}">
+                  {{ _('dashboard.budget_toggle.current_month') }}
+                </button>
+                <button type="button" class="btn btn-outline-primary py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(annual_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_yearly_total') }}">
+                  {{ _('dashboard.budget_toggle.yearly_total') }}
+                </button>
               </div>
             </div>
           </div>
@@ -98,7 +111,7 @@
         </h5>
         {% if cashflow %}
         <div class="chart-container">
-          <canvas id="cashflowChart" data-labels="{{ (cashflow | map(attribute='month') | list if cashflow else []) | tojson }}" data-values="{{ (cashflow | map(attribute='amount') | list if cashflow else []) | tojson }}" data-title="{{ _('dashboard.cashflow_title') }}"></canvas>
+          <canvas id="cashflowChart"></canvas>
         </div>
         {% else %}
         <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
@@ -172,7 +185,7 @@
     </h5>
     {% if distribution %}
     <div class="chart-container chart-container-sm">
-      <canvas id="categoryChart" data-labels="{{ (distribution | map(attribute='category') | list if distribution else []) | tojson }}" data-values="{{ (distribution | map(attribute='value') | list if distribution else []) | tojson }}"></canvas>
+      <canvas id="categoryChart"></canvas>
     </div>
     {% else %}
     <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
@@ -274,49 +287,149 @@
 
 {% block extra_scripts %}
 <script>
-  const cashflowEl = document.getElementById('cashflowChart');
-  if (cashflowEl && typeof Chart !== 'undefined') {
-    const labels = JSON.parse(cashflowEl.getAttribute('data-labels') || '[]');
-    const values = JSON.parse(cashflowEl.getAttribute('data-values') || '[]');
-    const labelTitle = cashflowEl.getAttribute('data-title') || 'Cashflow';
-
-    new Chart(cashflowEl, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: labelTitle,
-          data: values,
-          backgroundColor: '#0d6efd',
-          borderRadius: 4
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      },
+  // Option A: Interactive Budget Switcher
+  document.querySelectorAll('.budget-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.budget-toggle-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const val = this.getAttribute('data-value');
+      const lbl = this.getAttribute('data-label');
+      const valEl = document.getElementById('budgetValueDisplay');
+      const lblEl = document.getElementById('budgetLabelDisplay');
+      if (valEl) valEl.textContent = val;
+      if (lblEl) lblEl.textContent = lbl;
     });
+  });
+
+  // Chart.js Theme Awareness
+  function getThemeColors() {
+    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    return {
+      textColor: isDark ? '#adb5bd' : '#495057',
+      gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+      tooltipBg: isDark ? '#212529' : '#ffffff',
+      tooltipText: isDark ? '#f8f9fa' : '#212529',
+    };
   }
 
-  const categoryEl = document.getElementById('categoryChart');
-  if (categoryEl && typeof Chart !== 'undefined') {
-    const catLabels = JSON.parse(categoryEl.getAttribute('data-labels') || '[]');
-    const catValues = JSON.parse(categoryEl.getAttribute('data-values') || '[]');
+  // Chart data provided directly via server-side Jinja2
+  const cashflowLabels = {{ (cashflow | map(attribute='label') | list if cashflow else []) | tojson }};
+  const cashflowValues = {{ (cashflow | map(attribute='amount') | list if cashflow else []) | tojson }};
+  const cashflowTitle = {{ _('dashboard.cashflow_title') | tojson }};
+  const categoryLabels = {{ (distribution | map(attribute='category') | list if distribution else []) | tojson }};
+  const categoryValues = {{ (distribution | map(attribute='value') | list if distribution else []) | tojson }};
+  const chartCurrency = {{ (current_user.currency or 'EUR') | tojson }};
 
-    new Chart(categoryEl, {
-      type: 'doughnut',
-      data: {
-        labels: catLabels,
-        datasets: [{
-          data: catValues,
-          backgroundColor: ['#0d6efd', '#6f42c1', '#198754', '#fd7e14', '#20c997', '#ffc107']
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      },
-    });
+  let cashflowChartInstance = null;
+  let categoryChartInstance = null;
+
+  function initCharts() {
+    const colors = getThemeColors();
+
+    const cashflowEl = document.getElementById('cashflowChart');
+    if (cashflowEl && typeof Chart !== 'undefined' && cashflowLabels.length > 0) {
+      if (cashflowChartInstance) {
+        cashflowChartInstance.destroy();
+      }
+
+      cashflowChartInstance = new Chart(cashflowEl, {
+        type: 'bar',
+        data: {
+          labels: cashflowLabels,
+          datasets: [{
+            label: cashflowTitle,
+            data: cashflowValues,
+            backgroundColor: '#0d6efd',
+            borderRadius: 6,
+            hoverBackgroundColor: '#0b5ed7',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ' ' + (ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + ' ' + chartCurrency : '');
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: colors.textColor },
+              grid: { display: false }
+            },
+            y: {
+              ticks: {
+                color: colors.textColor,
+                callback: function(val) { return val + ' ' + chartCurrency; }
+              },
+              grid: { color: colors.gridColor }
+            }
+          }
+        },
+      });
+    }
+
+    const categoryEl = document.getElementById('categoryChart');
+    if (categoryEl && typeof Chart !== 'undefined' && categoryLabels.length > 0) {
+      if (categoryChartInstance) {
+        categoryChartInstance.destroy();
+      }
+
+      categoryChartInstance = new Chart(categoryEl, {
+        type: 'doughnut',
+        data: {
+          labels: categoryLabels,
+          datasets: [{
+            data: categoryValues,
+            backgroundColor: ['#0d6efd', '#6f42c1', '#198754', '#fd7e14', '#20c997', '#ffc107', '#0dcaf0'],
+            borderWidth: 2,
+            borderColor: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#212529' : '#ffffff',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: colors.textColor,
+                padding: 16,
+                usePointStyle: true,
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const val = ctx.parsed;
+                  return ' ' + ctx.label + ': ' + (val !== null ? val.toFixed(2) + ' ' + chartCurrency : '');
+                }
+              }
+            }
+          },
+        },
+      });
+    }
   }
+
+  // Initial render
+  initCharts();
+
+  // Watch for dark/light mode toggle
+  const themeObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.attributeName === 'data-bs-theme') {
+        initCharts();
+      }
+    });
+  });
+  themeObserver.observe(document.documentElement, { attributes: true });
 </script>
 {% endblock %}

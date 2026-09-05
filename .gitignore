@@ -7,3 +7,5 @@ app/static/uploads/
 .venv/
 venv/
 db_data/
+.coverage
+.pytest_cache/

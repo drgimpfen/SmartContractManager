@@ -497,3 +497,168 @@ def test_next_billing_date_calculation():
     assert c_no_anchor.get_next_billing_date(as_of=date(2026, 9, 5)) is None
 
 
+def test_contract_remaining_term_and_cancellation_properties(monkeypatch):
+    from datetime import date, timedelta
+    from app.models import Contract, Frequency
+
+    # Fix today to 2026-09-05
+    fixed_today = date(2026, 9, 5)
+
+    # 1. Open-ended contract
+    c_open = Contract(end_date=None, cancellation_notice_amount=1, cancellation_notice_unit="months")
+    assert c_open.days_until_end is None
+    assert c_open.cancellation_deadline is None
+    assert c_open.days_until_cancellation_deadline is None
+    assert c_open.cancellation_status == "none"
+    assert c_open.get_remaining_term_human(as_of=fixed_today) == "unlimited"
+
+    # 2. Fixed-term contract ending in future with months notice
+    # end_date = 2026-12-31, notice = 3 months -> deadline = 2026-09-30
+    c_future = Contract(
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+        cancellation_notice_amount=3,
+        cancellation_notice_unit="months",
+    )
+    assert c_future.cancellation_deadline == date(2026, 9, 30)
+
+    # Monkeypatch date.today in models module if needed or test with explicit methods
+    import app.models as models_module
+    class MockDate(date):
+        @classmethod
+        def today(cls):
+            return fixed_today
+
+    monkeypatch.setattr(models_module, "date", MockDate)
+
+    # days until end: 2026-12-31 - 2026-09-05 = 117 days
+    assert c_future.days_until_end == 117
+    # days until deadline: 2026-09-30 - 2026-09-05 = 25 days -> urgent
+    assert c_future.days_until_cancellation_deadline == 25
+    assert c_future.cancellation_status == "urgent"
+    assert c_future.remaining_term_human == "3m"
+
+    # 3. Safe cancellation status (>30 days)
+    c_safe = Contract(
+        end_date=date(2027, 6, 30),
+        cancellation_notice_amount=1,
+        cancellation_notice_unit="months",
+    )
+    # deadline = 2027-05-30, days > 30 -> safe
+    assert c_safe.cancellation_status == "safe"
+    assert c_safe.remaining_term_human == "9m"
+
+    # 4. Due today
+    c_today = Contract(
+        end_date=date(2026, 10, 5),
+        cancellation_notice_amount=1,
+        cancellation_notice_unit="months",
+    )
+    # deadline = 2026-09-05, days = 0 -> due_today
+    assert c_today.cancellation_deadline == date(2026, 9, 5)
+    assert c_today.days_until_cancellation_deadline == 0
+    assert c_today.cancellation_status == "due_today"
+
+    # 5. Missed deadline (deadline passed, contract still active)
+    c_missed = Contract(
+        end_date=date(2026, 9, 20),
+        cancellation_notice_amount=1,
+        cancellation_notice_unit="months",
+    )
+    # deadline = 2026-08-20, days < 0 -> missed
+    assert c_missed.days_until_cancellation_deadline < 0
+    assert c_missed.cancellation_status == "missed"
+    assert c_missed.remaining_term_human == "15d"
+
+    # 6. Contract ended in past
+    c_past = Contract(
+        end_date=date(2026, 8, 1),
+        cancellation_notice_amount=1,
+        cancellation_notice_unit="months",
+    )
+    assert c_past.cancellation_status == "ended"
+    assert c_past.remaining_term_human == "ended"
+
+    # 7. Canceled or archived contract -> cancellation deadline and alert are suppressed
+    c_canceled = Contract(
+        status=ContractStatus.canceled,
+        end_date=date(2026, 12, 31),
+        cancellation_notice_amount=3,
+        cancellation_notice_unit="months",
+    )
+    assert c_canceled.cancellation_deadline is None
+    assert c_canceled.days_until_cancellation_deadline is None
+    assert c_canceled.cancellation_status == "none"
+
+    c_archived = Contract(
+        status=ContractStatus.archived,
+        end_date=date(2026, 12, 31),
+        cancellation_notice_amount=3,
+        cancellation_notice_unit="months",
+    )
+    assert c_archived.cancellation_deadline is None
+    assert c_archived.days_until_cancellation_deadline is None
+    assert c_archived.cancellation_status == "none"
+
+    # 7. Weeks and days notice units
+    c_weeks = Contract(
+        end_date=date(2026, 10, 1),
+        cancellation_notice_amount=2,
+        cancellation_notice_unit="weeks",
+    )
+    assert c_weeks.cancellation_deadline == date(2026, 9, 17)
+
+    c_days = Contract(
+        end_date=date(2026, 10, 1),
+        cancellation_notice_amount=10,
+        cancellation_notice_unit="days",
+    )
+    assert c_days.cancellation_deadline == date(2026, 9, 21)
+
+    # 8. Remaining term human with years and months
+    c_years = Contract(end_date=date(2028, 3, 5))
+    # 2028-03-05 - 2026-09-05 = 547 days -> 1y 6m
+    assert "1y" in c_years.remaining_term_human
+
+
+def test_contract_detail_view_renders_cost_summary(client, app):
+    from datetime import date
+    from app import db
+    from app.models import User, Contract, ContractStatus, Frequency
+    with app.app_context():
+        user = User(username="cost_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(user)
+        db.session.commit()
+
+        c = Contract(
+            user_id=user.id,
+            category="Fiber Internet",
+            amount=50.0,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=date(2025, 1, 1),
+            end_date=date(2026, 12, 31),
+            billing_anchor_date=date(2025, 1, 1),
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+        )
+        db.session.add(c)
+        db.session.commit()
+        c_id = c.id
+
+    client.post("/login", data={"username": "cost_user", "password": "pass123"}, follow_redirects=True)
+    
+    # English default
+    resp = client.get(f"/contracts/{c_id}")
+    assert resp.status_code == 200
+    assert b"Cost Overview" in resp.data or b"Total Lifetime Cost" in resp.data
+    assert b"Remaining Term" in resp.data
+
+    # German locale
+    resp_de = client.get(f"/contracts/{c_id}?lang=de")
+    assert resp_de.status_code == 200
+    assert b"Kosten\xc3\xbcbersicht" in resp_de.data or b"Gesamtkosten" in resp_de.data
+    assert b"Restlaufzeit" in resp_de.data
+
+

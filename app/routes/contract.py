@@ -6,6 +6,7 @@ from app import db
 from app.models import Contract, Provider, Tag, ContractStatus, Frequency, PriceEntry
 from app.forms import ContractForm, PriceEntryForm
 from app.services.contract_service import sync_contract_tags, add_price_entry
+from app.services.financial_service import FinancialService
 
 bp = Blueprint('contract', __name__, url_prefix='/contracts')
 
@@ -123,12 +124,16 @@ def detail(id):
     price_form.valid_from.data = date.today()
     all_tags = Tag.query.filter_by(user_id=current_user.id).order_by(Tag.name.asc()).all()
 
+    fin_service = FinancialService()
+    cost_summary = fin_service.calculate_contract_cost_summary(contract)
+
     return render_template(
         'contract_detail.html',
         contract=contract,
         edit_form=edit_form,
         price_form=price_form,
         all_tags=all_tags,
+        cost_summary=cost_summary,
     )
 
 

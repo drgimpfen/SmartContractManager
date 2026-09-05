@@ -193,6 +193,91 @@ class Contract(db.Model):
             return None
         return (nbd - date.today()).days
 
+    @property
+    def days_until_end(self) -> int | None:
+        """Number of calendar days until contract end date from today, or None if open-ended."""
+        if not self.end_date:
+            return None
+        return (self.end_date - date.today()).days
+
+    @property
+    def cancellation_deadline(self) -> date | None:
+        """Calculates the latest cancellation date: end_date minus notice period for active contracts."""
+        if self.status and self.status != ContractStatus.active:
+            return None
+        if not self.end_date or not self.cancellation_notice_amount or self.cancellation_notice_amount <= 0:
+            return None
+        unit = (self.cancellation_notice_unit or "days").lower()
+        if unit == "months":
+            return add_months(self.end_date, -self.cancellation_notice_amount)
+        elif unit == "weeks":
+            return self.end_date - timedelta(weeks=self.cancellation_notice_amount)
+        else:
+            return self.end_date - timedelta(days=self.cancellation_notice_amount)
+
+    @property
+    def days_until_cancellation_deadline(self) -> int | None:
+        """Number of days until the cancellation deadline from today."""
+        dl = self.cancellation_deadline
+        if not dl:
+            return None
+        return (dl - date.today()).days
+
+    @property
+    def cancellation_status(self) -> str:
+        """
+        Status of the cancellation deadline:
+        - 'none': No deadline defined (open-ended, no notice specified, or contract not active)
+        - 'missed': Deadline has passed, but contract end_date is still in future
+        - 'due_today': Deadline is today (0 days left)
+        - 'urgent': Deadline is within the next 30 days
+        - 'safe': Deadline is more than 30 days in the future
+        - 'ended': Contract end_date is in the past
+        """
+        if self.status and self.status != ContractStatus.active:
+            return 'none'
+        if not self.end_date or not self.cancellation_deadline:
+            return 'none'
+        today = date.today()
+        if self.end_date < today:
+            return 'ended'
+        days = self.days_until_cancellation_deadline
+        if days is None:
+            return 'none'
+        if days < 0:
+            return 'missed'
+        elif days == 0:
+            return 'due_today'
+        elif days <= 30:
+            return 'urgent'
+        else:
+            return 'safe'
+
+    def get_remaining_term_human(self, as_of: date | None = None) -> str:
+        """Returns a human-readable remaining term representation token."""
+        if not self.end_date:
+            return "unlimited"
+        ref_date = as_of or date.today()
+        if self.end_date < ref_date:
+            return "ended"
+        diff_days = (self.end_date - ref_date).days
+        if diff_days == 0:
+            return "ends_today"
+        if diff_days < 30:
+            return f"{diff_days}d"
+        years = diff_days // 365
+        rem_days = diff_days % 365
+        months = rem_days // 30
+        if years > 0:
+            if months > 0:
+                return f"{years}y {months}m"
+            return f"{years}y"
+        return f"{months}m" if months > 0 else f"{diff_days}d"
+
+    @property
+    def remaining_term_human(self) -> str:
+        return self.get_remaining_term_human()
+
 
 class Document(db.Model):
     __tablename__ = "documents"
