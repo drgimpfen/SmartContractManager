@@ -162,6 +162,83 @@ class Contract(db.Model):
         order_by="PriceEntry.valid_from.desc()",
     )
 
+    def get_price_on_date(self, on_date: date) -> tuple[float, str]:
+        """Returns the effective (amount, currency) on a given date."""
+        if self.price_history:
+            for p in self.price_history:
+                if p.valid_from <= on_date and (p.valid_to is None or p.valid_to >= on_date):
+                    return float(p.amount), p.currency
+        return float(self.amount or 0.0), (self.currency or "EUR")
+
+    @property
+    def current_price_entry(self):
+        """Returns the PriceEntry active today."""
+        today = date.today()
+        if self.price_history:
+            for p in self.price_history:
+                if p.valid_from <= today and (p.valid_to is None or p.valid_to >= today):
+                    return p
+        return None
+
+    @property
+    def current_amount(self) -> float:
+        """Effective amount today, falling back to contract.amount."""
+        curr_p = self.current_price_entry
+        if curr_p:
+            return float(curr_p.amount)
+        return float(self.amount or 0.0)
+
+    @property
+    def current_currency(self) -> str:
+        """Effective currency today, falling back to contract.currency."""
+        curr_p = self.current_price_entry
+        if curr_p:
+            return curr_p.currency
+        return self.currency or "EUR"
+
+    @property
+    def upcoming_price_entries(self):
+        """Returns future price entries (valid_from > today) ordered chronologically ascending."""
+        today = date.today()
+        if not self.price_history:
+            return []
+        futures = [p for p in self.price_history if p.valid_from > today]
+        return sorted(futures, key=lambda p: p.valid_from)
+
+    @property
+    def next_price_change(self):
+        """Returns the earliest upcoming price entry if one is scheduled."""
+        upcoming = self.upcoming_price_entries
+        return upcoming[0] if upcoming else None
+
+    @property
+    def price_delta_to_next(self) -> dict | None:
+        """Calculates delta between current price and next scheduled price change."""
+        next_p = self.next_price_change
+        if not next_p:
+            return None
+        curr_amt = self.current_amount
+        diff = round(float(next_p.amount) - curr_amt, 2)
+        pct = round((diff / curr_amt) * 100, 1) if curr_amt > 0 else 0.0
+        return {
+            "diff_amount": diff,
+            "abs_diff_amount": abs(diff),
+            "diff_percent": pct,
+            "abs_diff_percent": abs(pct),
+            "is_reduction": diff < 0,
+            "is_increase": diff > 0,
+            "currency": next_p.currency,
+        }
+
+    @property
+    def amount_on_next_billing(self) -> float | None:
+        """Calculates the amount that will actually be charged on next_billing_date."""
+        nbd = self.next_billing_date
+        if not nbd:
+            return None
+        amt, _ = self.get_price_on_date(nbd)
+        return amt
+
     @property
     def next_billing_date(self) -> date | None:
         """Returns the next upcoming billing date for the contract, or None if contract ended or has no anchor."""
@@ -313,6 +390,34 @@ class PriceEntry(db.Model):
     @effective_date.setter
     def effective_date(self, value):
         self.valid_from = value
+
+    def get_status(self, as_of: date | None = None) -> str:
+        """Returns 'future', 'current', or 'past' relative to as_of (default date.today())."""
+        ref = as_of or date.today()
+        if self.valid_from > ref:
+            return "future"
+        if self.valid_to is not None and self.valid_to < ref:
+            return "past"
+        return "current"
+
+    @property
+    def status(self) -> str:
+        """Dynamic status: 'future', 'current', or 'past' relative to today."""
+        return self.get_status()
+
+    @property
+    def is_future(self) -> bool:
+        return self.valid_from > date.today()
+
+    @property
+    def is_currently_active(self) -> bool:
+        today = date.today()
+        return self.valid_from <= today and (self.valid_to is None or self.valid_to >= today)
+
+    @property
+    def is_past(self) -> bool:
+        return self.valid_to is not None and self.valid_to < date.today()
+
 
 
 class ExchangeRateCache(db.Model):

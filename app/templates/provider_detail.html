@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+{% block title %}{{ provider.name }} - {{ _('providers.detail_title') }} - {{ _('app.brand.title') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Top Navigation & Header Bar -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-3 border-bottom">
+    <div>
+      <!-- Clean Breadcrumb Back Navigation -->
+      <nav aria-label="breadcrumb" class="mb-1">
+        <a href="{{ url_for('provider.index') }}" class="text-decoration-none text-body-secondary small d-inline-flex align-items-center gap-1">
+          <i class="bi bi-arrow-left"></i>
+          <span>{{ _('providers.title') }}</span>
+        </a>
+      </nav>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h3 fw-bold mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-building text-primary"></i>
+          <span>{{ provider.name }}</span>
+        </h1>
+
+        <!-- Active Contracts Count Badge -->
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+          <i class="bi bi-check-circle-fill me-1"></i>{{ summary.active_count }} {{ _('contracts.active') }}
+        </span>
+
+        {% if summary.canceled_count > 0 %}
+        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ summary.canceled_count }} {{ _('contracts.canceled') }}
+        </span>
+        {% endif %}
+
+        {% if summary.archived_count > 0 %}
+        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+          <i class="bi bi-archive-fill me-1"></i>{{ summary.archived_count }} {{ _('contracts.archived') }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if provider.customer_number %}
+      <small class="text-muted d-block mt-1">
+        <i class="bi bi-hash"></i>{{ _('providers.customer_number') }}: <span class="fw-semibold text-body">{{ provider.customer_number }}</span>
+      </small>
+      {% endif %}
+    </div>
+
+    <!-- Header Action Buttons -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      {% if provider.customer_portal %}
+      <a href="{{ provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 py-2 px-3">
+        <i class="bi bi-person-workspace"></i>
+        <span>{{ _('contracts.portal_button') }}</span>
+        <i class="bi bi-box-arrow-up-right small"></i>
+      </a>
+      {% endif %}
+
+      {% if provider.cancel_url %}
+      <a href="{{ provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 py-2 px-3">
+        <i class="bi bi-x-circle"></i>
+        <span>{{ _('contracts.cancel_button') }}</span>
+        <i class="bi bi-box-arrow-up-right small"></i>
+      </a>
+      {% endif %}
+
+      <!-- Edit Button -->
+      <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#editProviderDetailModal">
+        <i class="bi bi-pencil"></i>
+        <span>{{ _('contracts.edit') }}</span>
+      </button>
+
+      <!-- Delete Button -->
+      <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#deleteProviderDetailModal">
+        <i class="bi bi-trash"></i>
+        <span>{{ _('contracts.delete') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Financial KPI Overview Cards Row -->
+  <div class="row g-3">
+    <!-- Card 1: Monthly Cost -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border shadow-sm h-100">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="bi bi-calendar-month fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-muted small d-block text-truncate">{{ _('providers.kpi_monthly_cost') }}</span>
+            <div class="h4 fw-bold text-body mb-0">
+              {{ "%.2f"|format(summary.monthly_spend) }} {{ summary.target_currency }}
+            </div>
+            <small class="text-secondary d-block text-truncate">
+              {{ _('providers.kpi_annual_projected') }}: {{ "%.2f"|format(summary.annual_projected) }} {{ summary.target_currency }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Paid So Far -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border shadow-sm h-100">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="bi bi-cash-coin fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-muted small d-block text-truncate">{{ _('providers.kpi_paid_so_far') }}</span>
+            <div class="h4 fw-bold text-success mb-0">
+              {{ "%.2f"|format(summary.total_paid) }} {{ summary.target_currency }}
+            </div>
+            <small class="text-muted d-block text-truncate">
+              {{ _('providers.kpi_paid_hint') }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Remaining Obligations / Total Lifetime -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border shadow-sm h-100">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          {% if summary.has_fixed_term and summary.total_remaining is not none %}
+          <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="bi bi-hourglass-split fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-muted small d-block text-truncate">{{ _('providers.kpi_remaining_cost') }}</span>
+            <div class="h4 fw-bold text-primary mb-0">
+              {{ "%.2f"|format(summary.total_remaining) }} {{ summary.target_currency }}
+            </div>
+            <small class="text-muted d-block text-truncate">
+              {{ _('providers.kpi_remaining_hint') }}
+            </small>
+          </div>
+          {% else %}
+          <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="bi bi-calculator fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-muted small d-block text-truncate">{{ _('providers.kpi_total_cost') }}</span>
+            <div class="h4 fw-bold text-body mb-0">
+              {{ "%.2f"|format(summary.total_cost) }} {{ summary.target_currency }}
+            </div>
+            <small class="text-secondary d-block text-truncate">
+              {{ _('providers.kpi_annual_projected') }}
+            </small>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Contracts Overview -->
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border shadow-sm h-100">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <i class="bi bi-file-earmark-text fs-4"></i>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-muted small d-block text-truncate">{{ _('providers.kpi_contracts_overview') }}</span>
+            <div class="h4 fw-bold text-body mb-0">
+              {{ summary.total_contracts }} {{ _('providers.contracts_count_badge') }}
+            </div>
+            <small class="text-secondary d-block text-truncate">
+              {{ _('providers.kpi_contracts_breakdown', active=summary.active_count, canceled=summary.canceled_count, archived=summary.archived_count) }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-Column Content Layout -->
+  <div class="row g-4">
+    <!-- Main Column (Left, col-lg-8): Associated Contracts Table -->
+    <div class="col-12 col-lg-8 d-flex flex-column gap-4">
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-ruled text-primary"></i>
+            <span>{{ _('providers.associated_contracts') }}</span>
+            <span class="badge bg-body-secondary text-body border ms-1">{{ provider.contracts|length }}</span>
+          </h5>
+          <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#addContractModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>{{ _('providers.add_contract_for_provider') }}</span>
+          </button>
+        </div>
+        <div class="card-body p-0">
+          {% if provider.contracts %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="border-bottom text-secondary small text-uppercase fw-semibold">
+                <tr>
+                  <th class="py-3 ps-3">{{ _('contracts.table.category') }}</th>
+                  <th class="py-3">{{ _('contracts.table.status') }}</th>
+                  <th class="py-3">{{ _('contracts.table.amount') }}</th>
+                  <th class="py-3">{{ _('contracts.table.anchor') }}</th>
+                  <th class="py-3">{{ _('contracts.remaining_term') }}</th>
+                  <th class="py-3 pe-3 text-end">{{ _('contracts.table.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for contract in provider.contracts|sort(attribute='created_at', reverse=True) %}
+                <tr>
+                  <!-- Category & Contract Number -->
+                  <td class="ps-3 py-3">
+                    <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
+                      {{ contract.category }}
+                    </a>
+                    {% if contract.contract_number %}
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                      {{ contract.contract_number }}
+                    </small>
+                    {% endif %}
+                  </td>
+
+                  <!-- Status Badge -->
+                  <td class="py-3">
+                    {% if contract.status.value == 'active' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                      <i class="bi bi-check-circle me-1"></i>{{ _('contracts.active') }}
+                    </span>
+                    {% elif contract.status.value == 'canceled' %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
+                      <i class="bi bi-exclamation-triangle me-1"></i>{{ _('contracts.canceled') }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                      <i class="bi bi-archive me-1"></i>{{ _('contracts.archived') }}
+                    </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Amount & Frequency -->
+                  <td class="py-3">
+                    <span class="fw-semibold text-body">
+                      {{ "%.2f"|format(contract.amount) }} {{ contract.currency }}
+                    </span>
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                      {{ _('form.' ~ contract.frequency.value) }}
+                    </small>
+                    {% set next_p = contract.next_price_change %}
+                    {% if next_p %}
+                    <div class="mt-1">
+                      <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 0.68rem;" title="{{ _('contracts.scheduled_badge') }}: {{ next_p.valid_from.strftime('%d.%m.%Y') }}">
+                        <i class="bi bi-clock-history me-1"></i>ab {{ next_p.valid_from.strftime('%d.%m.') }}: {{ "%.2f"|format(next_p.amount) }} {{ next_p.currency }}
+                      </span>
+                    </div>
+                    {% endif %}
+                  </td>
+
+                  <!-- Next Billing Date -->
+                  <td class="py-3">
+                    {% set next_bill = contract.next_billing_date %}
+                    {% if next_bill %}
+                    <div class="d-flex flex-column">
+                      <span class="small fw-semibold text-body">
+                        {{ next_bill.strftime('%d.%m.%Y') }}
+                      </span>
+                      {% set days_left = contract.days_until_next_billing %}
+                      {% if days_left is not none %}
+                        {% if days_left == 0 %}
+                        <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-25 px-1 py-0 mt-1 d-inline-block" style="font-size: 0.65rem; width: fit-content;">
+                          {{ _('contracts.due_today') }}
+                        </span>
+                        {% elif days_left > 0 and days_left <= 7 %}
+                        <span class="badge bg-info bg-opacity-25 text-info-emphasis border border-info border-opacity-25 px-1 py-0 mt-1 d-inline-block" style="font-size: 0.65rem; width: fit-content;">
+                          {{ _('contracts.due_in_days', days=days_left) }}
+                        </span>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Remaining Term Badge -->
+                  <td class="py-3">
+                    {% if contract.remaining_term_human == 'unlimited' %}
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1" style="font-size: 0.75rem;">
+                      <i class="bi bi-infinity me-1 text-secondary"></i>{{ _('contracts.unlimited') }}
+                    </span>
+                    {% elif contract.remaining_term_human == 'ended' %}
+                    <span class="badge bg-secondary bg-opacity-15 text-muted border px-2 py-1" style="font-size: 0.75rem;">
+                      {{ _('contracts.ended') }}
+                    </span>
+                    {% elif contract.remaining_term_human == 'ends_today' %}
+                    <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1" style="font-size: 0.75rem;">
+                      {{ _('contracts.ends_today') }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1" style="font-size: 0.75rem;">
+                      {{ contract.remaining_term_human }}
+                    </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Actions: View Details -->
+                  <td class="pe-3 py-3 text-end">
+                    <a href="{{ url_for('contract.detail', id=contract.id) }}" class="btn btn-sm btn-outline-primary" title="{{ _('contracts.detail_title') }}">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center text-muted p-5">
+            <i class="bi bi-file-earmark-x fs-1 d-block mb-3 text-secondary opacity-50"></i>
+            <h6 class="fw-semibold mb-1">{{ _('providers.no_contracts') }}</h6>
+            <p class="small mb-3">Erstelle deinen ersten Vertrag und ordne ihn diesem Provider zu.</p>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addContractModal">
+              <i class="bi bi-plus-lg me-1"></i>{{ _('providers.add_contract_for_provider') }}
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Column (Right, col-lg-4): Master Data & Contact -->
+    <div class="col-12 col-lg-4 d-flex flex-column gap-4">
+      <!-- Master Data Card -->
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle text-primary"></i>
+            <span>{{ _('providers.master_data') }}</span>
+          </h5>
+        </div>
+        <div class="card-body p-4 d-flex flex-column gap-3">
+          <!-- Customer Number -->
+          {% if provider.customer_number %}
+          <div>
+            <span class="text-muted small d-block mb-1">{{ _('providers.customer_number') }}</span>
+            <span class="fw-semibold text-body d-flex align-items-center gap-2">
+              <i class="bi bi-hash text-secondary"></i>
+              <span>{{ provider.customer_number }}</span>
+            </span>
+          </div>
+          {% endif %}
+
+          <!-- Address -->
+          {% if provider.address %}
+          <div class="pt-2 border-top">
+            <span class="text-muted small d-block mb-1">{{ _('form.address') }}</span>
+            <span class="text-body small d-flex align-items-start gap-2">
+              <i class="bi bi-geo-alt text-secondary mt-1"></i>
+              <span class="text-break">{{ provider.address }}</span>
+            </span>
+          </div>
+          {% endif %}
+
+          <!-- Email -->
+          {% if provider.email %}
+          <div class="pt-2 border-top">
+            <span class="text-muted small d-block mb-1">{{ _('providers.table.email') }}</span>
+            <a href="mailto:{{ provider.email }}" class="text-decoration-none d-inline-flex align-items-center gap-2 small">
+              <i class="bi bi-envelope text-secondary"></i>
+              <span class="text-break">{{ provider.email }}</span>
+            </a>
+          </div>
+          {% endif %}
+
+          <!-- Phone -->
+          {% if provider.phone %}
+          <div class="pt-2 border-top">
+            <span class="text-muted small d-block mb-1">{{ _('form.phone') }}</span>
+            <a href="tel:{{ provider.phone }}" class="text-decoration-none text-body d-inline-flex align-items-center gap-2 small">
+              <i class="bi bi-telephone text-secondary"></i>
+              <span>{{ provider.phone }}</span>
+            </a>
+          </div>
+          {% endif %}
+
+          <!-- Action Buttons for Portals & Web -->
+          <div class="d-flex flex-column gap-2 pt-2 border-top">
+            {% if provider.customer_portal %}
+            <a href="{{ provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-person-workspace"></i>
+              <span>{{ _('contracts.portal_button') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+            {% endif %}
+
+            {% if provider.cancel_url %}
+            <a href="{{ provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-x-circle"></i>
+              <span>{{ _('contracts.cancel_button') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+            {% endif %}
+
+            {% if provider.website %}
+            <a href="{{ provider.website }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-globe"></i>
+              <span>{{ _('providers.table.website') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+            {% endif %}
+
+            {% if not provider.customer_portal and not provider.cancel_url and not provider.website %}
+            <div class="text-muted small text-center py-2">
+              Keine Weblinks hinterlegt.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Provider -->
+<div class="modal fade" id="editProviderDetailModal" tabindex="-1" aria-labelledby="editProviderDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="editProviderDetailModalLabel">
+          <i class="bi bi-pencil-square text-primary"></i>
+          <span>{{ _('providers.edit_provider') }}: {{ provider.name }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('provider.edit', id=provider.id, next=url_for('provider.detail', id=provider.id)) }}">
+        {{ form.csrf_token }}
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.name') }} <span class="text-danger">*</span></label>
+              <input name="name" class="form-control" value="{{ provider.name }}" required />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.customer_number') }}</label>
+              <input name="customer_number" class="form-control" value="{{ provider.customer_number or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.address') }}</label>
+              <textarea name="address" class="form-control" rows="2">{{ provider.address or '' }}</textarea>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label small fw-semibold">{{ _('providers.table.email') }}</label>
+              <input name="email" type="email" class="form-control" value="{{ provider.email or '' }}" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label small fw-semibold">{{ _('form.phone') }}</label>
+              <input name="phone" type="tel" class="form-control" value="{{ provider.phone or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.table.website') }}</label>
+              <input name="website" type="url" class="form-control" value="{{ provider.website or '' }}" placeholder="https://" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.customer_portal') }}</label>
+              <input name="customer_portal" type="url" class="form-control" value="{{ provider.customer_portal or '' }}" placeholder="https://" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.cancellation_link') }}</label>
+              <input name="cancel_url" type="url" class="form-control" value="{{ provider.cancel_url or '' }}" placeholder="https://" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+          <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('providers.save') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Provider Confirmation -->
+<div class="modal fade" id="deleteProviderDetailModal" tabindex="-1" aria-labelledby="deleteProviderDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteProviderDetailModalLabel">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ _('providers.delete') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="mb-2 fw-semibold">{{ provider.name }}</p>
+        <p class="text-muted small mb-0">{{ _('providers.delete_confirm') }}</p>
+      </div>
+      <div class="modal-footer border-top bg-body-tertiary">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+        <form method="post" action="{{ url_for('provider.delete', id=provider.id) }}">
+          {{ form.csrf_token }}
+          <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+            <i class="bi bi-trash"></i>
+            <span>{{ _('providers.delete') }}</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Contract for Provider (Reusable Component) -->
+{% with c_form=contract_form, preselected_provider_id=provider.id, action_url=url_for('contract.index', next=url_for('provider.detail', id=provider.id)), modal_title=_('modal.add_contract') ~ ' (' ~ provider.name ~ ')' %}
+  {% include "components/_contract_modal.html" %}
+{% endwith %}
+{% endblock %}

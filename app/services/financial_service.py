@@ -189,10 +189,14 @@ class FinancialService:
         ]
 
     def _get_due_dates_in_range(
-        self, contract: Contract, range_start: date, range_end: date
+        self,
+        contract: Contract,
+        range_start: date,
+        range_end: date,
+        override_anchor: date | None = None,
     ) -> list[date]:
         """Extrapolate exact billing dates for a contract falling within [range_start, range_end]."""
-        anchor = contract.billing_anchor_date
+        anchor = override_anchor or contract.billing_anchor_date
         if not anchor:
             return []
 
@@ -330,18 +334,7 @@ class FinancialService:
 
         if is_fixed:
             anchor = contract.billing_anchor_date or calc_start
-            eff_contract = contract if contract.billing_anchor_date else Contract(
-                billing_anchor_date=anchor,
-                frequency=contract.frequency,
-                start_date=contract.start_date,
-                end_date=contract.end_date,
-                amount=contract.amount,
-                currency=contract.currency,
-                price_history=contract.price_history,
-                status=contract.status,
-            )
-
-            due_dates = self._get_due_dates_in_range(eff_contract, calc_start, contract.end_date)
+            due_dates = self._get_due_dates_in_range(contract, calc_start, contract.end_date, override_anchor=anchor)
             total_amount = 0.0
             paid_amount = 0.0
             remaining_amount = 0.0
@@ -370,24 +363,28 @@ class FinancialService:
             }
         else:
             anchor = contract.billing_anchor_date or calc_start
-            eff_contract = contract if contract.billing_anchor_date else Contract(
-                billing_anchor_date=anchor,
-                frequency=contract.frequency,
-                start_date=contract.start_date,
-                amount=contract.amount,
-                currency=contract.currency,
-                price_history=contract.price_history,
-                status=contract.status,
+            due_dates = (
+                self._get_due_dates_in_range(contract, calc_start, ref_date, override_anchor=anchor)
+                if calc_start <= ref_date
+                else []
             )
-
-            due_dates = self._get_due_dates_in_range(eff_contract, calc_start, ref_date) if calc_start <= ref_date else []
             paid_amount = 0.0
 
             for d in due_dates:
                 amt, _ = get_contract_price_on_date(contract, d)
                 paid_amount += amt
 
-            annual_amount = normalize_to_monthly(contract.amount or 0.0, contract.frequency) * 12.0
+            # Forward 12-month cashflow projection accounting for future price adjustments
+            one_year_ahead = ref_date + timedelta(days=365)
+            upcoming_due_dates = self._get_due_dates_in_range(
+                contract, ref_date + timedelta(days=1), one_year_ahead, override_anchor=anchor
+            )
+
+            if upcoming_due_dates:
+                annual_amount = sum(get_contract_price_on_date(contract, d)[0] for d in upcoming_due_dates)
+            else:
+                eff_amt, _ = get_contract_price_on_date(contract, ref_date)
+                annual_amount = normalize_to_monthly(eff_amt, contract.frequency) * 12.0
 
             return {
                 "is_fixed_term": False,
@@ -396,4 +393,59 @@ class FinancialService:
                 "annual_amount": round(annual_amount, 2),
                 "paid_payments": len(due_dates),
             }
+
+    def calculate_provider_summary(
+        self,
+        contracts: list[Contract],
+        target_currency: str = "EUR",
+        as_of: date | None = None,
+    ) -> dict:
+        """
+        Calculate aggregated financial and contract statistics for a specific provider.
+        Normalizes amounts to the target currency.
+        """
+        as_of_date = as_of or date.today()
+        total_contracts = len(contracts)
+        active_contracts = [c for c in contracts if c.status == ContractStatus.active]
+        canceled_contracts = [c for c in contracts if c.status == ContractStatus.canceled]
+        archived_contracts = [c for c in contracts if c.status == ContractStatus.archived]
+
+        monthly_spend = self.calculate_monthly_budget(active_contracts, target_currency, as_of_date)
+        annual_projected = round(monthly_spend * 12.0, 2)
+
+        total_paid = 0.0
+        total_remaining = 0.0
+        has_fixed_term = False
+
+        for c in contracts:
+            c_summary = self.calculate_contract_cost_summary(c, as_of_date)
+            c_curr = c_summary.get("currency", c.currency or "EUR")
+            paid_val = c_summary.get("paid_amount", 0.0)
+            paid_conv = self.currency_service.convert(paid_val, c_curr, target_currency)
+            total_paid += paid_conv
+
+            if c_summary.get("is_fixed_term"):
+                has_fixed_term = True
+                rem_val = c_summary.get("remaining_amount", 0.0)
+                rem_conv = self.currency_service.convert(rem_val, c_curr, target_currency)
+                total_remaining += rem_conv
+
+        total_paid = round(total_paid, 2)
+        total_remaining = round(total_remaining, 2) if has_fixed_term else None
+        total_cost = round(total_paid + (total_remaining or 0.0), 2)
+
+        return {
+            "target_currency": target_currency,
+            "total_contracts": total_contracts,
+            "active_count": len(active_contracts),
+            "canceled_count": len(canceled_contracts),
+            "archived_count": len(archived_contracts),
+            "monthly_spend": monthly_spend,
+            "annual_projected": annual_projected,
+            "total_paid": total_paid,
+            "total_remaining": total_remaining,
+            "total_cost": total_cost,
+            "has_fixed_term": has_fixed_term,
+        }
+
 

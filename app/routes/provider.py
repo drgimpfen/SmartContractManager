@@ -3,7 +3,9 @@ from flask_login import login_required, current_user
 
 from app import db
 from app.models import Provider
-from app.forms import ProviderForm
+from app.forms import ProviderForm, ContractForm
+from app.routes.contract import populate_provider_choices
+from app.services.financial_service import FinancialService
 
 bp = Blueprint('provider', __name__, url_prefix='/providers')
 
@@ -34,6 +36,34 @@ def index():
     return render_template('providers.html', form=form, providers=providers)
 
 
+@bp.route('/<int:id>')
+@login_required
+def detail(id):
+    provider = db.session.get(Provider, id)
+    if not provider or provider.user_id != current_user.id:
+        abort(404)
+
+    form = ProviderForm(obj=provider)
+    contract_form = ContractForm()
+    populate_provider_choices(contract_form, current_user.id)
+    contract_form.provider_id.data = provider.id
+    contract_form.currency.data = current_user.currency or "EUR"
+
+    fin_service = FinancialService()
+    summary = fin_service.calculate_provider_summary(
+        provider.contracts,
+        target_currency=current_user.currency or "EUR",
+    )
+
+    return render_template(
+        'provider_detail.html',
+        provider=provider,
+        form=form,
+        contract_form=contract_form,
+        summary=summary,
+    )
+
+
 @bp.route('/<int:id>/edit', methods=['POST'])
 @login_required
 def edit(id):
@@ -59,6 +89,9 @@ def edit(id):
             for error in errors:
                 flash(f"{field}: {error}", "danger")
 
+    next_url = request.args.get('next')
+    if next_url and next_url.startswith('/'):
+        return redirect(next_url)
     return redirect(url_for('provider.index'))
 
 
@@ -73,3 +106,4 @@ def delete(id):
     db.session.commit()
     flash('Provider successfully deleted.', 'success')
     return redirect(url_for('provider.index'))
+

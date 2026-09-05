@@ -114,6 +114,30 @@
     <div class="col-12 col-lg-8 d-flex flex-column gap-4">
       <!-- Card 1: Contract Details & Terms -->
       <div class="card border shadow-sm">
+        {% set next_price = contract.next_price_change %}
+        {% set delta = contract.price_delta_to_next %}
+        {% if next_price %}
+        <div class="alert alert-info border-0 border-bottom border-info border-opacity-25 bg-info bg-opacity-10 d-flex align-items-center justify-content-between flex-wrap gap-2 mb-0 py-2 px-4 rounded-top">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill text-info fs-5"></i>
+            <div>
+              <span class="fw-bold">{{ _('contracts.scheduled_price_change_title') }}:</span>
+              <span>{{ _('contracts.scheduled_price_change_text', date=next_price.valid_from.strftime('%d.%m.%Y'), amount="%.2f"|format(next_price.amount), currency=next_price.currency) }}</span>
+            </div>
+          </div>
+          {% if delta %}
+            {% if delta.is_reduction %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+              <i class="bi bi-arrow-down-right me-1"></i>-{{ "%.2f"|format(delta.abs_diff_amount) }} {{ delta.currency }} ({{ delta.abs_diff_percent }}%) {{ _('contracts.cheaper') }}
+            </span>
+            {% elif delta.is_increase %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+              <i class="bi bi-arrow-up-right me-1"></i>+{{ "%.2f"|format(delta.abs_diff_amount) }} {{ delta.currency }} (+{{ delta.abs_diff_percent }}%) {{ _('contracts.more_expensive') }}
+            </span>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% endif %}
         <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
           <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
             <i class="bi bi-info-circle text-primary"></i>
@@ -144,6 +168,12 @@
                   <i class="bi bi-calendar-check text-primary"></i>
                   <span>{{ next_bill.strftime('%d.%m.%Y') }}</span>
                 </span>
+                {% set due_amt = contract.amount_on_next_billing %}
+                {% if due_amt is not none and due_amt != contract.amount %}
+                <span class="text-primary small fw-semibold mt-1" style="font-size: 0.78rem;">
+                  <i class="bi bi-tag-fill me-1"></i>{{ _('contracts.due_amount_on_date') }}: {{ "%.2f"|format(due_amt) }} {{ contract.currency }}
+                </span>
+                {% endif %}
                 {% set days_left = contract.days_until_next_billing %}
                 {% if days_left is not none %}
                   {% if days_left == 0 %}
@@ -412,15 +442,38 @@
           {% if contract.price_history %}
           <div class="list-group list-group-flush border-top-0">
             {% for price in contract.price_history %}
-            <div class="list-group-item px-3 py-3 rounded-3 mb-2 border {% if price.is_current %}bg-success bg-opacity-10 border-success border-opacity-25{% else %}bg-body-tertiary{% endif %}">
+            {% set p_status = price.status %}
+            <div class="list-group-item px-3 py-3 rounded-3 mb-2 border {% if p_status == 'future' %}border-primary border-opacity-50 bg-primary bg-opacity-10{% elif p_status == 'current' %}border-success border-opacity-25 bg-success bg-opacity-10{% else %}bg-body-tertiary{% endif %}">
               <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                 <div>
-                  <div class="d-flex align-items-center gap-2">
+                  <div class="d-flex align-items-center flex-wrap gap-2">
                     <span class="h5 fw-bold mb-0 text-body">
                       {{ "%.2f"|format(price.amount) }} {{ price.currency }}
                     </span>
-                    {% if price.is_current %}
-                    <span class="badge bg-success">{{ _('contracts.current_price') }}</span>
+                    {% if p_status == 'future' %}
+                    <span class="badge bg-primary text-white">
+                      <i class="bi bi-clock-history me-1"></i>{{ _('contracts.scheduled_badge') }}
+                    </span>
+                    {% if contract.current_amount %}
+                      {% set p_diff = price.amount - contract.current_amount %}
+                      {% if p_diff < 0 %}
+                      <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 0.72rem;">
+                        <i class="bi bi-arrow-down-right me-1"></i>{{ "%.2f"|format(p_diff) }} {{ price.currency }}
+                      </span>
+                      {% elif p_diff > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size: 0.72rem;">
+                        <i class="bi bi-arrow-up-right me-1"></i>+{{ "%.2f"|format(p_diff) }} {{ price.currency }}
+                      </span>
+                      {% endif %}
+                    {% endif %}
+                    {% elif p_status == 'current' %}
+                    <span class="badge bg-success">
+                      <i class="bi bi-check-circle me-1"></i>{{ _('contracts.current_price') }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                      {{ _('contracts.past_price') }}
+                    </span>
                     {% endif %}
                   </div>
                   {% if price.note %}
@@ -429,11 +482,46 @@
                   </div>
                   {% endif %}
                 </div>
-                <div class="text-secondary small d-flex align-items-center gap-1">
-                  <i class="bi bi-calendar-range me-1 text-primary"></i>
-                  <span>{{ price.valid_from.strftime('%d.%m.%Y') }}</span>
-                  <span>&rarr;</span>
-                  <span>{{ price.valid_to.strftime('%d.%m.%Y') if price.valid_to else _('contracts.open_ended') }}</span>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="text-secondary small d-flex align-items-center gap-1">
+                    <i class="bi bi-calendar-range me-1 text-primary"></i>
+                    <span>{{ price.valid_from.strftime('%d.%m.%Y') }}</span>
+                    <span>&rarr;</span>
+                    <span>{{ price.valid_to.strftime('%d.%m.%Y') if price.valid_to else _('contracts.open_ended') }}</span>
+                  </div>
+                  <!-- Delete Price Entry Trigger Button -->
+                  <button class="btn btn-sm btn-outline-danger p-1 border-0" type="button" data-bs-toggle="modal" data-bs-target="#deletePriceModal{{ price.id }}" title="{{ _('contracts.delete_price') }}">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal: Delete Price Entry Confirmation -->
+            <div class="modal fade" id="deletePriceModal{{ price.id }}" tabindex="-1" aria-labelledby="deletePriceModalLabel{{ price.id }}" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border shadow">
+                  <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deletePriceModalLabel{{ price.id }}">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      <span>{{ _('contracts.delete_price_title') }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+                  </div>
+                  <div class="modal-body p-4">
+                    <p class="mb-2 fw-semibold">{{ "%.2f"|format(price.amount) }} {{ price.currency }} ({{ price.valid_from.strftime('%d.%m.%Y') }} &rarr; {{ price.valid_to.strftime('%d.%m.%Y') if price.valid_to else _('contracts.open_ended') }})</p>
+                    <p class="text-muted small mb-0">{{ _('contracts.delete_price_confirm') }}</p>
+                  </div>
+                  <div class="modal-footer border-top bg-body-tertiary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+                    <form method="post" action="{{ url_for('contract.delete_price', id=contract.id, price_id=price.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+                      <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+                        <i class="bi bi-trash"></i>
+                        <span>{{ _('contracts.delete') }}</span>
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
@@ -461,7 +549,12 @@
         <div class="card-body p-4">
           {% if contract.provider %}
           <div class="mb-3">
-            <h6 class="fw-bold mb-1 fs-5">{{ contract.provider.name }}</h6>
+            <h6 class="fw-bold mb-1 fs-5">
+              <a href="{{ url_for('provider.detail', id=contract.provider.id) }}" class="text-decoration-none text-body d-inline-flex align-items-center gap-1">
+                <span>{{ contract.provider.name }}</span>
+                <i class="bi bi-arrow-right-short text-primary fs-5"></i>
+              </a>
+            </h6>
             {% if contract.provider.customer_number %}
             <small class="text-muted d-block">
               {{ _('providers.customer_number') }}: <span class="fw-semibold text-body">{{ contract.provider.customer_number }}</span>
@@ -476,6 +569,12 @@
 
           <!-- Direct Provider Action Buttons -->
           <div class="d-flex flex-column gap-2 mb-3 pt-2 border-top">
+            <a href="{{ url_for('provider.detail', id=contract.provider.id) }}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-building"></i>
+              <span>{{ _('providers.view_details') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+
             {% if contract.provider.customer_portal %}
             <a href="{{ contract.provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
               <i class="bi bi-person-workspace"></i>

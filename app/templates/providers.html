@@ -53,9 +53,14 @@
             <tr>
               <!-- Name, Customer Number & Address -->
               <td class="ps-3 py-3">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                   <i class="bi bi-building text-secondary"></i>
-                  <span class="fw-bold text-body">{{ provider.name }}</span>
+                  <a href="{{ url_for('provider.detail', id=provider.id) }}" class="fw-bold text-decoration-none text-body">
+                    {{ provider.name }}
+                  </a>
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis border" style="font-size: 0.72rem;">
+                    {{ provider.contracts|length }} {{ _('providers.contracts_count_badge') }}
+                  </span>
                 </div>
                 {% if provider.customer_number %}
                 <small class="text-muted ps-4 d-block mt-1">
@@ -122,16 +127,12 @@
                 </div>
               </td>
 
-              <!-- Actions: Edit & Delete -->
+              <!-- Actions -->
               <td class="pe-3 py-3 text-end">
-                <div class="btn-group btn-group-sm">
-                  <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProviderModal{{ provider.id }}" title="{{ _('providers.edit_provider') }}">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProviderModal{{ provider.id }}" title="{{ _('providers.delete') }}">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
+                <a href="{{ url_for('provider.detail', id=provider.id) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" title="{{ _('providers.detail_title') }}">
+                  <span>Details</span>
+                  <i class="bi bi-arrow-right"></i>
+                </a>
               </td>
             </tr>
             {% endfor %}
@@ -212,97 +213,5 @@
     </div>
   </div>
 </div>
-
-<!-- Modals for Edit & Delete Providers -->
-{% for provider in providers %}
-<!-- Modal: Edit Provider -->
-<div class="modal fade" id="editProviderModal{{ provider.id }}" tabindex="-1" aria-labelledby="editProviderModalLabel{{ provider.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border shadow">
-      <div class="modal-header border-bottom">
-        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="editProviderModalLabel{{ provider.id }}">
-          <i class="bi bi-pencil-square text-primary"></i>
-          <span>{{ _('providers.edit_provider') }}: {{ provider.name }}</span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
-      </div>
-      <form method="post" action="{{ url_for('provider.edit', id=provider.id) }}">
-        {{ form.csrf_token }}
-        <div class="modal-body p-4">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('form.name') }} <span class="text-danger">*</span></label>
-              <input name="name" class="form-control" value="{{ provider.name }}" required />
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('providers.customer_number') }}</label>
-              <input name="customer_number" class="form-control" value="{{ provider.customer_number or '' }}" />
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('form.address') }}</label>
-              <textarea name="address" class="form-control" rows="2">{{ provider.address or '' }}</textarea>
-            </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-label small fw-semibold">{{ _('providers.table.email') }}</label>
-              <input name="email" type="email" class="form-control" value="{{ provider.email or '' }}" />
-            </div>
-            <div class="col-12 col-sm-6">
-              <label class="form-label small fw-semibold">{{ _('form.phone') }}</label>
-              <input name="phone" type="tel" class="form-control" value="{{ provider.phone or '' }}" />
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('providers.table.website') }}</label>
-              <input name="website" type="url" class="form-control" value="{{ provider.website or '' }}" placeholder="https://" />
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('providers.customer_portal') }}</label>
-              <input name="customer_portal" type="url" class="form-control" value="{{ provider.customer_portal or '' }}" placeholder="https://" />
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('providers.cancellation_link') }}</label>
-              <input name="cancel_url" type="url" class="form-control" value="{{ provider.cancel_url or '' }}" placeholder="https://" />
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer border-top bg-body-tertiary">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
-          <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
-            <i class="bi bi-check-lg"></i>
-            <span>{{ _('providers.save') }}</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Delete Provider Confirmation -->
-<div class="modal fade" id="deleteProviderModal{{ provider.id }}" tabindex="-1" aria-labelledby="deleteProviderModalLabel{{ provider.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border shadow">
-      <div class="modal-header border-bottom">
-        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteProviderModalLabel{{ provider.id }}">
-          <i class="bi bi-exclamation-triangle"></i>
-          <span>{{ _('providers.delete') }}</span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
-      </div>
-      <div class="modal-body p-4">
-        <p class="mb-2 fw-semibold">{{ provider.name }}</p>
-        <p class="text-muted small mb-0">{{ _('providers.delete_confirm') }}</p>
-      </div>
-      <div class="modal-footer border-top bg-body-tertiary">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
-        <form method="post" action="{{ url_for('provider.delete', id=provider.id) }}">
-          {{ form.csrf_token }}
-          <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
-            <i class="bi bi-trash"></i>
-            <span>{{ _('providers.delete') }}</span>
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% endfor %}
 {% endblock %}
+

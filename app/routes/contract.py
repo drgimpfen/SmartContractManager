@@ -5,7 +5,12 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Contract, Provider, Tag, ContractStatus, Frequency, PriceEntry
 from app.forms import ContractForm, PriceEntryForm
-from app.services.contract_service import sync_contract_tags, add_price_entry
+from app.services.contract_service import (
+    sync_contract_tags,
+    add_price_entry,
+    sync_contract_prices,
+    delete_price_entry,
+)
 from app.services.financial_service import FinancialService
 
 bp = Blueprint('contract', __name__, url_prefix='/contracts')
@@ -23,6 +28,8 @@ def populate_provider_choices(form, user_id):
 def index():
     form = ContractForm()
     populate_provider_choices(form, current_user.id)
+
+    next_url = request.args.get('next')
 
     if form.validate_on_submit():
         provider_id = form.provider_id.data if form.provider_id.data and form.provider_id.data > 0 else None
@@ -64,7 +71,16 @@ def index():
         db.session.commit()
 
         flash('Vertrag erfolgreich erstellt.', 'success')
+        if next_url and next_url.startswith('/'):
+            return redirect(next_url)
         return redirect(url_for('contract.detail', id=contract.id))
+
+    if request.method == 'POST' and not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{field}: {error}", "danger")
+        if next_url and next_url.startswith('/'):
+            return redirect(next_url)
 
     # Query contracts with filters
     status_filter = request.args.get('status', 'all')
@@ -89,6 +105,11 @@ def index():
         query = query.join(Contract.tags).filter(Tag.name == tag_filter)
 
     contracts = query.order_by(Contract.created_at.desc()).all()
+    for c in contracts:
+        if c.price_history:
+            sync_contract_prices(c)
+    db.session.commit()
+
     providers = Provider.query.filter_by(user_id=current_user.id).order_by(Provider.name.asc()).all()
     all_tags = Tag.query.filter_by(user_id=current_user.id).order_by(Tag.name.asc()).all()
 
@@ -110,6 +131,9 @@ def detail(id):
     contract = db.session.get(Contract, id)
     if not contract or contract.user_id != current_user.id:
         abort(404)
+
+    sync_contract_prices(contract)
+    db.session.commit()
 
     edit_form = ContractForm(obj=contract)
     populate_provider_choices(edit_form, current_user.id)
@@ -201,6 +225,23 @@ def add_price(id):
                 flash(f"{field}: {error}", "danger")
 
     return redirect(url_for('contract.detail', id=contract.id))
+
+
+@bp.route('/<int:id>/price-entry/<int:price_id>/delete', methods=['POST'])
+@login_required
+def delete_price(id, price_id):
+    contract = db.session.get(Contract, id)
+    if not contract or contract.user_id != current_user.id:
+        abort(404)
+
+    success, error_msg = delete_price_entry(contract.id, price_id, current_user.id)
+    if success:
+        flash('Preiseintrag erfolgreich gelöscht.', 'success')
+    else:
+        flash(error_msg or 'Fehler beim Löschen des Preiseintrags.', 'danger')
+
+    return redirect(url_for('contract.detail', id=contract.id))
+
 
 
 @bp.route('/<int:id>/status', methods=['POST'])

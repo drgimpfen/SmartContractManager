@@ -90,12 +90,17 @@ def add_price_entry(
         )
         return False, error_msg, conf_entry
 
+    today = date.today()
+
     if conflicts and auto_adjust:
         for conf_entry in conflicts:
             # If the conflicting entry started before the new entry:
             if conf_entry.valid_from < valid_from:
                 conf_entry.valid_to = valid_from - timedelta(days=1)
-                conf_entry.is_current = False
+                conf_entry.is_current = (
+                    conf_entry.valid_from <= today
+                    and (conf_entry.valid_to is None or conf_entry.valid_to >= today)
+                )
             # If the conflicting entry started at or after the new entry:
             elif conf_entry.valid_from >= valid_from:
                 if valid_to is None or conf_entry.valid_to is None or conf_entry.valid_to <= valid_to:
@@ -104,17 +109,18 @@ def add_price_entry(
                 else:
                     # It started during the new entry and ends after:
                     conf_entry.valid_from = valid_to + timedelta(days=1)
-                    conf_entry.is_current = (conf_entry.valid_from <= date.today() and (conf_entry.valid_to is None or conf_entry.valid_to >= date.today()))
+                    conf_entry.is_current = (
+                        conf_entry.valid_from <= today
+                        and (conf_entry.valid_to is None or conf_entry.valid_to >= today)
+                    )
 
-    # Mark other open-ended prices as not current if this new price is open-ended
-    today = date.today()
     is_curr = valid_from <= today and (valid_to is None or valid_to >= today)
 
-    if is_curr or valid_to is None:
+    # Only mark other prices as not current if this new price is actually active TODAY
+    if is_curr:
         for p in contract.price_history:
             if p not in conflicts:
-                if valid_to is None:
-                    p.is_current = False
+                p.is_current = False
 
     new_price = PriceEntry(
         contract_id=contract.id,
@@ -126,11 +132,61 @@ def add_price_entry(
         note=note,
     )
     db.session.add(new_price)
+    db.session.flush()
 
-    # Sync contract's active amount if the new price is currently active
-    if is_curr:
-        contract.amount = amount
-        contract.currency = currency
-
+    sync_contract_prices(contract)
     db.session.commit()
     return True, None, new_price
+
+
+def sync_contract_prices(contract: Contract, as_of: date | None = None) -> None:
+    """
+    Synchronize is_current flags for all price entries and ensure contract.amount
+    and contract.currency match the currently active price entry.
+    """
+    ref = as_of or date.today()
+    active_entry = None
+
+    for p in contract.price_history:
+        p_active = p.valid_from <= ref and (p.valid_to is None or p.valid_to >= ref)
+        p.is_current = p_active
+        if p_active:
+            active_entry = p
+
+    if active_entry:
+        contract.amount = active_entry.amount
+        contract.currency = active_entry.currency
+
+
+def delete_price_entry(contract_id: int, price_entry_id: int, user_id: int) -> tuple[bool, str | None]:
+    """
+    Safely delete a price entry. If an adjacent preceding entry was capped by this entry,
+    re-opens or adjusts its valid_to, and re-syncs contract current price.
+    """
+    contract = Contract.query.filter_by(id=contract_id, user_id=user_id).first()
+    if not contract:
+        return False, "Vertrag nicht gefunden."
+
+    entry = PriceEntry.query.filter_by(id=price_entry_id, contract_id=contract_id).first()
+    if not entry:
+        return False, "Preiseintrag nicht gefunden."
+
+    other_entries = [p for p in contract.price_history if p.id != price_entry_id]
+
+    # If this entry had an adjacent preceding entry ending right before entry.valid_from:
+    preceding_end = entry.valid_from - timedelta(days=1)
+    preceding = next((p for p in other_entries if p.valid_to == preceding_end), None)
+
+    if preceding:
+        if entry.valid_to is None:
+            preceding.valid_to = None
+        else:
+            preceding.valid_to = entry.valid_to
+
+    db.session.delete(entry)
+    db.session.flush()
+
+    sync_contract_prices(contract)
+    db.session.commit()
+    return True, None
+

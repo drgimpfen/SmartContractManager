@@ -575,3 +575,56 @@ def test_calculate_contract_cost_summary_no_anchor_fallback():
     assert summary["total_payments"] == 4
     assert summary["paid_payments"] == 2
     assert summary["remaining_payments"] == 2
+
+
+def test_calculate_provider_summary():
+    dummy_curr = DummyCurrencyService(rates={("USD", "EUR"): 0.85})
+    fin_svc = FinancialService(currency_service=dummy_curr)
+
+    c1 = Contract(
+        status=ContractStatus.active,
+        amount=50.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 1, 1),
+        end_date=None,
+        billing_anchor_date=date(2026, 1, 1),
+    )
+    c2 = Contract(
+        status=ContractStatus.active,
+        amount=100.0,
+        currency="USD",
+        frequency=Frequency.quarterly,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+        billing_anchor_date=date(2026, 1, 1),
+    )
+    c3 = Contract(
+        status=ContractStatus.canceled,
+        amount=20.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2025, 1, 1),
+        end_date=date(2025, 12, 31),
+        billing_anchor_date=date(2025, 1, 1),
+    )
+
+    contracts = [c1, c2, c3]
+    # As of May 1, 2026
+    # c1 active monthly: 50.0 EUR
+    # c2 active monthly in EUR: 100 USD * 0.85 = 85 EUR / 3 = 28.33 EUR
+    # c3 is canceled -> 0 monthly
+    # total monthly spend: 50 + 28.33 = 78.33 EUR
+    summary = fin_svc.calculate_provider_summary(contracts, target_currency="EUR", as_of=date(2026, 5, 1))
+
+    assert summary["total_contracts"] == 3
+    assert summary["active_count"] == 2
+    assert summary["canceled_count"] == 1
+    assert summary["archived_count"] == 0
+    assert summary["monthly_spend"] == 78.33
+    assert summary["annual_projected"] == round(78.33 * 12, 2)
+    assert summary["has_fixed_term"] is True
+    assert summary["total_paid"] > 0
+    assert summary["total_remaining"] is not None
+    assert summary["total_cost"] == round(summary["total_paid"] + summary["total_remaining"], 2)
+

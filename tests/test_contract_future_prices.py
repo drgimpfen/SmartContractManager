@@ -1,0 +1,316 @@
+import datetime
+from werkzeug.security import generate_password_hash
+from app import db
+from app.models import User, Contract, PriceEntry, Frequency, ContractStatus
+from app.services.contract_service import add_price_entry, sync_contract_prices, delete_price_entry
+from app.services.financial_service import FinancialService
+
+
+def test_price_entry_dynamic_status_properties(app):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="pe_dyn_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Music Streaming",
+            amount=14.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Past price
+        p_past = PriceEntry(
+            contract_id=c.id,
+            amount=9.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=100),
+            valid_to=today - datetime.timedelta(days=1),
+            is_current=False,
+        )
+        # Current price
+        p_curr = PriceEntry(
+            contract_id=c.id,
+            amount=14.99,
+            currency="EUR",
+            valid_from=today,
+            valid_to=today + datetime.timedelta(days=20),
+            is_current=True,
+        )
+        # Future price
+        p_fut = PriceEntry(
+            contract_id=c.id,
+            amount=19.99,
+            currency="EUR",
+            valid_from=today + datetime.timedelta(days=21),
+            valid_to=None,
+            is_current=False,
+        )
+        db.session.add_all([p_past, p_curr, p_fut])
+        db.session.commit()
+
+        # Test PriceEntry dynamic properties
+        assert p_past.status == "past"
+        assert p_past.is_past is True
+        assert p_past.is_future is False
+        assert p_past.is_currently_active is False
+
+        assert p_curr.status == "current"
+        assert p_curr.is_currently_active is True
+        assert p_curr.is_future is False
+        assert p_curr.is_past is False
+
+        assert p_fut.status == "future"
+        assert p_fut.is_future is True
+        assert p_fut.is_currently_active is False
+        assert p_fut.is_past is False
+
+        # Test Contract dynamic properties
+        assert c.current_price_entry.id == p_curr.id
+        assert c.current_amount == 14.99
+        assert c.current_currency == "EUR"
+        assert len(c.upcoming_price_entries) == 1
+        assert c.next_price_change.id == p_fut.id
+
+        # Price delta: 19.99 vs 14.99 -> +5.00 (+33.3%)
+        delta = c.price_delta_to_next
+        assert delta is not None
+        assert delta["diff_amount"] == 5.00
+        assert delta["is_increase"] is True
+        assert delta["is_reduction"] is False
+        assert delta["diff_percent"] == 33.4 or delta["diff_percent"] == 33.3
+
+
+def test_future_price_addition_preserves_current_price_flag(app):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="future_flag_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Video Streaming",
+            amount=44.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=today - datetime.timedelta(days=200),
+            billing_anchor_date=today + datetime.timedelta(days=23),
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Initial open-ended price entry
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=44.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=200),
+            valid_to=None,
+            is_current=True,
+        )
+        db.session.add(p1)
+        db.session.commit()
+
+        # Add future price starting in 23 days (e.g. 24.99 EUR) with auto_adjust=True
+        future_start = today + datetime.timedelta(days=23)
+        success, err, new_price = add_price_entry(
+            contract=c,
+            amount=24.99,
+            currency="EUR",
+            valid_from=future_start,
+            valid_to=None,
+            auto_adjust=True,
+        )
+        assert success is True
+        assert new_price is not None
+
+        # Re-query
+        c = db.session.get(Contract, c.id)
+        p1 = db.session.get(PriceEntry, p1.id)
+
+        # p1 should now be capped to day before future_start, BUT STILL CURRENT TODAY!
+        assert p1.valid_to == future_start - datetime.timedelta(days=1)
+        assert p1.is_current is True
+        assert c.amount == 44.99
+
+        # new_price should not be current today
+        assert new_price.is_current is False
+
+        # Next billing is on future_start, so amount_on_next_billing is 24.99!
+        assert c.amount_on_next_billing == 24.99
+
+
+def test_financial_service_forward_12m_open_ended_projection(app):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="fin_proj_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        # Monthly contract billing on day today + 23 days
+        anchor = today + datetime.timedelta(days=23)
+        c = Contract(
+            user_id=u.id,
+            category="Fiber Internet",
+            amount=44.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=today - datetime.timedelta(days=365),
+            billing_anchor_date=anchor,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Current price until anchor - 1 day
+        p_curr = PriceEntry(
+            contract_id=c.id,
+            amount=44.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=365),
+            valid_to=anchor - datetime.timedelta(days=1),
+            is_current=True,
+        )
+        # Future price starting on anchor
+        p_fut = PriceEntry(
+            contract_id=c.id,
+            amount=24.99,
+            currency="EUR",
+            valid_from=anchor,
+            valid_to=None,
+            is_current=False,
+        )
+        db.session.add_all([p_curr, p_fut])
+        db.session.commit()
+
+        fin_service = FinancialService()
+        summary = fin_service.calculate_contract_cost_summary(c, as_of=today)
+
+        # In the next 12 months, all 12 payments fall on or after `anchor`
+        # Each payment is 24.99 EUR, so annual_amount should be 12 * 24.99 = 299.88 EUR
+        assert summary["is_fixed_term"] is False
+        assert summary["annual_amount"] == round(12 * 24.99, 2)
+
+
+def test_delete_price_entry_restores_preceding_range(app, client):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="del_pe_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+        u_id = u.id
+
+        c = Contract(
+            user_id=u.id,
+            category="Mobile Phone",
+            amount=30.00,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+        c_id = c.id
+
+        # p1 was initially open-ended, then capped when future price was added
+        fut_date = today + datetime.timedelta(days=30)
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=30.00,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=100),
+            valid_to=fut_date - datetime.timedelta(days=1),
+            is_current=True,
+        )
+        p2 = PriceEntry(
+            contract_id=c.id,
+            amount=40.00,
+            currency="EUR",
+            valid_from=fut_date,
+            valid_to=None,
+            is_current=False,
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
+        p1_id = p1.id
+        p2_id = p2.id
+
+    client.post("/login", data={"username": "del_pe_user", "password": "pass123"}, follow_redirects=True)
+
+    # Delete future price entry p2
+    resp = client.post(f"/contracts/{c_id}/price-entry/{p2_id}/delete", follow_redirects=True)
+    assert resp.status_code == 200
+
+    with app.app_context():
+        c = db.session.get(Contract, c_id)
+        p1 = db.session.get(PriceEntry, p1_id)
+        p2 = db.session.get(PriceEntry, p2_id)
+
+        assert p2 is None
+        # p1 should have its valid_to restored to None because p2 was open-ended
+        assert p1.valid_to is None
+        assert p1.is_current is True
+        assert c.amount == 30.00
+
+
+def test_ui_renders_scheduled_price_banner_and_list_badge(app, client):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="ui_price_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        fut_date = today + datetime.timedelta(days=20)
+        c = Contract(
+            user_id=u.id,
+            category="Game Pass",
+            amount=16.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            billing_anchor_date=fut_date,
+        )
+        db.session.add(c)
+        db.session.commit()
+        c_id = c.id
+
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=16.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=60),
+            valid_to=fut_date - datetime.timedelta(days=1),
+            is_current=True,
+        )
+        p2 = PriceEntry(
+            contract_id=c.id,
+            amount=12.99,
+            currency="EUR",
+            valid_from=fut_date,
+            valid_to=None,
+            is_current=False,
+            note="Rabattaktion",
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
+
+    client.post("/login", data={"username": "ui_price_user", "password": "pass123"}, follow_redirects=True)
+
+    # Check contract list view: should contain indicator badge
+    resp_list = client.get("/contracts?lang=de")
+    assert resp_list.status_code == 200
+    assert b"12.99 EUR" in resp_list.data
+
+    # Check contract detail view: should contain scheduled banner and badges
+    resp_detail = client.get(f"/contracts/{c_id}?lang=de")
+    assert resp_detail.status_code == 200
+    assert "Geplante Preisanpassung".encode("utf-8") in resp_detail.data
+    assert "F\xc3\xa4lliger Betrag: 12.99 EUR".encode("utf-8") in resp_detail.data or b"12.99 EUR" in resp_detail.data
+    assert "Rabattaktion".encode("utf-8") in resp_detail.data
