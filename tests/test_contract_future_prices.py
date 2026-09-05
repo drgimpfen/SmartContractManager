@@ -314,3 +314,132 @@ def test_ui_renders_scheduled_price_banner_and_list_badge(app, client):
     assert "Geplante Preisanpassung".encode("utf-8") in resp_detail.data
     assert "F\xc3\xa4lliger Betrag: 12.99 EUR".encode("utf-8") in resp_detail.data or b"12.99 EUR" in resp_detail.data
     assert "Rabattaktion".encode("utf-8") in resp_detail.data
+
+
+def test_get_contract_price_timeline_chart_data(app):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="chart_test_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Cloud Storage",
+            amount=44.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        fin_service = FinancialService()
+
+        # Case 1: No explicit price_history entries
+        data_single = fin_service.get_contract_price_timeline_chart(c)
+        assert data_single["has_multiple"] is False
+        assert data_single["currency"] == "EUR"
+        assert len(data_single["amounts"]) == 1
+        assert data_single["stats"]["min_amount"] == 44.99
+
+        # Case 2: Multiple entries with past, current, and future
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=14.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=300),
+            valid_to=today - datetime.timedelta(days=101),
+            is_current=False,
+            note="Einstiegspreis",
+        )
+        p2 = PriceEntry(
+            contract_id=c.id,
+            amount=44.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=100),
+            valid_to=today + datetime.timedelta(days=20),
+            is_current=True,
+            note="Preisanpassung",
+        )
+        p3 = PriceEntry(
+            contract_id=c.id,
+            amount=24.99,
+            currency="EUR",
+            valid_from=today + datetime.timedelta(days=21),
+            valid_to=None,
+            is_current=False,
+            note="Treuerabatt",
+        )
+        db.session.add_all([p1, p2, p3])
+        db.session.commit()
+
+        c = db.session.get(Contract, c.id)
+        chart_data = fin_service.get_contract_price_timeline_chart(c)
+
+        assert chart_data["has_multiple"] is True
+        assert chart_data["has_future"] is True
+        assert chart_data["amounts"] == [14.99, 44.99, 24.99]
+        assert chart_data["point_statuses"] == ["past", "current", "future"]
+        assert chart_data["notes"] == ["Einstiegspreis", "Preisanpassung", "Treuerabatt"]
+        assert chart_data["stats"]["initial_amount"] == 14.99
+        assert chart_data["stats"]["current_amount"] == 44.99
+        assert chart_data["stats"]["min_amount"] == 14.99
+        assert chart_data["stats"]["max_amount"] == 44.99
+        assert chart_data["stats"]["change_since_start_amount"] == 30.00
+        assert chart_data["stats"]["is_increase"] is True
+
+
+def test_ui_renders_price_timeline_chart_and_kpis(app, client):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="ui_chart_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Netflix Streaming",
+            amount=17.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+        c_id = c.id
+
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=11.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=200),
+            valid_to=today - datetime.timedelta(days=51),
+            is_current=False,
+            note="Starttarif",
+        )
+        p2 = PriceEntry(
+            contract_id=c.id,
+            amount=17.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=50),
+            valid_to=None,
+            is_current=True,
+            note="4K Upgrade",
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
+
+    client.post("/login", data={"username": "ui_chart_user", "password": "pass123"}, follow_redirects=True)
+
+    resp = client.get(f"/contracts/{c_id}?lang=de")
+    assert resp.status_code == 200
+    # Checks canvas and script data
+    assert b"priceTimelineChart" in resp.data
+    assert b"price-chart-data" in resp.data
+    # Checks KPI stat labels
+    assert "Startpreis" in resp.text
+    assert "Höchstpreis" in resp.text
+    assert "11.99 EUR" in resp.text
+    assert "17.99 EUR" in resp.text
+

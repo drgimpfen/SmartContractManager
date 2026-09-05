@@ -448,4 +448,76 @@ class FinancialService:
             "has_fixed_term": has_fixed_term,
         }
 
+    def get_contract_price_timeline_chart(self, contract: Contract) -> dict:
+        """
+        Generate structured timeline chart data for contract price adjustments.
+        Returns labels, values, point metadata, and summary statistics for Chart.js visualization.
+        """
+        currency = contract.currency or "EUR"
+
+        # Collect and sort price history entries ascending by valid_from
+        entries = sorted(contract.price_history or [], key=lambda p: p.valid_from)
+
+        if not entries:
+            # Fallback when no explicit price entries exist
+            start_d = contract.start_date or date.today()
+            amt = float(contract.amount or 0.0)
+            return {
+                "currency": currency,
+                "labels": [start_d.strftime("%d.%m.%Y")],
+                "amounts": [amt],
+                "point_statuses": ["current"],
+                "notes": [""],
+                "has_multiple": False,
+                "has_future": False,
+                "stats": {
+                    "initial_amount": amt,
+                    "initial_date": start_d.strftime("%d.%m.%Y"),
+                    "current_amount": amt,
+                    "min_amount": amt,
+                    "max_amount": amt,
+                    "change_since_start_amount": 0.0,
+                    "change_since_start_percent": 0.0,
+                    "is_increase": False,
+                    "is_reduction": False,
+                },
+            }
+
+        labels = [p.valid_from.strftime("%d.%m.%Y") for p in entries]
+        amounts = [round(float(p.amount), 2) for p in entries]
+        point_statuses = [p.status for p in entries]
+        notes = [p.note or "" for p in entries]
+
+        initial_entry = entries[0]
+        initial_amount = round(float(initial_entry.amount), 2)
+        initial_date = initial_entry.valid_from.strftime("%d.%m.%Y")
+        current_amount = round(contract.current_amount, 2)
+        min_amount = min(amounts)
+        max_amount = max(amounts)
+
+        diff_start = round(current_amount - initial_amount, 2)
+        pct_start = round((diff_start / initial_amount) * 100, 1) if initial_amount > 0 else 0.0
+
+        return {
+            "currency": currency,
+            "labels": labels,
+            "amounts": amounts,
+            "point_statuses": point_statuses,
+            "notes": notes,
+            "has_multiple": len(entries) > 1,
+            "has_future": any(p == "future" for p in point_statuses),
+            "stats": {
+                "initial_amount": initial_amount,
+                "initial_date": initial_date,
+                "current_amount": current_amount,
+                "min_amount": min_amount,
+                "max_amount": max_amount,
+                "change_since_start_amount": diff_start,
+                "change_since_start_percent": pct_start,
+                "is_increase": diff_start > 0,
+                "is_reduction": diff_start < 0,
+            },
+        }
+
+
 

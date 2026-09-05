@@ -149,6 +149,7 @@ def detail(id):
 
     fin_service = FinancialService()
     cost_summary = fin_service.calculate_contract_cost_summary(contract)
+    price_chart_data = fin_service.get_contract_price_timeline_chart(contract)
 
     return render_template(
         'contract_detail.html',
@@ -157,6 +158,7 @@ def detail(id):
         price_form=price_form,
         all_tags=all_tags,
         cost_summary=cost_summary,
+        price_chart_data=price_chart_data,
     )
 
 
