@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ _('register.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block main_class %}p-0 min-vh-100 d-flex align-items-center justify-content-center{% endblock %}
+{% block container_class %}container d-flex align-items-center justify-content-center min-vh-100 py-4{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center py-4 py-md-5">
+<div class="row justify-content-center w-100">
   <div class="col-12 col-sm-9 col-md-6 col-lg-5 col-xl-4">
     <div class="card border shadow-sm rounded-4">
       <div class="card-body p-4 p-md-5">
@@ -52,6 +59,36 @@
             </a>
           </div>
         </form>
+
+        <!-- Subtle Utilities inside card footer -->
+        <hr class="my-3 opacity-25" />
+        <div class="d-flex align-items-center justify-content-between text-muted small pt-1">
+          <!-- Language Selector -->
+          <div class="dropdown">
+            <button class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-globe"></i>
+              <span style="font-size: 0.8rem;">{{ languages.get(lang, lang|upper) }}</span>
+              <i class="bi bi-chevron-down" style="font-size: 0.6rem;"></i>
+            </button>
+            <ul class="dropdown-menu shadow-sm border">
+              {% for code, name in languages.items() %}
+              <li>
+                <a class="dropdown-item d-flex align-items-center justify-content-between py-2 small {% if lang == code %}active fw-semibold{% endif %}" href="/set-language/{{ code }}?next={{ request.path|urlencode }}">
+                  <span>{{ name }}</span>
+                  {% if lang == code %}<i class="bi bi-check2 text-primary"></i>{% endif %}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Theme Toggle -->
+          <button class="btn btn-sm btn-link text-decoration-none text-secondary p-0 theme-toggle-btn d-flex align-items-center gap-1" type="button" aria-label="{{ _('topbar.toggle_theme') }}">
+            <i class="bi bi-sun-fill theme-icon-light d-none text-warning"></i>
+            <i class="bi bi-moon-stars-fill theme-icon-dark text-secondary"></i>
+            <span style="font-size: 0.8rem;">{{ _('sidebar.theme') }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
