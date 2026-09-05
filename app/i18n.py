@@ -84,6 +84,14 @@ def _lookup_translation(translations: dict[str, Any], key: str) -> str | None:
 
 
 def translate(key: str, locale: str | None = None, **kwargs: Any) -> str:
+    global TRANSLATIONS
+    try:
+        from flask import current_app
+        if current_app and current_app.debug:
+            TRANSLATIONS = load_translations()
+    except Exception:
+        pass
+
     locale = normalize_locale(locale)
     translation = _lookup_translation(TRANSLATIONS.get(locale, {}), key)
     # Fallback to default locale if not found

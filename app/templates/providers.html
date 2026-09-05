@@ -1,183 +1,214 @@
 {% extends "base.html" %}
 {% block title %}{{ _('providers.title') }} - {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}{% endblock %}
-{% block page_title %}<h1 class="h4 mb-0 fw-bold">{{ _('providers.title') }}</h1>{% endblock %}
-{% block content %}
-<div class="row g-3">
-  <!-- Providers List Table Card -->
-  <div class="col-12 col-xl-8">
-    <div class="card border shadow-sm">
-      <div class="card-body p-3 p-md-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
-            <i class="bi bi-building text-primary"></i>
-            <span>{{ _('providers.list_title') }}</span>
-          </h5>
-          <span class="badge bg-primary rounded-pill">{{ providers|length }}</span>
-        </div>
 
-        {% if providers %}
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="py-2">{{ _('providers.table.name') }}</th>
-                <th class="py-2">{{ _('providers.table.email') }} / {{ _('form.phone') }}</th>
-                <th class="py-2">{{ _('providers.table.website') }} & Links</th>
-                <th class="py-2 text-end">{{ _('providers.table.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for provider in providers %}
-              <tr>
-                <td class="fw-semibold">
-                  <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-building text-secondary"></i>
-                    <span>{{ provider.name }}</span>
-                  </div>
-                  {% if provider.customer_number %}
-                  <small class="text-muted ps-4 d-block">{{ _('providers.customer_number') }}: <span class="font-monospace">{{ provider.customer_number }}</span></small>
-                  {% endif %}
-                  {% if provider.address %}
-                  <small class="text-muted ps-4 d-block text-truncate" style="max-width: 250px;"><i class="bi bi-geo-alt me-1"></i>{{ provider.address }}</small>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if provider.email %}
-                  <div class="mb-1">
-                    <a href="mailto:{{ provider.email }}" class="text-decoration-none d-inline-flex align-items-center gap-1 small">
-                      <i class="bi bi-envelope"></i>
-                      <span>{{ provider.email }}</span>
-                    </a>
-                  </div>
-                  {% endif %}
-                  {% if provider.phone %}
-                  <div>
-                    <a href="tel:{{ provider.phone }}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1 small">
-                      <i class="bi bi-telephone"></i>
-                      <span>{{ provider.phone }}</span>
-                    </a>
-                  </div>
-                  {% endif %}
-                  {% if not provider.email and not provider.phone %}
-                  <span class="text-muted small">{{ _('common.none') }}</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <div class="d-flex flex-wrap gap-1">
-                    {% if provider.website %}
-                    <a href="{{ provider.website }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-outline-secondary d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size: 0.75rem;">
-                      <i class="bi bi-globe"></i>
-                      <span>Web</span>
-                      <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.65rem;"></i>
-                    </a>
-                    {% endif %}
-                    {% if provider.customer_portal %}
-                    <a href="{{ provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-outline-primary d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size: 0.75rem;">
-                      <i class="bi bi-person-workspace"></i>
-                      <span>Portal</span>
-                      <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.65rem;"></i>
-                    </a>
-                    {% endif %}
-                    {% if provider.cancel_url %}
-                    <a href="{{ provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-outline-danger d-inline-flex align-items-center gap-1 py-0 px-2" style="font-size: 0.75rem;">
-                      <i class="bi bi-x-circle"></i>
-                      <span>Kündigung</span>
-                      <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.65rem;"></i>
-                    </a>
-                    {% endif %}
-                    {% if not provider.website and not provider.customer_portal and not provider.cancel_url %}
-                    <span class="text-muted small">{{ _('common.none') }}</span>
-                    {% endif %}
-                  </div>
-                </td>
-                <td class="text-end">
-                  <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProviderModal{{ provider.id }}" title="{{ _('providers.edit_provider') }}">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProviderModal{{ provider.id }}" title="{{ _('providers.delete') }}">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
-          <i class="bi bi-building-slash fs-1 d-block mb-2 text-secondary opacity-50"></i>
-          <p class="mb-1 fw-semibold">{{ _('providers.list_title') }}</p>
-          <p class="small mb-0">{{ _('common.none') }}</p>
-        </div>
-        {% endif %}
-      </div>
+{% block content %}
+<div class="d-flex flex-column gap-4">
+  <!-- Page Header & Action Bar -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+      <h1 class="h3 fw-bold mb-1 d-flex align-items-center gap-2">
+        <i class="bi bi-building text-primary"></i>
+        <span>{{ _('providers.title') }}</span>
+      </h1>
+      <p class="text-muted small mb-0">{{ _('providers.subtitle') }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#addProviderModal">
+        <i class="bi bi-plus-lg"></i>
+        <span>{{ _('providers.add_new_provider') }}</span>
+      </button>
     </div>
   </div>
 
-  <!-- Add Provider Form Card -->
-  <div class="col-12 col-xl-4">
-    <div class="card border shadow-sm">
-      <div class="card-body p-3 p-md-4">
-        <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
-          <i class="bi bi-plus-circle text-primary"></i>
+  {% if form.errors %}
+  <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-octagon me-1"></i>Fehler beim Speichern des Providers:</div>
+    <ul class="mb-0 ps-3">
+      {% for field, errors in form.errors.items() %}
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('sidebar.close') }}"></button>
+  </div>
+  {% endif %}
+
+  <!-- Full-Width Providers Table Card -->
+  <div class="card border shadow-sm">
+    <div class="card-body p-0">
+      {% if providers %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="border-bottom text-secondary small text-uppercase fw-semibold">
+            <tr>
+              <th class="py-3 ps-3">{{ _('providers.table.name') }}</th>
+              <th class="py-3">{{ _('providers.table.email') }} / {{ _('form.phone') }}</th>
+              <th class="py-3">{{ _('providers.table.website') }} & Portale</th>
+              <th class="py-3 pe-3 text-end">{{ _('providers.table.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for provider in providers %}
+            <tr>
+              <!-- Name, Customer Number & Address -->
+              <td class="ps-3 py-3">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-building text-secondary"></i>
+                  <span class="fw-bold text-body">{{ provider.name }}</span>
+                </div>
+                {% if provider.customer_number %}
+                <small class="text-muted ps-4 d-block mt-1">
+                  {{ _('providers.customer_number') }}: <span class="fw-semibold text-body">{{ provider.customer_number }}</span>
+                </small>
+                {% endif %}
+                {% if provider.address %}
+                <small class="text-muted ps-4 d-block text-truncate mt-1" style="max-width: 320px;">
+                  <i class="bi bi-geo-alt me-1"></i>{{ provider.address }}
+                </small>
+                {% endif %}
+              </td>
+
+              <!-- Email & Phone -->
+              <td class="py-3">
+                {% if provider.email %}
+                <div class="mb-1">
+                  <a href="mailto:{{ provider.email }}" class="text-decoration-none d-inline-flex align-items-center gap-1 small">
+                    <i class="bi bi-envelope text-secondary"></i>
+                    <span>{{ provider.email }}</span>
+                  </a>
+                </div>
+                {% endif %}
+                {% if provider.phone %}
+                <div>
+                  <a href="tel:{{ provider.phone }}" class="text-decoration-none text-body d-inline-flex align-items-center gap-1 small">
+                    <i class="bi bi-telephone text-secondary"></i>
+                    <span>{{ provider.phone }}</span>
+                  </a>
+                </div>
+                {% endif %}
+                {% if not provider.email and not provider.phone %}
+                <span class="text-muted small">-</span>
+                {% endif %}
+              </td>
+
+              <!-- Direct Action Links (Website, Portal, Cancellation) -->
+              <td class="py-3">
+                <div class="d-flex flex-wrap gap-2">
+                  {% if provider.website %}
+                  <a href="{{ provider.website }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-globe"></i>
+                    <span>Web</span>
+                    <i class="bi bi-box-arrow-up-right small"></i>
+                  </a>
+                  {% endif %}
+                  {% if provider.customer_portal %}
+                  <a href="{{ provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-person-workspace"></i>
+                    <span>Portal</span>
+                    <i class="bi bi-box-arrow-up-right small"></i>
+                  </a>
+                  {% endif %}
+                  {% if provider.cancel_url %}
+                  <a href="{{ provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.78rem;">
+                    <i class="bi bi-x-circle"></i>
+                    <span>Kündigung</span>
+                    <i class="bi bi-box-arrow-up-right small"></i>
+                  </a>
+                  {% endif %}
+                  {% if not provider.website and not provider.customer_portal and not provider.cancel_url %}
+                  <span class="text-muted small">-</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <!-- Actions: Edit & Delete -->
+              <td class="pe-3 py-3 text-end">
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProviderModal{{ provider.id }}" title="{{ _('providers.edit_provider') }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProviderModal{{ provider.id }}" title="{{ _('providers.delete') }}">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="bi bi-building-slash fs-1 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-semibold mb-1">{{ _('providers.list_title') }}</h5>
+        <p class="small mb-3">Noch keine Provider hinterlegt.</p>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addProviderModal">
+          <i class="bi bi-plus-lg me-1"></i>{{ _('providers.add_new_provider') }}
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add New Provider -->
+<div class="modal fade" id="addProviderModal" tabindex="-1" aria-labelledby="addProviderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="addProviderModalLabel">
+          <i class="bi bi-building-add text-primary"></i>
           <span>{{ _('providers.add_new_provider') }}</span>
         </h5>
-
-        {% if form.errors %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          <ul class="mb-0 ps-3">
-            {% for field, errors in form.errors.items() %}
-              {% for error in errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            {% endfor %}
-          </ul>
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('sidebar.close') }}"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('provider.index') }}">
+        {{ form.hidden_tag() }}
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.name') }} <span class="text-danger">*</span></label>
+              <input name="name" class="form-control" value="{{ form.name.data or '' }}" placeholder="z. B. Telekom, Vodafone, Stadtwerke" required />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.customer_number') }}</label>
+              <input name="customer_number" class="form-control" value="{{ form.customer_number.data or '' }}" placeholder="z. B. CUST-987654" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.address') }}</label>
+              <textarea name="address" class="form-control" rows="2" placeholder="Straße, Hausnummer, PLZ Ort">{{ form.address.data or '' }}</textarea>
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label small fw-semibold">{{ _('providers.table.email') }}</label>
+              <input name="email" type="email" inputmode="email" class="form-control" value="{{ form.email.data or '' }}" placeholder="kundenservice@provider.de" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label small fw-semibold">{{ _('form.phone') }}</label>
+              <input name="phone" type="tel" inputmode="tel" class="form-control" value="{{ form.phone.data or '' }}" placeholder="+49 ..." />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.table.website') }}</label>
+              <input name="website" type="url" inputmode="url" placeholder="https://" class="form-control" value="{{ form.website.data or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.customer_portal') }}</label>
+              <input name="customer_portal" type="url" inputmode="url" placeholder="https://login.provider.de" class="form-control" value="{{ form.customer_portal.data or '' }}" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('providers.cancellation_link') }}</label>
+              <input name="cancel_url" type="url" inputmode="url" placeholder="https://kuendigung.provider.de" class="form-control" value="{{ form.cancel_url.data or '' }}" />
+            </div>
+          </div>
         </div>
-        {% endif %}
-
-        <form method="post" action="{{ url_for('provider.index') }}">
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.name') }} <span class="text-danger">*</span></label>
-            <input name="name" class="form-control" value="{{ form.name.data or '' }}" required />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('providers.customer_number') }}</label>
-            <input name="customer_number" class="form-control" value="{{ form.customer_number.data or '' }}" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.address') }}</label>
-            <textarea name="address" class="form-control" rows="2">{{ form.address.data or '' }}</textarea>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('providers.table.email') }}</label>
-            <input name="email" type="email" inputmode="email" class="form-control" value="{{ form.email.data or '' }}" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('form.phone') }}</label>
-            <input name="phone" type="tel" inputmode="tel" class="form-control" value="{{ form.phone.data or '' }}" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('providers.table.website') }}</label>
-            <input name="website" type="url" inputmode="url" placeholder="https://" class="form-control" value="{{ form.website.data or '' }}" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">{{ _('providers.customer_portal') }}</label>
-            <input name="customer_portal" type="url" inputmode="url" placeholder="https://" class="form-control" value="{{ form.customer_portal.data or '' }}" />
-          </div>
-          <div class="mb-4">
-            <label class="form-label small fw-semibold">{{ _('providers.cancellation_link') }}</label>
-            <input name="cancel_url" type="url" inputmode="url" placeholder="https://" class="form-control" value="{{ form.cancel_url.data or '' }}" />
-          </div>
-          <button type="submit" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+          <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
             <i class="bi bi-check-lg"></i>
             <span>{{ _('providers.save') }}</span>
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -245,7 +276,7 @@
   </div>
 </div>
 
-<!-- Modal: Delete Provider -->
+<!-- Modal: Delete Provider Confirmation -->
 <div class="modal fade" id="deleteProviderModal{{ provider.id }}" tabindex="-1" aria-labelledby="deleteProviderModalLabel{{ provider.id }}" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border shadow">

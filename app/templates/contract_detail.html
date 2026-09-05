@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="d-flex flex-column gap-4">
-  <!-- Top Navigation & Actions Bar -->
-  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+  <!-- Top Navigation & Header Bar -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 pb-2 border-bottom">
     <div class="d-flex align-items-center gap-3">
-      <a href="{{ url_for('contract.index') }}" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Zurück">
+      <a href="{{ url_for('contract.index') }}" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Zurück zur Übersicht">
         <i class="bi bi-arrow-left fs-5"></i>
       </a>
       <div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
           <h1 class="h3 fw-bold mb-0">{{ contract.category }}</h1>
           {% if contract.status.value == 'active' %}
           <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
@@ -27,24 +27,27 @@
           {% endif %}
         </div>
         {% if contract.contract_number %}
-        <small class="text-muted">Vertragsnummer: #{{ contract.contract_number }}</small>
+        <small class="text-muted d-block mt-1">
+          <i class="bi bi-hash"></i>{{ _('form.contract_number') }}: <span class="fw-semibold text-body">{{ contract.contract_number }}</span>
+        </small>
         {% endif %}
       </div>
     </div>
 
-    <!-- Quick Actions -->
+    <!-- Header Action Buttons -->
     <div class="d-flex align-items-center gap-2">
-      <!-- Status Toggle Dropdown -->
+      <!-- Status Quick Selector Dropdown -->
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-arrow-repeat me-1"></i>{{ _('form.status') }}
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1 py-2 px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>{{ _('form.status') }}</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm border">
           <li>
             <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
               <input type="hidden" name="status" value="active" />
-              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-success py-2">
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-success py-2 {% if contract.status.value == 'active' %}fw-bold bg-success bg-opacity-10{% endif %}">
                 <i class="bi bi-check-circle"></i>{{ _('contracts.active') }}
               </button>
             </form>
@@ -53,7 +56,7 @@
             <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
               <input type="hidden" name="status" value="canceled" />
-              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-warning py-2">
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-warning py-2 {% if contract.status.value == 'canceled' %}fw-bold bg-warning bg-opacity-10{% endif %}">
                 <i class="bi bi-exclamation-triangle"></i>{{ _('contracts.canceled') }}
               </button>
             </form>
@@ -62,7 +65,7 @@
             <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
               <input type="hidden" name="status" value="archived" />
-              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-secondary py-2">
+              <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-secondary py-2 {% if contract.status.value == 'archived' %}fw-bold bg-secondary bg-opacity-10{% endif %}">
                 <i class="bi bi-archive"></i>{{ _('contracts.archived') }}
               </button>
             </form>
@@ -71,190 +74,130 @@
       </div>
 
       <!-- Edit Button -->
-      <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editContractModal">
+      <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#editContractModal">
         <i class="bi bi-pencil"></i>
         <span>{{ _('contracts.edit') }}</span>
       </button>
 
       <!-- Delete Button -->
-      <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#deleteContractModal">
+      <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 py-2 px-3" data-bs-toggle="modal" data-bs-target="#deleteContractModal">
         <i class="bi bi-trash"></i>
         <span>{{ _('contracts.delete') }}</span>
       </button>
     </div>
   </div>
 
+  <!-- Balanced 2-Column Content Layout -->
   <div class="row g-4">
-    <!-- Left Column: Contract Details & Provider -->
-    <div class="col-12 col-lg-7">
-      <div class="d-flex flex-column gap-4">
-        <!-- Main Info Card -->
-        <div class="card border shadow-sm">
-          <div class="card-header bg-transparent border-bottom py-3">
-            <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
-              <i class="bi bi-info-circle text-primary"></i>
-              <span>Vertragsübersicht</span>
-            </h5>
-          </div>
-          <div class="card-body p-4">
-            <div class="row g-3">
-              <!-- Active Amount -->
-              <div class="col-6 col-sm-4">
-                <span class="text-muted small d-block mb-1">{{ _('contracts.table.amount') }}</span>
-                <span class="h4 fw-bold text-primary mb-0">{{ "%.2f"|format(contract.amount) }} {{ contract.currency }}</span>
-                <span class="badge text-bg-light border text-secondary ms-1" style="font-size: 0.75rem;">
-                  {{ contract.frequency.value|capitalize }}
-                </span>
-              </div>
-
-              <!-- Billing Anchor Date -->
-              <div class="col-6 col-sm-4">
-                <span class="text-muted small d-block mb-1">{{ _('contracts.table.anchor') }}</span>
-                {% if contract.billing_anchor_date %}
-                <span class="fw-semibold text-body d-flex align-items-center gap-1">
-                  <i class="bi bi-calendar-check text-primary"></i>
-                  {{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}
-                </span>
-                {% else %}
-                <span class="text-muted">-</span>
-                {% endif %}
-              </div>
-
-              <!-- Notice Period -->
-              <div class="col-6 col-sm-4">
-                <span class="text-muted small d-block mb-1">{{ _('form.cancellation_notice') }}</span>
-                <span class="fw-semibold text-body">
-                  {{ contract.cancellation_notice_amount }} {{ contract.cancellation_notice_unit }}
-                </span>
-              </div>
-
-              <!-- Start & End Date -->
-              <div class="col-6 col-sm-6 border-top pt-3">
-                <span class="text-muted small d-block mb-1">{{ _('form.start_date') }}</span>
-                <span class="fw-semibold text-body">
-                  {{ contract.start_date.strftime('%d.%m.%Y') if contract.start_date else '-' }}
-                </span>
-              </div>
-              <div class="col-6 col-sm-6 border-top pt-3">
-                <span class="text-muted small d-block mb-1">{{ _('form.end_date') }}</span>
-                <span class="fw-semibold text-body">
-                  {{ contract.end_date.strftime('%d.%m.%Y') if contract.end_date else '-' }}
-                </span>
-              </div>
-
-              <!-- Payment Method & Term -->
-              <div class="col-6 border-top pt-3">
-                <span class="text-muted small d-block mb-1">{{ _('form.payment_method') }}</span>
-                <span class="fw-semibold text-body">{{ contract.payment_method or '-' }}</span>
-              </div>
-              <div class="col-6 border-top pt-3">
-                <span class="text-muted small d-block mb-1">{{ _('form.payment_term') }}</span>
-                <span class="fw-semibold text-body">{{ contract.payment_term or '-' }}</span>
-              </div>
-
-              <!-- Tags -->
-              {% if contract.tags %}
-              <div class="col-12 border-top pt-3">
-                <span class="text-muted small d-block mb-2"><i class="bi bi-tags me-1"></i>Tags:</span>
-                <div class="d-flex flex-wrap gap-1">
-                  {% for t in contract.tags %}
-                  <span class="badge rounded-pill px-3 py-2" style="background-color: {{ t.color }}; font-size: 0.8rem; color: white;">
-                    {{ t.name }}
-                  </span>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
-
-              <!-- Notes -->
-              {% if contract.notes %}
-              <div class="col-12 border-top pt-3">
-                <span class="text-muted small d-block mb-1">{{ _('form.notes') }}:</span>
-                <div class="p-3 bg-body-tertiary rounded-3 small text-body">{{ contract.notes }}</div>
-              </div>
-              {% endif %}
-            </div>
-          </div>
+    <!-- Main Column (Left, col-lg-8): Overview Card + Price History Timeline -->
+    <div class="col-12 col-lg-8 d-flex flex-column gap-4">
+      <!-- Card 1: Contract Details & Terms -->
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle text-primary"></i>
+            <span>{{ _('contracts.detail_title') }}</span>
+          </h5>
+          <span class="badge bg-body-secondary text-body border px-2 py-1">
+            {{ _('form.' ~ contract.frequency.value) }}
+          </span>
         </div>
-
-        <!-- Provider Card (if associated) -->
-        <div class="card border shadow-sm">
-          <div class="card-header bg-transparent border-bottom py-3">
-            <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
-              <i class="bi bi-building text-primary"></i>
-              <span>Vertragspartner / Provider</span>
-            </h5>
-          </div>
-          <div class="card-body p-4">
-            {% if contract.provider %}
-            <div class="d-flex flex-column gap-3">
-              <div class="d-flex align-items-center justify-content-between">
-                <div>
-                  <h6 class="fw-bold mb-0 fs-5">{{ contract.provider.name }}</h6>
-                  {% if contract.provider.customer_number %}
-                  <small class="text-muted">{{ _('providers.customer_number') }}: {{ contract.provider.customer_number }}</small>
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="row g-2 text-muted small">
-                {% if contract.provider.email %}
-                <div class="col-12 col-sm-6">
-                  <i class="bi bi-envelope me-1"></i>
-                  <a href="mailto:{{ contract.provider.email }}" class="text-decoration-none">{{ contract.provider.email }}</a>
-                </div>
-                {% endif %}
-                {% if contract.provider.phone %}
-                <div class="col-12 col-sm-6">
-                  <i class="bi bi-telephone me-1"></i>
-                  <span>{{ contract.provider.phone }}</span>
-                </div>
-                {% endif %}
-                {% if contract.provider.website %}
-                <div class="col-12">
-                  <i class="bi bi-globe me-1"></i>
-                  <a href="{{ contract.provider.website }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
-                    {{ contract.provider.website }}
-                  </a>
-                </div>
-                {% endif %}
-              </div>
-
-              <!-- One-Click Provider Action Buttons -->
-              <div class="d-flex flex-wrap gap-2 pt-2 border-top">
-                {% if contract.provider.customer_portal %}
-                <a href="{{ contract.provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2">
-                  <i class="bi bi-box-arrow-up-right"></i>
-                  <span>{{ _('contracts.portal_button') }}</span>
-                </a>
-                {% endif %}
-                {% if contract.provider.cancel_url %}
-                <a href="{{ contract.provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-warning text-dark d-inline-flex align-items-center gap-2">
-                  <i class="bi bi-x-octagon"></i>
-                  <span>{{ _('contracts.cancel_button') }}</span>
-                </a>
-                {% endif %}
+        <div class="card-body p-4">
+          <div class="row g-4">
+            <!-- Active Amount Block -->
+            <div class="col-12 col-sm-4">
+              <span class="text-muted small d-block mb-1">{{ _('contracts.table.amount') }}</span>
+              <div class="d-flex align-items-baseline gap-2">
+                <span class="h3 fw-bold text-primary mb-0">{{ "%.2f"|format(contract.amount) }}</span>
+                <span class="fw-semibold text-secondary">{{ contract.currency }}</span>
               </div>
             </div>
-            {% else %}
-            <div class="text-muted text-center py-3">
-              <p class="mb-0 small">Diesem Vertrag ist aktuell kein Provider zugewiesen.</p>
+
+            <!-- Billing Anchor Date -->
+            <div class="col-12 col-sm-4">
+              <span class="text-muted small d-block mb-1">{{ _('contracts.table.anchor') }}</span>
+              {% if contract.billing_anchor_date %}
+              <span class="fw-semibold text-body d-flex align-items-center gap-1">
+                <i class="bi bi-calendar-check text-primary"></i>
+                <span>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}</span>
+              </span>
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </div>
+
+            <!-- Cancellation Notice -->
+            <div class="col-12 col-sm-4">
+              <span class="text-muted small d-block mb-1">{{ _('form.cancellation_notice') }}</span>
+              {% if contract.cancellation_notice_amount and contract.cancellation_notice_amount > 0 %}
+              <span class="fw-semibold text-body d-flex align-items-center gap-1">
+                <i class="bi bi-bell text-warning"></i>
+                <span>{{ contract.cancellation_notice_amount }} {{ _('form.' ~ contract.cancellation_notice_unit) }}</span>
+              </span>
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </div>
+
+            <!-- Start & End Date -->
+            <div class="col-6 col-sm-6 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-event me-1"></i>{{ _('form.start_date') }}</span>
+              <span class="fw-semibold text-body">
+                {{ contract.start_date.strftime('%d.%m.%Y') if contract.start_date else '-' }}
+              </span>
+            </div>
+            <div class="col-6 col-sm-6 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-calendar-x me-1"></i>{{ _('form.end_date') }}</span>
+              <span class="fw-semibold text-body">
+                {{ contract.end_date.strftime('%d.%m.%Y') if contract.end_date else '-' }}
+              </span>
+            </div>
+
+            <!-- Payment Method & Term -->
+            <div class="col-6 col-sm-6 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-credit-card me-1"></i>{{ _('form.payment_method') }}</span>
+              <span class="fw-semibold text-body">{{ contract.payment_method or '-' }}</span>
+            </div>
+            <div class="col-6 col-sm-6 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-hourglass-split me-1"></i>{{ _('form.payment_term') }}</span>
+              <span class="fw-semibold text-body">{{ contract.payment_term or '-' }}</span>
+            </div>
+
+            <!-- Tags -->
+            {% if contract.tags %}
+            <div class="col-12 border-top pt-3">
+              <span class="text-muted small d-block mb-2"><i class="bi bi-tags me-1"></i>Tags:</span>
+              <div class="d-flex flex-wrap gap-1">
+                {% for t in contract.tags %}
+                <span class="badge rounded-pill px-2 py-1" style="background-color: {{ t.color }}; color: #ffffff; font-size: 0.75rem;">
+                  {{ t.name }}
+                </span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if contract.notes %}
+            <div class="col-12 border-top pt-3">
+              <span class="text-muted small d-block mb-1"><i class="bi bi-journal-text me-1"></i>{{ _('form.notes') }}</span>
+              <div class="p-3 bg-body-tertiary rounded-3 border text-body small">
+                {{ contract.notes }}
+              </div>
             </div>
             {% endif %}
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Right Column: Price History Timeline & Management -->
-    <div class="col-12 col-lg-5">
+      <!-- Card 2: Price History Timeline -->
       <div class="card border shadow-sm">
         <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
           <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
             <i class="bi bi-graph-up text-primary"></i>
             <span>{{ _('contracts.price_history') }}</span>
           </h5>
-          <button class="btn btn-sm btn-primary d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addPriceModal">
+          <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#addPriceModal">
             <i class="bi bi-plus-lg"></i>
             <span>{{ _('contracts.add_price_entry') }}</span>
           </button>
@@ -263,34 +206,117 @@
           {% if contract.price_history %}
           <div class="list-group list-group-flush border-top-0">
             {% for price in contract.price_history %}
-            <div class="list-group-item px-0 py-3 border-bottom {% if price.is_current %}bg-success bg-opacity-10 rounded-3 p-3 my-1 border{% endif %}">
-              <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+            <div class="list-group-item px-3 py-3 rounded-3 mb-2 border {% if price.is_current %}bg-success bg-opacity-10 border-success border-opacity-25{% else %}bg-body-tertiary{% endif %}">
+              <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                 <div>
-                  <span class="h5 fw-bold mb-0 text-body">
-                    {{ "%.2f"|format(price.amount) }} {{ price.currency }}
-                  </span>
-                  {% if price.is_current %}
-                  <span class="badge bg-success ms-2">{{ _('contracts.current_price') }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="h5 fw-bold mb-0 text-body">
+                      {{ "%.2f"|format(price.amount) }} {{ price.currency }}
+                    </span>
+                    {% if price.is_current %}
+                    <span class="badge bg-success">{{ _('contracts.current_price') }}</span>
+                    {% endif %}
+                  </div>
+                  {% if price.note %}
+                  <div class="text-muted small mt-1">
+                    <i class="bi bi-chat-left-text me-1"></i>{{ price.note }}
+                  </div>
                   {% endif %}
                 </div>
-                <div class="text-end text-muted small font-monospace">
-                  <i class="bi bi-calendar-range me-1"></i>
+                <div class="text-secondary small d-flex align-items-center gap-1">
+                  <i class="bi bi-calendar-range me-1 text-primary"></i>
                   <span>{{ price.valid_from.strftime('%d.%m.%Y') }}</span>
                   <span>&rarr;</span>
                   <span>{{ price.valid_to.strftime('%d.%m.%Y') if price.valid_to else _('contracts.open_ended') }}</span>
                 </div>
               </div>
-              {% if price.note %}
-              <div class="text-muted small mt-1">
-                <i class="bi bi-chat-left-text me-1"></i>{{ price.note }}
-              </div>
-              {% endif %}
             </div>
             {% endfor %}
           </div>
           {% else %}
           <div class="text-center text-muted py-4">
             <p class="small mb-0">Keine Preishistorie verfügbar.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Column (Right, col-lg-4): Provider Actions & Information -->
+    <div class="col-12 col-lg-4 d-flex flex-column gap-4">
+      <!-- Provider Card -->
+      <div class="card border shadow-sm">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-building text-primary"></i>
+            <span>Vertragspartner / Provider</span>
+          </h5>
+        </div>
+        <div class="card-body p-4">
+          {% if contract.provider %}
+          <div class="mb-3">
+            <h6 class="fw-bold mb-1 fs-5">{{ contract.provider.name }}</h6>
+            {% if contract.provider.customer_number %}
+            <small class="text-muted d-block">
+              {{ _('providers.customer_number') }}: <span class="fw-semibold text-body">{{ contract.provider.customer_number }}</span>
+            </small>
+            {% endif %}
+            {% if contract.provider.address %}
+            <small class="text-muted d-block mt-1">
+              <i class="bi bi-geo-alt me-1"></i>{{ contract.provider.address }}
+            </small>
+            {% endif %}
+          </div>
+
+          <!-- Direct Provider Action Buttons -->
+          <div class="d-flex flex-column gap-2 mb-3 pt-2 border-top">
+            {% if contract.provider.customer_portal %}
+            <a href="{{ contract.provider.customer_portal }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-person-workspace"></i>
+              <span>{{ _('contracts.portal_button') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+            {% endif %}
+
+            {% if contract.provider.cancel_url %}
+            <a href="{{ contract.provider.cancel_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <i class="bi bi-x-circle"></i>
+              <span>{{ _('contracts.cancel_button') }}</span>
+              <i class="bi bi-box-arrow-up-right small"></i>
+            </a>
+            {% endif %}
+          </div>
+
+          <!-- Contact Details List -->
+          <div class="d-flex flex-column gap-2 pt-2 border-top small">
+            {% if contract.provider.email %}
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-envelope text-secondary"></i>
+              <a href="mailto:{{ contract.provider.email }}" class="text-decoration-none text-body">{{ contract.provider.email }}</a>
+            </div>
+            {% endif %}
+            {% if contract.provider.phone %}
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-telephone text-secondary"></i>
+              <a href="tel:{{ contract.provider.phone }}" class="text-decoration-none text-body">{{ contract.provider.phone }}</a>
+            </div>
+            {% endif %}
+            {% if contract.provider.website %}
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-globe text-secondary"></i>
+              <a href="{{ contract.provider.website }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-truncate" style="max-width: 220px;">
+                {{ contract.provider.website }}
+              </a>
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="text-muted text-center py-4">
+            <i class="bi bi-building-dash fs-2 d-block mb-2 opacity-50"></i>
+            <p class="small mb-2">Kein Provider zugewiesen.</p>
+            <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editContractModal">
+              <i class="bi bi-pencil me-1"></i>Provider zuweisen
+            </button>
           </div>
           {% endif %}
         </div>
@@ -467,13 +493,14 @@
     <div class="modal-content border shadow">
       <div class="modal-header border-bottom">
         <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteContractModalLabel">
-          <i class="bi bi-exclamation-triangle-fill"></i>
+          <i class="bi bi-exclamation-triangle"></i>
           <span>{{ _('contracts.delete') }}</span>
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
       </div>
       <div class="modal-body p-4">
-        <p class="mb-0">{{ _('contracts.delete_confirm') }}</p>
+        <p class="mb-2 fw-semibold">{{ contract.category }}</p>
+        <p class="text-muted small mb-0">{{ _('contracts.delete_confirm') }}</p>
       </div>
       <div class="modal-footer border-top bg-body-tertiary">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>

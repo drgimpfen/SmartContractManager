@@ -10,7 +10,7 @@
         <i class="bi bi-file-earmark-text text-primary"></i>
         <span>{{ _('contracts.title') }}</span>
       </h1>
-      <p class="text-muted small mb-0">{{ _('dashboard.subtitle') }}</p>
+      <p class="text-muted small mb-0">{{ _('contracts.subtitle') }}</p>
     </div>
     <div class="d-flex align-items-center gap-2">
       <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
@@ -26,33 +26,36 @@
       <form method="get" action="{{ url_for('contract.index') }}" class="row g-2 align-items-center">
         <!-- Status Filter Pills -->
         <div class="col-12 col-lg-auto me-lg-auto">
-          <div class="btn-group btn-group-sm w-100" role="group">
-            <a href="{{ url_for('contract.index', status='all', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'all' %}active fw-semibold{% endif %}">
+          <div class="btn-group btn-group-sm w-100" role="group" aria-label="Status Filter">
+            <a href="{{ url_for('contract.index', status='all', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'all' %}active fw-semibold text-white bg-primary border-primary{% endif %}">
               {{ _('contracts.filter_all') }}
             </a>
-            <a href="{{ url_for('contract.index', status='active', tag=active_tag, q=search_query) }}" class="btn btn-outline-success {% if active_status == 'active' %}active fw-semibold{% endif %}">
-              {{ _('contracts.filter_active') }}
+            <a href="{{ url_for('contract.index', status='active', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'active' %}active fw-semibold text-white bg-success border-success{% endif %}">
+              {{ _('contracts.active') }}
             </a>
-            <a href="{{ url_for('contract.index', status='canceled', tag=active_tag, q=search_query) }}" class="btn btn-outline-warning {% if active_status == 'canceled' %}active fw-semibold{% endif %}">
-              {{ _('contracts.filter_canceled') }}
+            <a href="{{ url_for('contract.index', status='canceled', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'canceled' %}active fw-semibold text-white bg-warning border-warning{% endif %}">
+              {{ _('contracts.canceled') }}
             </a>
-            <a href="{{ url_for('contract.index', status='archived', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'archived' %}active fw-semibold{% endif %}">
-              {{ _('contracts.filter_archived') }}
+            <a href="{{ url_for('contract.index', status='archived', tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary {% if active_status == 'archived' %}active fw-semibold text-white bg-secondary border-secondary{% endif %}">
+              {{ _('contracts.archived') }}
             </a>
           </div>
         </div>
 
-        <!-- Search Input -->
-        <div class="col-12 col-sm-8 col-lg-4">
+        <!-- Search Input with inline Button -->
+        <div class="col-12 col-lg-5">
           <div class="input-group input-group-sm">
-            <span class="input-group-text bg-transparent"><i class="bi bi-search text-secondary"></i></span>
-            <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="{{ _('common.search') }}" />
+            <span class="input-group-text bg-transparent border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+            <input type="text" name="q" value="{{ search_query }}" class="form-control border-start-0 border-end-0" placeholder="{{ _('common.search') }}" />
             {% if active_status != 'all' %}<input type="hidden" name="status" value="{{ active_status }}" />{% endif %}
             {% if active_tag %}<input type="hidden" name="tag" value="{{ active_tag }}" />{% endif %}
+            {% if search_query %}
+            <a href="{{ url_for('contract.index', status=active_status, tag=active_tag) }}" class="btn btn-outline-secondary border-start-0" title="Suche zurücksetzen">
+              <i class="bi bi-x-lg"></i>
+            </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary px-3">{{ _('common.search') }}</button>
           </div>
-        </div>
-        <div class="col-12 col-sm-4 col-lg-auto">
-          <button type="submit" class="btn btn-sm btn-secondary w-100">{{ _('common.search') }}</button>
         </div>
       </form>
 
@@ -60,11 +63,11 @@
       {% if all_tags %}
       <div class="d-flex flex-wrap gap-1 align-items-center pt-2 mt-2 border-top">
         <span class="small text-muted me-1"><i class="bi bi-tags"></i> Tags:</span>
-        <a href="{{ url_for('contract.index', status=active_status, q=search_query) }}" class="badge text-decoration-none {% if not active_tag %}bg-secondary text-white{% else %}bg-body-secondary text-body border{% endif %}">
+        <a href="{{ url_for('contract.index', status=active_status, q=search_query) }}" class="badge text-decoration-none rounded-pill px-2 py-1 {% if not active_tag %}bg-primary text-white{% else %}bg-body-secondary text-body border{% endif %}">
           {{ _('contracts.filter_all') }}
         </a>
         {% for t in all_tags %}
-        <a href="{{ url_for('contract.index', status=active_status, tag=t.name, q=search_query) }}" class="badge text-decoration-none {% if active_tag == t.name %}border border-dark shadow-sm{% endif %}" style="background-color: {{ t.color }}; color: white;">
+        <a href="{{ url_for('contract.index', status=active_status, tag=t.name, q=search_query) }}" class="badge text-decoration-none rounded-pill px-2 py-1 {% if active_tag == t.name %}border-2 border-primary shadow-sm{% endif %}" style="background-color: {{ t.color }}; color: #ffffff;">
           {{ t.name }}
         </a>
         {% endfor %}
@@ -79,7 +82,7 @@
       {% if contracts %}
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead class="table-light border-bottom">
+          <thead class="border-bottom text-secondary small text-uppercase fw-semibold">
             <tr>
               <th class="py-3 ps-3">{{ _('contracts.table.category') }}</th>
               <th class="py-3">{{ _('contracts.table.provider') }}</th>
@@ -93,7 +96,7 @@
             {% for contract in contracts %}
             <tr>
               <!-- Category, Number & Tags -->
-              <td class="ps-3">
+              <td class="ps-3 py-3">
                 <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
                   {{ contract.category }}
                 </a>
@@ -102,7 +105,7 @@
                   <span class="text-muted small">#{{ contract.contract_number }}</span>
                   {% endif %}
                   {% for t in contract.tags %}
-                  <span class="badge rounded-pill" style="background-color: {{ t.color }}; font-size: 0.7rem; color: white;">
+                  <span class="badge rounded-pill" style="background-color: {{ t.color }}; font-size: 0.7rem; color: #ffffff;">
                     {{ t.name }}
                   </span>
                   {% endfor %}
@@ -110,7 +113,7 @@
               </td>
 
               <!-- Provider -->
-              <td>
+              <td class="py-3">
                 {% if contract.provider %}
                 <div class="d-flex align-items-center gap-2">
                   <i class="bi bi-building text-secondary"></i>
@@ -122,30 +125,31 @@
               </td>
 
               <!-- Amount & Rhythm -->
-              <td>
+              <td class="py-3">
                 <div class="fw-semibold text-nowrap">
                   {{ "%.2f"|format(contract.amount) }} {{ contract.currency }}
                 </div>
-                <small class="text-muted d-block">
-                  <span class="badge text-bg-light border text-secondary" style="font-size: 0.7rem;">
-                    {{ contract.frequency.value|capitalize }}
+                <small class="d-block mt-1">
+                  <span class="badge bg-body-secondary text-body border" style="font-size: 0.72rem;">
+                    {{ _('form.' ~ contract.frequency.value) }}
                   </span>
                 </small>
               </td>
 
               <!-- Billing Anchor Date -->
-              <td>
+              <td class="py-3">
                 {% if contract.billing_anchor_date %}
-                <span class="small font-monospace text-body">
-                  <i class="bi bi-calendar3 text-primary me-1"></i>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}
+                <span class="small text-body d-flex align-items-center gap-1">
+                  <i class="bi bi-calendar3 text-primary"></i>
+                  <span>{{ contract.billing_anchor_date.strftime('%d.%m.%Y') }}</span>
                 </span>
                 {% else %}
-                <span class="text-muted small">{{ _('common.none') }}</span>
+                <span class="text-muted small">-</span>
                 {% endif %}
               </td>
 
               <!-- Status Badge -->
-              <td>
+              <td class="py-3">
                 {% if contract.status.value == 'active' %}
                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
                   <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
@@ -162,12 +166,11 @@
               </td>
 
               <!-- Actions -->
-              <td class="pe-3 text-end">
-                <div class="btn-group btn-group-sm">
-                  <a href="{{ url_for('contract.detail', id=contract.id) }}" class="btn btn-outline-primary" title="{{ _('contracts.detail_title') }}">
-                    <i class="bi bi-arrow-right"></i>
-                  </a>
-                </div>
+              <td class="pe-3 py-3 text-end">
+                <a href="{{ url_for('contract.detail', id=contract.id) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" title="{{ _('contracts.detail_title') }}">
+                  <span>Details</span>
+                  <i class="bi bi-arrow-right"></i>
+                </a>
               </td>
             </tr>
             {% endfor %}
