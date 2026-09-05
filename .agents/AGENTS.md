@@ -37,6 +37,9 @@ Your code must be modular, secure, and performant. Implement features strictly a
     4. Fallback: `DEFAULT_LOCALE` (`en`).
   * Presentation layer: Access in Jinja2 templates via the context processor helper `_('key', **kwargs)`.
   * Language switching: Handled via the endpoint `/set-language/<locale>`, which sets the `lang` cookie (1-year validity) and securely redirects via the `next` parameter (preventing open redirects).
+* **Testing & Quality Assurance (Critical):**
+  * Test-Driven Development (TDD) is mandatory. No new features or bug fixes are accepted without corresponding `pytest` coverage (unit and integration).
+  * Detailed testing conventions, mocking strategies, and strict coverage goals are defined in `.agents/rules/testing.md` and must be strictly followed.
 
 ## 4. UI/UX & Design Guidelines
 The system uses Server-Side Rendering (Jinja2) in strict combination with Bootstrap 5.3. There is no separate design agent; the Full-Stack Agent is responsible for adhering to the following UI rules:
@@ -124,6 +127,7 @@ The project is orchestrated via an optimized multi-agent structure tailored to S
 ### 8.2 Full-Stack Developer Agent
 * **Tasks:** Implementation of backend logic, definition of ORM models (SQLAlchemy), and UI creation (Jinja2, Bootstrap 5.3) in strict compliance with Section 4.
   * **i18n Responsibility:** Ongoing maintenance and synchronization of localization keys in `app/locales/` alongside new templates, forms, and backend routes (prohibition of hardcoded user-facing strings in UI code).
+  * **Testing Responsibility:** Writing unit and integration tests strictly following TDD principles alongside feature development, ensuring adherence to `.agents/rules/testing.md`.
 * **Rationale:** Combining DB, backend, and frontend in one agent prevents context loss between database schema and template variables during Server-Side Rendering.
 * **Restriction:** Modifies the file system only after approval of the plan by the Lead Agent and user.
 
