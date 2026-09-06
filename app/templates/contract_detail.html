@@ -1421,6 +1421,7 @@
     const chartAmounts = chartData.amounts;
     const chartStatuses = chartData.point_statuses;
     const chartNotes = chartData.notes;
+    const chartIsToday = chartData.is_today || [];
     const currency = chartData.currency;
 
     function getThemeColors() {
@@ -1450,19 +1451,21 @@
       gradient.addColorStop(0, colors.areaGradientStart);
       gradient.addColorStop(1, colors.areaGradientEnd);
 
-      const pointBackgroundColors = chartStatuses.map(s => {
+      const pointBackgroundColors = chartStatuses.map((s, idx) => {
+        if (chartIsToday && chartIsToday[idx]) return '#198754';
         if (s === 'future') return '#0dcaf0';
         if (s === 'current') return '#198754';
         return '#6c757d';
       });
 
-      const pointBorderColors = chartStatuses.map(s => {
+      const pointBorderColors = chartStatuses.map((s, idx) => {
+        if (chartIsToday && chartIsToday[idx]) return '#146c43';
         if (s === 'future') return '#0d6efd';
         if (s === 'current') return '#146c43';
         return '#495057';
       });
 
-      const pointRadii = chartStatuses.map(s => (s === 'current' ? 6 : 5));
+      const pointRadii = chartStatuses.map((s, idx) => ((s === 'current' || (chartIsToday && chartIsToday[idx])) ? 6 : 5));
 
       priceChartInstance = new Chart(canvas, {
         type: 'line',
@@ -1506,6 +1509,9 @@
               callbacks: {
                 title: function(items) {
                   const idx = items[0].dataIndex;
+                  if (chartIsToday && chartIsToday[idx]) {
+                    return '{{ _("contracts.price_chart_as_of_today") }} (' + chartLabels[idx] + ')';
+                  }
                   return 'Ab ' + chartLabels[idx];
                 },
                 label: function(ctx) {
@@ -1513,8 +1519,9 @@
                   const amt = ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + ' ' + currency : '';
                   const st = chartStatuses[idx];
                   let statusText = '';
-                  if (st === 'future') statusText = ' [Geplant]';
-                  else if (st === 'current') statusText = ' [Aktuell]';
+                  if (chartIsToday && chartIsToday[idx]) statusText = ' [{{ _("contracts.price_chart_current") }}]';
+                  else if (st === 'future') statusText = ' [{{ _("contracts.scheduled_badge") }}]';
+                  else if (st === 'current') statusText = ' [{{ _("contracts.price_chart_current") }}]';
                   return ' Betrag: ' + amt + statusText;
                 },
                 afterLabel: function(ctx) {
@@ -1526,7 +1533,17 @@
           },
           scales: {
             x: {
-              ticks: { color: colors.textColor, font: { size: 11 } },
+              ticks: {
+                color: colors.textColor,
+                font: { size: 11 },
+                callback: function(val, index) {
+                  const label = chartLabels[index];
+                  if (chartIsToday && chartIsToday[index]) {
+                    return label + ' ({{ _("contracts.price_chart_today") }})';
+                  }
+                  return label;
+                }
+              },
               grid: { color: colors.gridColor }
             },
             y: {

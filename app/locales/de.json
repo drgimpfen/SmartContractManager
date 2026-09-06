@@ -192,6 +192,8 @@
     "price_chart_max": "Höchstpreis",
     "price_chart_min": "Tiefstpreis",
     "price_chart_change": "Seit Beginn",
+    "price_chart_today": "Heute",
+    "price_chart_as_of_today": "Aktueller Stand (Heute)",
     "open_ended": "bis auf weiteres",
     "filter_all": "Alle",
     "filter_active": "Aktiv",

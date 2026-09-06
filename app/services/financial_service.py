@@ -577,10 +577,64 @@ class FinancialService:
                 },
             }
 
-        labels = [p.valid_from.strftime("%d.%m.%Y") for p in entries]
-        amounts = [round(float(p.amount), 2) for p in entries]
-        point_statuses = [p.status for p in entries]
-        notes = [p.note or "" for p in entries]
+        today = date.today()
+        timeline_points: list[dict] = []
+
+        for i, p in enumerate(entries):
+            timeline_points.append({
+                "date": p.valid_from,
+                "amount": round(float(p.amount), 2),
+                "status": p.status,
+                "note": p.note or "",
+                "is_today": p.valid_from == today,
+            })
+
+            # Check if we should insert/append an endpoint for today or contract end
+            is_current_entry = (p.status == "current") or (
+                p.valid_from <= today and (p.valid_to is None or p.valid_to >= today)
+            )
+            has_next = (i + 1 < len(entries))
+
+            if is_current_entry and p.valid_from < today:
+                if has_next:
+                    next_p = entries[i + 1]
+                    if next_p.valid_from > today:
+                        timeline_points.append({
+                            "date": today,
+                            "amount": round(float(p.amount), 2),
+                            "status": "current",
+                            "note": "",
+                            "is_today": True,
+                        })
+                else:
+                    # Last entry: extend to contract.end_date if terminated in the past, else to today
+                    if (
+                        contract.end_date
+                        and contract.end_date < today
+                        and contract.status in (ContractStatus.canceled, ContractStatus.cancellation_confirmed)
+                    ):
+                        if contract.end_date > p.valid_from:
+                            timeline_points.append({
+                                "date": contract.end_date,
+                                "amount": round(float(p.amount), 2),
+                                "status": "past",
+                                "note": "",
+                                "is_today": False,
+                            })
+                    else:
+                        timeline_points.append({
+                            "date": today,
+                            "amount": round(float(p.amount), 2),
+                            "status": "current",
+                            "note": "",
+                            "is_today": True,
+                        })
+
+        labels = [pt["date"].strftime("%d.%m.%Y") for pt in timeline_points]
+        amounts = [pt["amount"] for pt in timeline_points]
+        point_statuses = [pt["status"] for pt in timeline_points]
+        notes = [pt["note"] for pt in timeline_points]
+        is_today = [pt["is_today"] for pt in timeline_points]
 
         initial_entry = entries[0]
         initial_amount = round(float(initial_entry.amount), 2)
@@ -598,6 +652,7 @@ class FinancialService:
             "amounts": amounts,
             "point_statuses": point_statuses,
             "notes": notes,
+            "is_today": is_today,
             "has_multiple": len(entries) > 1,
             "has_future": any(p == "future" for p in point_statuses),
             "stats": {

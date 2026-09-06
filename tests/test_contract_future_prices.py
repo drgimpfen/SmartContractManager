@@ -379,15 +379,85 @@ def test_get_contract_price_timeline_chart_data(app):
 
         assert chart_data["has_multiple"] is True
         assert chart_data["has_future"] is True
-        assert chart_data["amounts"] == [14.99, 44.99, 24.99]
-        assert chart_data["point_statuses"] == ["past", "current", "future"]
-        assert chart_data["notes"] == ["Einstiegspreis", "Preisanpassung", "Treuerabatt"]
+        assert chart_data["amounts"] == [14.99, 44.99, 44.99, 24.99]
+        assert chart_data["point_statuses"] == ["past", "current", "current", "future"]
+        assert chart_data["is_today"] == [False, False, True, False]
+        assert chart_data["notes"] == ["Einstiegspreis", "Preisanpassung", "", "Treuerabatt"]
         assert chart_data["stats"]["initial_amount"] == 14.99
         assert chart_data["stats"]["current_amount"] == 44.99
         assert chart_data["stats"]["min_amount"] == 14.99
         assert chart_data["stats"]["max_amount"] == 44.99
         assert chart_data["stats"]["change_since_start_amount"] == 30.00
         assert chart_data["stats"]["is_increase"] is True
+
+
+def test_price_timeline_extends_to_today_for_open_ended_contracts(app):
+    today = datetime.date.today()
+    with app.app_context():
+        u = User(username="timeline_today_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Mobile Data",
+            amount=10.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Past price from 2022 to 2024
+        p1 = PriceEntry(
+            contract_id=c.id,
+            amount=8.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=600),
+            valid_to=today - datetime.timedelta(days=201),
+            is_current=False,
+            note="Initialer Preis",
+        )
+        # Current price since 200 days ago, ongoing (valid_to=None)
+        p2 = PriceEntry(
+            contract_id=c.id,
+            amount=10.99,
+            currency="EUR",
+            valid_from=today - datetime.timedelta(days=200),
+            valid_to=None,
+            is_current=True,
+            note="Mehr Datenvolumen",
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
+
+        fin_service = FinancialService()
+        c = db.session.get(Contract, c.id)
+        chart_data = fin_service.get_contract_price_timeline_chart(c)
+
+        # Must have 3 points: past start, current start, and TODAY
+        assert chart_data["has_multiple"] is True
+        assert chart_data["has_future"] is False
+        assert len(chart_data["amounts"]) == 3
+        assert chart_data["amounts"] == [8.99, 10.99, 10.99]
+        assert chart_data["point_statuses"] == ["past", "current", "current"]
+        assert chart_data["is_today"] == [False, False, True]
+        assert chart_data["labels"][2] == today.strftime("%d.%m.%Y")
+        assert chart_data["stats"]["initial_amount"] == 8.99
+        assert chart_data["stats"]["current_amount"] == 10.99
+
+        # Case: Canceled contract ending in the past stops at contract.end_date
+        past_end = today - datetime.timedelta(days=50)
+        c.status = ContractStatus.canceled
+        c.end_date = past_end
+        db.session.commit()
+
+        chart_data_canceled = fin_service.get_contract_price_timeline_chart(c)
+        assert len(chart_data_canceled["amounts"]) == 3
+        assert chart_data_canceled["amounts"] == [8.99, 10.99, 10.99]
+        assert chart_data_canceled["labels"][2] == past_end.strftime("%d.%m.%Y")
+        assert chart_data_canceled["is_today"][2] is False
 
 
 def test_ui_renders_price_timeline_chart_and_kpis(app, client):

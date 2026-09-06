@@ -192,6 +192,8 @@
     "price_chart_max": "All-Time High",
     "price_chart_min": "All-Time Low",
     "price_chart_change": "Since Start",
+    "price_chart_today": "Today",
+    "price_chart_as_of_today": "Current Status (Today)",
     "open_ended": "ongoing",
     "filter_all": "All",
     "filter_active": "Active",
