@@ -499,9 +499,47 @@ def test_next_billing_date_calculation():
     )
     assert c_ending_soon.get_next_billing_date(as_of=date(2026, 9, 5)) is None
 
-    # No anchor date:
-    c_no_anchor = Contract(billing_anchor_date=None, frequency=Frequency.monthly)
+    # No anchor date and no start date:
+    c_no_anchor = Contract(billing_anchor_date=None, start_date=None, frequency=Frequency.monthly)
     assert c_no_anchor.get_next_billing_date(as_of=date(2026, 9, 5)) is None
+
+    # Fallback to start_date when anchor is None:
+    c_start_only = Contract(billing_anchor_date=None, start_date=date(2024, 1, 15), frequency=Frequency.monthly)
+    assert c_start_only.get_next_billing_date(as_of=date(2026, 9, 5)) == date(2026, 9, 15)
+
+
+def test_contract_creation_defaults_anchor_to_start_date(client, app):
+    """When creating a contract without explicit billing_anchor_date, it defaults to start_date."""
+    from app import db
+    with app.app_context():
+        user = User(username='anchor_user', hashed_password=generate_password_hash('pass123'))
+        db.session.add(user)
+        db.session.commit()
+        u_id = user.id
+
+    client.post('/login', data={'username': 'anchor_user', 'password': 'pass123'}, follow_redirects=True)
+
+    resp = client.post('/contracts', data={
+        'title': 'Legacy Contract 2020',
+        'category': 'Old Insurance',
+        'amount': '45.00',
+        'currency': 'EUR',
+        'frequency': 'monthly',
+        'start_date': '2020-10-25',
+        'billing_anchor_date': '',  # Omitted by user
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+
+    with app.app_context():
+        c = Contract.query.filter_by(title='Legacy Contract 2020', user_id=u_id).first()
+        assert c is not None
+        assert c.start_date == datetime.date(2020, 10, 25)
+        assert c.billing_anchor_date == datetime.date(2020, 10, 25)
+        # Next billing date is dynamically in September 2026
+        next_bill = c.get_next_billing_date(as_of=datetime.date(2026, 9, 6))
+        assert next_bill == datetime.date(2026, 9, 25)
+
 
 
 def test_contract_remaining_term_and_cancellation_properties(monkeypatch):

@@ -75,6 +75,33 @@
     }
   }
 
+  function calculateNextDue(anchorDate, freq, asOf) {
+    if (!anchorDate || isNaN(anchorDate.getTime())) return null;
+    const a = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
+    const ref = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+
+    if (freq === 'weekly' || freq === 'biweekly') {
+      const stepDays = freq === 'weekly' ? 7 : 14;
+      const diffDays = Math.floor((ref.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+      const stepIdx = Math.floor(diffDays / stepDays) - 1;
+      let cand = new Date(a.getTime() + stepIdx * stepDays * 24 * 60 * 60 * 1000);
+      while (cand < ref) {
+        cand = new Date(cand.getTime() + stepDays * 24 * 60 * 60 * 1000);
+      }
+      return cand;
+    } else {
+      const stepMonths = freq === 'quarterly' ? 3 : (freq === 'yearly' ? 12 : 1);
+      const monthDiff = (ref.getFullYear() - a.getFullYear()) * 12 + (ref.getMonth() - a.getMonth());
+      let stepIdx = Math.floor(monthDiff / stepMonths) - 1;
+      let cand = addMonths(a, stepIdx * stepMonths);
+      while (cand < ref) {
+        stepIdx += 1;
+        cand = addMonths(a, stepIdx * stepMonths);
+      }
+      return cand;
+    }
+  }
+
   function initContractTermGroup(groupEl) {
     if (groupEl._contractTermInitialized) return;
     groupEl._contractTermInitialized = true;
@@ -88,6 +115,11 @@
 
     const inputStartDate = groupEl.querySelector('[name="start_date"]');
     const inputEndDate = groupEl.querySelector('[name="end_date"]');
+    const inputBillingAnchor = groupEl.querySelector('[name="billing_anchor_date"]');
+    const selectFrequency = groupEl.querySelector('[name="frequency"]');
+    const nextBillingBadge = groupEl.querySelector('.next-billing-preview-badge');
+    let previousStartDateVal = inputStartDate ? inputStartDate.value : '';
+
     const inputInitialTerm = groupEl.querySelector('[name="initial_term_months"]');
     const inputInitialTermEndDate = groupEl.querySelector('[name="initial_term_end_date"]');
     const selectRenewalType = groupEl.querySelector('[name="renewal_type"]');
@@ -247,10 +279,26 @@
           if (m === 0) {
             inputInitialTermEndDate.value = '';
           } else {
+            const today = new Date();
+            const todayClean = new Date(today.getFullYear(), today.getMonth(), today.getDate());
             const startDateVal = inputStartDate ? inputStartDate.value : '';
-            const start = parseDateInput(startDateVal) || new Date();
+            const start = parseDateInput(startDateVal) || todayClean;
+
+            // Base date calculation:
+            // For future start dates, extend from start.
+            // For historical / running contracts, extend from current future end if present, otherwise from today.
+            let baseDate = start;
+            if (start <= todayClean) {
+              const existingInitialEnd = parseDateInput(inputInitialTermEndDate ? inputInitialTermEndDate.value : '');
+              if (existingInitialEnd && existingInitialEnd > todayClean) {
+                baseDate = existingInitialEnd;
+              } else {
+                baseDate = todayClean;
+              }
+            }
+
             const targetPeriod = selectTargetPeriod ? selectTargetPeriod.value : 'exact';
-            let calculatedEnd = addMonths(start, m);
+            let calculatedEnd = addMonths(baseDate, m);
             calculatedEnd = snapToTargetPeriod(calculatedEnd, targetPeriod);
             inputInitialTermEndDate.value = formatISODate(calculatedEnd);
           }
@@ -265,9 +313,12 @@
     if (inputInitialTermEndDate) {
       inputInitialTermEndDate.addEventListener('input', function () {
         const endDt = parseDateInput(this.value);
-        const startDt = parseDateInput(inputStartDate ? inputStartDate.value : '') || new Date();
-        if (endDt && endDt > startDt && inputInitialTerm) {
-          const diffMonths = (endDt.getFullYear() - startDt.getFullYear()) * 12 + (endDt.getMonth() - startDt.getMonth());
+        const today = new Date();
+        const todayClean = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const startDt = parseDateInput(inputStartDate ? inputStartDate.value : '') || todayClean;
+        const baseRef = (startDt > todayClean) ? startDt : todayClean;
+        if (endDt && endDt > baseRef && inputInitialTerm) {
+          const diffMonths = (endDt.getFullYear() - baseRef.getFullYear()) * 12 + (endDt.getMonth() - baseRef.getMonth());
           inputInitialTerm.value = Math.max(0, diffMonths);
         } else if (!this.value && inputInitialTerm) {
           inputInitialTerm.value = 0;
@@ -275,6 +326,56 @@
         updatePillsHighlight();
         updatePreview();
       });
+    }
+
+    function updateNextBillingPreview() {
+      if (!nextBillingBadge) return;
+      const anchorVal = (inputBillingAnchor && inputBillingAnchor.value) ? inputBillingAnchor.value : (inputStartDate ? inputStartDate.value : '');
+      const anchorDt = parseDateInput(anchorVal);
+      if (!anchorDt) {
+        nextBillingBadge.classList.add('d-none');
+        return;
+      }
+
+      const freq = selectFrequency ? selectFrequency.value : 'monthly';
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startDt = parseDateInput(inputStartDate ? inputStartDate.value : '');
+      const asOf = (startDt && startDt > today) ? startDt : today;
+
+      const nextDue = calculateNextDue(anchorDt, freq, asOf);
+      if (nextDue) {
+        nextBillingBadge.innerHTML = '<i class="bi bi-calendar-check me-1"></i>Nächste Fälligkeit: ' + formatDate(nextDue);
+        nextBillingBadge.title = 'Nächste Fälligkeit: ' + formatDate(nextDue);
+        nextBillingBadge.classList.remove('d-none');
+      } else {
+        nextBillingBadge.classList.add('d-none');
+      }
+    }
+
+    if (inputStartDate) {
+      inputStartDate.addEventListener('input', function () {
+        if (inputBillingAnchor) {
+          if (!inputBillingAnchor.value || inputBillingAnchor.value === previousStartDateVal) {
+            inputBillingAnchor.value = this.value;
+          }
+        }
+        previousStartDateVal = this.value;
+        updateNextBillingPreview();
+      });
+      inputStartDate.addEventListener('change', function () {
+        previousStartDateVal = this.value;
+        updateNextBillingPreview();
+      });
+    }
+
+    if (inputBillingAnchor) {
+      inputBillingAnchor.addEventListener('input', updateNextBillingPreview);
+      inputBillingAnchor.addEventListener('change', updateNextBillingPreview);
+    }
+
+    if (selectFrequency) {
+      selectFrequency.addEventListener('change', updateNextBillingPreview);
     }
 
     const watchInputs = [
@@ -301,6 +402,7 @@
 
     // Initial setup
     updateModeUI();
+    updateNextBillingPreview();
   }
 
   // Live preview controller for #extendContractModal

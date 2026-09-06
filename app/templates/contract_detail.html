@@ -1002,6 +1002,15 @@
         {{ edit_form.hidden_tag() }}
         <div class="modal-body p-4">
           <div class="row g-3 contract-term-group">
+            <!-- 1. Section: Vertragsdaten -->
+            <div class="col-12 border-bottom pb-2 mb-1">
+              <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-card-heading"></i>
+                <span>{{ _('form.section_contract_info') }}</span>
+              </h6>
+            </div>
+
+            <!-- Title & Category -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.title') }} <span class="text-danger">*</span></label>
               <input name="title" class="form-control" value="{{ contract.title }}" placeholder="{{ _('form.title_hint') }}" required />
@@ -1031,6 +1040,8 @@
                 </ul>
               </div>
             </div>
+
+            <!-- Provider & Contract Number -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.provider') }}</label>
               <select name="provider_id" class="form-select">
@@ -1043,15 +1054,36 @@
               <label class="form-label small fw-semibold">{{ _('form.contract_number') }}</label>
               <input name="contract_number" class="form-control" value="{{ contract.contract_number or '' }}" />
             </div>
+
+            <!-- Status & Tags -->
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.status') }}</label>
               <select name="status" class="form-select">
                 {% for val, label in edit_form.status.choices %}
-                <option value="{{ val }}" {% if contract.status.value == val %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ val }}" {% if contract.status.value == val %}selected{% endif %}>{{ _('contracts.' ~ val) if _('contracts.' ~ val) != 'contracts.' ~ val else label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
+              <div class="tag-picker-inline position-relative" data-available-tags='[{% for t in all_tags %}{"name": {{ t.name|tojson }}, "color": {{ (t.color or '')|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]'>
+                <input type="hidden" name="tags" class="tag-picker-hidden-input" value="{{ edit_form.tags.data or '' }}" />
+                <div class="tag-input-box form-control d-flex flex-wrap align-items-center gap-1 p-1" style="min-height: 38px; cursor: text;">
+                  <input type="text" class="tag-inline-input border-0 bg-transparent text-body p-0 m-1" style="outline: none; min-width: 120px; flex: 1;" placeholder="z. B. HomeOffice, Internet..." data-placeholder="z. B. HomeOffice, Internet..." autocomplete="off" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Section: Betrag & Zahlungsweise -->
+            <div class="col-12 border-bottom pb-2 mb-1 pt-2">
+              <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-credit-card"></i>
+                <span>{{ _('form.section_payment') }}</span>
+              </h6>
+            </div>
+
+            <!-- Payment Method, Frequency & Billing Anchor Date -->
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
               <div class="position-relative combobox-container">
                 <input name="payment_method" class="form-control pe-5 combobox-input" value="{{ contract.payment_method or '' }}" placeholder="SEPA-Lastschrift, PayPal, Kreditkarte..." autocomplete="off" />
@@ -1076,22 +1108,37 @@
                 </ul>
               </div>
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-4">
               <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
               <select name="frequency" class="form-select">
                 {% for val, label in edit_form.frequency.choices %}
-                <option value="{{ val }}" {% if contract.frequency.value == val %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ val }}" {% if contract.frequency.value == val %}selected{% endif %}>{{ _('form.' ~ val) if _('form.' ~ val) != 'form.' ~ val else label }}</option>
                 {% endfor %}
               </select>
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }} <span class="text-muted fw-normal">({{ _('form.optional') }})</span></label>
+              <input name="billing_anchor_date" type="date" class="form-control" value="{{ contract.billing_anchor_date or '' }}" />
+              <div class="mt-1 d-flex flex-column gap-1">
+                <div>
+                  <span class="next-billing-preview-badge badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 d-none" style="font-size: 0.70rem;"></span>
+                </div>
+                <div class="form-text small text-muted m-0" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
+              </div>
+            </div>
+
+            <!-- 3. Section: Vertragslaufzeit & Kündigung -->
+            <div class="col-12 border-bottom pb-2 mb-1 pt-2">
+              <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-hourglass-split"></i>
+                <span>{{ _('form.section_terms') }}</span>
+              </h6>
+            </div>
+
+            <!-- Start Date -->
+            <div class="col-12">
               <label class="form-label small fw-semibold">{{ _('form.start_date') }}</label>
               <input name="start_date" type="date" class="form-control" value="{{ contract.start_date or '' }}" />
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }}</label>
-              <input name="billing_anchor_date" type="date" class="form-control" value="{{ contract.billing_anchor_date or '' }}" />
-              <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
             </div>
 
             <!-- Term Mode Selector (3 Vertragstypen) -->
@@ -1160,7 +1207,7 @@
               <label class="form-label small fw-semibold">{{ _('form.unit') }}</label>
               <select name="cancellation_notice_unit" class="form-select">
                 {% for val, label in edit_form.cancellation_notice_unit.choices %}
-                <option value="{{ val }}" {% if contract.cancellation_notice_unit == val %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ val }}" {% if contract.cancellation_notice_unit == val %}selected{% endif %}>{{ _('form.' ~ val) if _('form.' ~ val) != 'form.' ~ val else label }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -1168,7 +1215,7 @@
               <label class="form-label small fw-semibold">{{ _('form.cancellation_target_period') }}</label>
               <select name="cancellation_target_period" class="form-select">
                 {% for val, label in edit_form.cancellation_target_period.choices %}
-                <option value="{{ val }}" {% if (contract.cancellation_target_period or 'exact') == val %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ val }}" {% if (contract.cancellation_target_period or 'exact') == val %}selected{% endif %}>{{ _('form.' ~ val) if _('form.' ~ val) != 'form.' ~ val else label }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -1191,20 +1238,9 @@
               <label class="form-label small fw-semibold">{{ _('form.confirmed_end_date') }}</label>
               <input name="confirmed_end_date" type="date" class="form-control" value="{{ contract.confirmed_end_date or '' }}" />
             </div>
-            <!-- Compact Inline Tags Picker with Dropdown Autocomplete -->
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.tags') }}</label>
-              <div class="tag-picker-inline position-relative" data-available-tags='[{% for t in all_tags %}{"name": {{ t.name|tojson }}, "color": {{ (t.color or '')|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]'>
-                <input type="hidden" name="tags" class="tag-picker-hidden-input" value="{{ edit_form.tags.data or '' }}" />
-                <div class="tag-input-box form-control d-flex flex-wrap align-items-center gap-1 p-1" style="min-height: 38px; cursor: text;">
-                  <input type="text" class="tag-inline-input border-0 bg-transparent text-body p-0 m-1" style="outline: none; min-width: 120px; flex: 1;" placeholder="z. B. HomeOffice, Internet..." data-placeholder="z. B. HomeOffice, Internet..." autocomplete="off" />
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
-              <textarea name="notes" class="form-control" rows="2">{{ contract.notes or '' }}</textarea>
-            </div>
+
+            <!-- Notes are managed via the dedicated Notes card on this page -->
+            <input type="hidden" name="notes" value="{{ contract.notes or '' }}" />
           </div>
         </div>
 

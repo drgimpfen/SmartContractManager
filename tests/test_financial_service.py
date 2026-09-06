@@ -722,3 +722,64 @@ def test_cashflow_includes_cancelled_contract_until_termination():
     assert proj[4]["amount"] == 0.0
 
 
+def test_due_dates_bidirectional_extrapolation_with_recent_anchor():
+    """Verify that an anchor date in the recent past (e.g. from online banking) can extrapolate both
+    historical past dates and future dates correctly without skipping."""
+    fin_svc = FinancialService()
+
+    # Old contract started 2020, user entered recent anchor date from Aug 2026
+    c = Contract(
+        status=ContractStatus.active,
+        amount=29.99,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2020, 10, 25),
+        billing_anchor_date=date(2026, 8, 28),
+    )
+
+    # Range covering both before and after anchor date (June 2026 to Dec 2026)
+    due_dates = fin_svc._get_due_dates_in_range(c, date(2026, 6, 1), date(2026, 12, 31))
+    assert due_dates == [
+        date(2026, 6, 28),
+        date(2026, 7, 28),
+        date(2026, 8, 28),
+        date(2026, 9, 28),
+        date(2026, 10, 28),
+        date(2026, 11, 28),
+        date(2026, 12, 28),
+    ]
+
+
+def test_billing_anchor_fallback_to_start_date():
+    """Verify that when billing_anchor_date is None, start_date is automatically used as the anchor."""
+    fin_svc = FinancialService()
+
+    c = Contract(
+        id=99,
+        title="Streaming No Anchor",
+        category="Entertainment",
+        status=ContractStatus.active,
+        amount=12.99,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2020, 5, 15),
+        billing_anchor_date=None,
+    )
+
+    # get_next_billing_date fallback
+    next_bill = c.get_next_billing_date(as_of=date(2026, 9, 6))
+    assert next_bill == date(2026, 9, 15)
+
+    # _get_due_dates_in_range fallback
+    due_dates = fin_svc._get_due_dates_in_range(c, date(2026, 9, 1), date(2026, 10, 31))
+    assert due_dates == [date(2026, 9, 15), date(2026, 10, 15)]
+
+    # Cashflow projection fallback
+    proj = fin_svc.calculate_cashflow_projection([c], "EUR", as_of=date(2026, 9, 1), months=3)
+    assert len(proj) == 3
+    assert proj[0]["amount"] == 12.99
+    assert proj[1]["amount"] == 12.99
+    assert proj[2]["amount"] == 12.99
+
+
+

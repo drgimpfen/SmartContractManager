@@ -111,8 +111,9 @@ class FinancialService:
             if contract.status != ContractStatus.active:
                 continue
 
-            # If anchor date is missing, fallback to normalized monthly cost if active
-            if not contract.billing_anchor_date:
+            # If anchor date is missing, fallback to start_date or normalized monthly cost if active
+            anchor = contract.billing_anchor_date or contract.start_date
+            if not anchor:
                 if is_contract_active_on_date(contract, as_of_date):
                     amt, curr = get_contract_price_on_date(contract, as_of_date)
                     converted = self.currency_service.convert(amt, curr, target_currency)
@@ -147,7 +148,7 @@ class FinancialService:
             ContractStatus.cancellation_confirmed,
         )
 
-        if not contracts or not any(c.status in eligible_statuses and c.billing_anchor_date for c in contracts):
+        if not contracts or not any(c.status in eligible_statuses and (c.billing_anchor_date or c.start_date) for c in contracts):
             return []
 
         base_first_of_month = date(as_of_date.year, as_of_date.month, 1)
@@ -175,7 +176,7 @@ class FinancialService:
         horizon_end = buckets[-1]["end"]
 
         for contract in contracts:
-            if contract.status not in eligible_statuses or not contract.billing_anchor_date:
+            if contract.status not in eligible_statuses or not (contract.billing_anchor_date or contract.start_date):
                 continue
 
             # Determine termination boundary if cancelled or fixed-term
@@ -260,8 +261,10 @@ class FinancialService:
         range_end: date,
         override_anchor: date | None = None,
     ) -> list[date]:
-        """Extrapolate exact billing dates for a contract falling within [range_start, range_end]."""
-        anchor = override_anchor or contract.billing_anchor_date
+        """Extrapolate exact billing dates for a contract falling within [range_start, range_end].
+        Supports bidirectional extrapolation from any past or future anchor in the cycle.
+        """
+        anchor = override_anchor or contract.billing_anchor_date or contract.start_date
         if not anchor:
             return []
 
@@ -271,27 +274,26 @@ class FinancialService:
         # Weekly or biweekly
         if freq in (Frequency.weekly, Frequency.biweekly):
             step_days = 7 if freq == Frequency.weekly else 14
-            # Align first candidate on or after range_start
-            candidate = calculate_next_billing_date(anchor, freq, range_start)
+            diff_days = (range_start - anchor).days
+            step_idx = (diff_days // step_days) - 1
+            candidate = anchor + timedelta(days=step_idx * step_days)
             while candidate <= range_end:
-                if (not contract.start_date or candidate >= contract.start_date) and (
-                    not contract.end_date or candidate <= contract.end_date
-                ):
-                    due_dates.append(candidate)
-                elif contract.end_date and candidate > contract.end_date:
-                    break
+                if candidate >= range_start:
+                    if (not contract.start_date or candidate >= contract.start_date) and (
+                        not contract.end_date or candidate <= contract.end_date
+                    ):
+                        due_dates.append(candidate)
+                    elif contract.end_date and candidate > contract.end_date:
+                        break
                 candidate += timedelta(days=step_days)
 
         # Monthly, quarterly, yearly
         else:
             step_months = 1 if freq == Frequency.monthly else (3 if freq == Frequency.quarterly else 12)
 
-            # Determine starting step
-            if anchor < range_start:
-                month_diff = (range_start.year - anchor.year) * 12 + (range_start.month - anchor.month)
-                step_idx = max(0, (month_diff // step_months) - 1)
-            else:
-                step_idx = 0
+            # Bidirectional step alignment: works seamlessly whether anchor is in the past, present, or future
+            month_diff = (range_start.year - anchor.year) * 12 + (range_start.month - anchor.month)
+            step_idx = (month_diff // step_months) - 1
 
             while True:
                 candidate = add_months(anchor, step_idx * step_months)

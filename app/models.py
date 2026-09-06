@@ -316,7 +316,8 @@ class Contract(db.Model):
 
     def get_next_billing_date(self, as_of: date | None = None) -> date | None:
         """Calculate the next billing date >= as_of based on billing_anchor_date and frequency."""
-        if not self.billing_anchor_date:
+        anchor = self.billing_anchor_date or self.start_date
+        if not anchor:
             return None
         if self.is_archived or self.status in (ContractStatus.paused, ContractStatus.canceled, ContractStatus.archived):
             return None
@@ -329,7 +330,7 @@ class Contract(db.Model):
         if effective_end and effective_end < as_of:
             return None
 
-        next_date = calculate_next_billing_date(self.billing_anchor_date, self.frequency, as_of)
+        next_date = calculate_next_billing_date(anchor, self.frequency, as_of)
 
         if effective_end and next_date > effective_end:
             return None

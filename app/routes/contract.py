@@ -71,7 +71,7 @@ def index():
             contract_number=form.contract_number.data.strip() if form.contract_number.data else None,
             start_date=form.start_date.data,
             end_date=end_date_val,
-            billing_anchor_date=form.billing_anchor_date.data,
+            billing_anchor_date=form.billing_anchor_date.data or form.start_date.data,
             cancellation_notice_amount=form.cancellation_notice_amount.data or 0,
             cancellation_notice_unit=form.cancellation_notice_unit.data or 'days',
             cancellation_target_period=form.cancellation_target_period.data or 'exact',
@@ -269,7 +269,7 @@ def edit(id):
             contract.initial_term_end_date = None
             contract.initial_term_months = 0
 
-        contract.billing_anchor_date = form.billing_anchor_date.data
+        contract.billing_anchor_date = form.billing_anchor_date.data or form.start_date.data
         contract.cancellation_notice_amount = form.cancellation_notice_amount.data or 0
         contract.cancellation_notice_unit = form.cancellation_notice_unit.data or 'days'
         contract.cancellation_target_period = form.cancellation_target_period.data or 'exact'
@@ -278,7 +278,8 @@ def edit(id):
         contract.confirmed_end_date = form.confirmed_end_date.data
         contract.frequency = Frequency(form.frequency.data)
         contract.payment_method = form.payment_method.data.strip() if form.payment_method.data else None
-        contract.notes = form.notes.data.strip() if form.notes.data else None
+        if form.notes.data is not None:
+            contract.notes = form.notes.data.strip() if form.notes.data else None
 
         # Synchronize tags
         sync_contract_tags(contract, current_user.id, form.tags.data or '')
