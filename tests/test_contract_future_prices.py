@@ -2,7 +2,7 @@ import datetime
 from werkzeug.security import generate_password_hash
 from app import db
 from app.models import User, Contract, PriceEntry, Frequency, ContractStatus
-from app.services.contract_service import add_price_entry, sync_contract_prices, delete_price_entry
+from app.services.contract_service import add_price_entry, sync_contract_prices, delete_price_entry, apply_price_tiers
 from app.services.financial_service import FinancialService
 
 
@@ -243,6 +243,13 @@ def test_delete_price_entry_restores_preceding_range(app, client):
         p2_id = p2.id
 
     client.post("/login", data={"username": "del_pe_user", "password": "pass123"}, follow_redirects=True)
+
+    # Verify the delete modal is properly rendered in the HTML before deletion
+    detail_resp = client.get(f"/contracts/{c_id}")
+    assert detail_resp.status_code == 200
+    detail_html = detail_resp.get_data(as_text=True)
+    assert f'id="deletePriceModal{p2_id}"' in detail_html
+    assert f'data-bs-target="#deletePriceModal{p2_id}"' in detail_html
 
     # Delete future price entry p2
     resp = client.post(f"/contracts/{c_id}/price-entry/{p2_id}/delete", follow_redirects=True)
@@ -512,4 +519,116 @@ def test_ui_renders_price_timeline_chart_and_kpis(app, client):
     assert "Höchstpreis" in resp.text
     assert "11.99 EUR" in resp.text
     assert "17.99 EUR" in resp.text
+
+
+def test_apply_price_tiers_two_steps(app):
+    """Test standard 2-step promotional model (e.g. 24 months @ 24.99, then 44.99 ongoing)."""
+    with app.app_context():
+        u = User(username="tier_user_1", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        start = datetime.date(2026, 1, 1)
+        c = Contract(
+            user_id=u.id,
+            category="Streaming",
+            title="DAZN 2-Jahresabo",
+            amount=24.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=start,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        tiers = [
+            {"months": 24, "amount": 24.99, "note": "Rabattphase (24 Monate)"},
+            {"months": None, "amount": 44.99, "note": "Standardpreis nach Mindestlaufzeit"},
+        ]
+
+        entries = apply_price_tiers(c, base_date=start, tiers=tiers, currency="EUR")
+        assert len(entries) == 2
+
+        e1 = entries[0]
+        assert e1.amount == 24.99
+        assert e1.valid_from == datetime.date(2026, 1, 1)
+        assert e1.valid_to == datetime.date(2027, 12, 31)
+
+        e2 = entries[1]
+        assert e2.amount == 44.99
+        assert e2.valid_from == datetime.date(2028, 1, 1)
+        assert e2.valid_to is None
+
+
+def test_apply_price_tiers_three_steps(app):
+    """Test 3-step promotional model (e.g. 6 months @ 9.99, 18 months @ 29.99, then 44.99 ongoing)."""
+    with app.app_context():
+        u = User(username="tier_user_2", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        start = datetime.date(2026, 3, 1)
+        c = Contract(
+            user_id=u.id,
+            category="Internet & Mobilfunk",
+            title="DSL 250",
+            amount=9.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=start,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        tiers = [
+            {"months": 6, "amount": 9.99, "note": "Monate 1-6 Sparpreis"},
+            {"months": 18, "amount": 29.99, "note": "Monate 7-24 Regulär"},
+            {"months": None, "amount": 44.99, "note": "Ab Monat 25 Standard"},
+        ]
+
+        entries = apply_price_tiers(c, base_date=start, tiers=tiers, currency="EUR")
+        assert len(entries) == 3
+
+        # Step 1: 2026-03-01 to 2026-08-31
+        assert entries[0].amount == 9.99
+        assert entries[0].valid_from == datetime.date(2026, 3, 1)
+        assert entries[0].valid_to == datetime.date(2026, 8, 31)
+
+        # Step 2: 2026-09-01 to 2028-02-29
+        assert entries[1].amount == 29.99
+        assert entries[1].valid_from == datetime.date(2026, 9, 1)
+        assert entries[1].valid_to == datetime.date(2028, 2, 29)
+
+        # Step 3: from 2028-03-01 onward
+        assert entries[2].amount == 44.99
+        assert entries[2].valid_from == datetime.date(2028, 3, 1)
+        assert entries[2].valid_to is None
+
+
+def test_apply_price_tiers_validation(app):
+    """Test validation and fallback for empty or invalid tier lists."""
+    with app.app_context():
+        u = User(username="tier_user_3", hashed_password=generate_password_hash("pass123"))
+        db.session.add(u)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            category="Software",
+            title="SaaS Sub",
+            amount=50.0,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Empty list
+        assert apply_price_tiers(c, datetime.date.today(), []) == []
+        # Negative amount filtered out
+        assert apply_price_tiers(c, datetime.date.today(), [{"months": 6, "amount": -10.0}]) == []
+
 

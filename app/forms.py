@@ -121,9 +121,11 @@ class ContractExtendForm(FlaskForm):
         choices=[
             ('append', 'Im Anschluss an bisherige Mindestlaufzeit'),
             ('from_today', 'Ab heute neu'),
+            ('custom_date', 'Freies Startdatum'),
         ],
         default='append',
     )
+    custom_start_date = DateField('Custom Start Date', validators=[Optional()])
     custom_end_date = DateField('Custom End Date', validators=[Optional()])
     new_amount = FloatField('New Monthly Amount', validators=[Optional(), NumberRange(min=0.0)])
     note = TextAreaField('Note', validators=[Optional(), Length(max=1000)])

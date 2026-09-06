@@ -179,6 +179,25 @@ def calculate_next_billing_date(anchor_date: date, frequency: Frequency, as_of: 
     return candidate
 
 
+def calculate_month_delta(start_date: date, end_date: date) -> int:
+    """Calculate the integer number of full or partial months between start_date and end_date.
+    Properly handles inclusive date ranges (e.g. 2021-01-01 to 2021-12-31 -> 12 months,
+    2021-01-01 to 2022-01-01 -> 12 months, 2021-02-01 to 2021-02-28 -> 1 month).
+    """
+    if not start_date or not end_date or end_date < start_date:
+        return 0
+
+    next_day = end_date + timedelta(days=1)
+    if next_day.day == start_date.day or (start_date.day == 1 and next_day.day == 1):
+        return max(0, (next_day.year - start_date.year) * 12 + (next_day.month - start_date.month))
+
+    raw = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+    if start_date.day == 1 and end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]:
+        return max(0, raw + 1)
+
+    return max(0, raw)
+
+
 class Contract(db.Model):
     __tablename__ = "contracts"
 
@@ -371,6 +390,42 @@ class Contract(db.Model):
             return None
         return (effective_end - date.today()).days
 
+    @property
+    def days_until_end_formatted(self) -> str:
+        """Returns a human-friendly representation of remaining time until end_date."""
+        days = self.days_until_end
+        if days is None:
+            return ""
+        from app.i18n import translate, get_locale
+        loc = get_locale()
+        if days < 0:
+            return translate("contracts.ended_ago", loc, days=-days)
+        if days == 0:
+            return translate("contracts.ends_today", loc)
+        if days == 1:
+            return translate("contracts.day_left", loc)
+        if days <= 30:
+            return translate("contracts.days_left", loc, days=days)
+        if days < 365:
+            months = max(1, round(days / 30.4375))
+            if months == 1:
+                return translate("contracts.remaining_one_month", loc)
+            return translate("contracts.remaining_months", loc, months=months)
+
+        years = days // 365
+        rem_days = days % 365
+        months = round(rem_days / 30.4375)
+        if months >= 12:
+            years += 1
+            months = 0
+        if months == 0:
+            if years == 1:
+                return translate("contracts.remaining_one_year", loc)
+            return translate("contracts.remaining_years", loc, years=years)
+        if years == 1:
+            return translate("contracts.remaining_one_year_months", loc, months=months)
+        return translate("contracts.remaining_years_months", loc, years=years, months=months)
+
     def get_earliest_cancellation_date(self, as_of: date | None = None) -> date | None:
         """
         Calculates the earliest legally possible contract termination date based on:
@@ -445,6 +500,8 @@ class Contract(db.Model):
 
     def get_cancellation_deadline(self, as_of: date | None = None) -> date | None:
         """Calculates the deadline by which notice must be received."""
+        if self.renewal_type == "none":
+            return None
         if self.is_archived or (self.status and self.status in (ContractStatus.canceled, ContractStatus.archived, ContractStatus.cancellation_confirmed)):
             return None
         if not self.cancellation_notice_amount or self.cancellation_notice_amount <= 0:
@@ -474,6 +531,49 @@ class Contract(db.Model):
         return (dl - date.today()).days
 
     @property
+    def effective_initial_term_end_date(self) -> date | None:
+        """Returns the calculated end date of the initial minimum term, respecting cancellation target periods."""
+        target_period = getattr(self, "cancellation_target_period", "exact") or "exact"
+        if self.initial_term_end_date:
+            return snap_to_target_period(self.initial_term_end_date, target_period)
+        if self.initial_term_months and self.initial_term_months > 0:
+            start = self.start_date or self.billing_anchor_date
+            if start:
+                return snap_to_target_period(add_months(start, self.initial_term_months), target_period)
+        return None
+
+    @property
+    def is_in_initial_term(self) -> bool:
+        """Returns True if today is on or before the effective initial term end date."""
+        end_d = self.effective_initial_term_end_date
+        return bool(end_d and date.today() <= end_d)
+
+    @property
+    def initial_term_days_left(self) -> int | None:
+        """Returns number of calendar days left until the initial term ends (None if expired or no initial term)."""
+        end_d = self.effective_initial_term_end_date
+        if not end_d or date.today() > end_d:
+            return None
+        return (end_d - date.today()).days
+
+    @property
+    def initial_term_days_left_formatted(self) -> str | None:
+        """Returns human-readable remaining time string (e.g. 'noch 8 Monate', 'noch 12 Tage', 'endet heute')."""
+        days = self.initial_term_days_left
+        if days is None:
+            return None
+        if days == 0:
+            return "endet heute"
+        if days <= 30:
+            return f"noch {days} T." if days > 1 else "noch 1 Tag"
+        years = days // 365
+        rem_days = days % 365
+        months = rem_days // 30
+        if years > 0:
+            return f"noch {years} J., {months} Mon." if months > 0 else f"noch {years} Jahr{'e' if years > 1 else ''}"
+        return f"noch {months} Monat{'e' if months > 1 else ''}" if months > 0 else f"noch {days} T."
+
+    @property
     def is_monthly_flexible(self) -> bool:
         """Returns True if the contract rolls monthly without an active longer lock-in period."""
         if self.renewal_type == "none" or self.end_date:
@@ -482,19 +582,88 @@ class Contract(db.Model):
         period = self.renewal_period_months or 1
         if r_type != "monthly_rolling" and period > 1:
             return False
-        today = date.today()
         # Check if currently locked in by initial term
-        if self.initial_term_end_date:
-            if today < self.initial_term_end_date:
-                return False
-        elif self.initial_term_months and self.initial_term_months > 0:
-            start = self.start_date or self.billing_anchor_date
-            if start:
-                target_period = getattr(self, "cancellation_target_period", "exact") or "exact"
-                initial_end = snap_to_target_period(add_months(start, self.initial_term_months), target_period)
-                if today < initial_end:
-                    return False
+        if self.is_in_initial_term:
+            return False
         return True
+
+    @property
+    def current_commitment_end_date(self) -> date | None:
+        """Returns the end date of the current active commitment/term period."""
+        if self.confirmed_end_date:
+            return self.confirmed_end_date
+        if self.end_date and self.renewal_type == "none":
+            return self.end_date
+        if self.is_in_initial_term:
+            return self.effective_initial_term_end_date
+        if self.earliest_cancellation_date:
+            return self.earliest_cancellation_date
+        return self.end_date
+
+    @property
+    def current_commitment_type(self) -> str:
+        """Categorizes the current commitment period:
+        - 'confirmed_canceled': confirmed end date set
+        - 'fixed_term': fixed term contract without renewal
+        - 'initial_term': currently within initial term
+        - 'fixed_period': past initial term, renewing in fixed periods (> 1 mo)
+        - 'monthly_rolling': monthly rolling / flexible
+        - 'none': no commitment
+        """
+        if self.confirmed_end_date or self.status == ContractStatus.cancellation_confirmed:
+            return "confirmed_canceled"
+        if self.renewal_type == "none" or (self.end_date and not self.renewal_period_months):
+            return "fixed_term"
+        if self.is_in_initial_term:
+            return "initial_term"
+        if self.renewal_type == "fixed_period" or (self.renewal_period_months and self.renewal_period_months > 1):
+            return "fixed_period"
+        if self.is_monthly_flexible:
+            return "monthly_rolling"
+        return "none"
+
+    @property
+    def current_commitment_days_left(self) -> int | None:
+        """Days left until the current commitment period ends."""
+        end_d = self.current_commitment_end_date
+        if not end_d:
+            return None
+        return (end_d - date.today()).days
+
+    @property
+    def current_commitment_days_left_formatted(self) -> str | None:
+        """Formatted remaining duration string for the current commitment period."""
+        days = self.current_commitment_days_left
+        if days is None:
+            return None
+        from app.i18n import translate, get_locale
+        loc = get_locale()
+        if days < 0:
+            return translate("contracts.ended_ago", loc, days=-days)
+        if days == 0:
+            return translate("contracts.ends_today", loc)
+        if days == 1:
+            return translate("contracts.day_left", loc)
+        if days <= 30:
+            return translate("contracts.days_left", loc, days=days)
+        if days < 365:
+            months = max(1, round(days / 30.4375))
+            if months == 1:
+                return translate("contracts.remaining_one_month", loc)
+            return translate("contracts.remaining_months", loc, months=months)
+        years = days // 365
+        rem_days = days % 365
+        months = round(rem_days / 30.4375)
+        if months >= 12:
+            years += 1
+            months = 0
+        if months == 0:
+            if years == 1:
+                return translate("contracts.remaining_one_year", loc)
+            return translate("contracts.remaining_years", loc, years=years)
+        if years == 1:
+            return translate("contracts.remaining_one_year_months", loc, months=months)
+        return translate("contracts.remaining_years_months", loc, years=years, months=months)
 
     @property
     def cancellation_status(self) -> str:
@@ -508,7 +677,7 @@ class Contract(db.Model):
         - 'safe': Deadline is more than 30 days in the future
         - 'ended': Contract has ended
         """
-        if self.status and self.status not in (ContractStatus.active, ContractStatus.pending_cancellation):
+        if self.status and self.status not in (ContractStatus.active, ContractStatus.pending_cancellation, ContractStatus.scheduled):
             return 'none'
         if not self.cancellation_notice_amount or not self.cancellation_deadline:
             return 'none'

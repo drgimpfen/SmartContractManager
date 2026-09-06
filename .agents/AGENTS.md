@@ -39,6 +39,7 @@ Your code must be modular, secure, and performant. Implement features strictly a
   * Language switching: Handled via the endpoint `/set-language/<locale>`, which sets the `lang` cookie (1-year validity) and securely redirects via the `next` parameter (preventing open redirects).
 * **Testing & Quality Assurance (Critical):**
   * Test-Driven Development (TDD) is mandatory. No new features or bug fixes are accepted without corresponding `pytest` coverage (unit and integration).
+  * **Test Execution:** Tests must strictly be executed inside the web container (`docker compose exec web pytest`), as host Python environments do not contain project dependencies.
   * Detailed testing conventions, mocking strategies, and strict coverage goals are defined in `.agents/rules/testing.md` and must be strictly followed.
 
 ## 4. UI/UX & Design Guidelines

@@ -145,16 +145,21 @@
     <main class="flex-grow-1 d-flex flex-column {% block main_class %}py-4{% endblock %}">
       <div class="{% block container_class %}container-xl flex-grow-1 d-flex flex-column{% endblock %}">
         <!-- Flash messages -->
+        {% block messages %}
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
+            <div class="{% block messages_wrapper_class %}w-100{% endblock %}">
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
+              {% set alert_category = 'info' if category in ['message', 'info'] else ('danger' if category in ['error', 'danger'] else category) %}
+              <div class="alert alert-{{ alert_category }} alert-dismissible fade show shadow-sm d-flex align-items-center justify-content-between mb-4" role="alert">
                 <div>{{ message }}</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('sidebar.close') }}"></button>
               </div>
             {% endfor %}
+            </div>
           {% endif %}
         {% endwith %}
+        {% endblock %}
 
         {% block content %}{% endblock %}
       </div>
@@ -176,7 +181,7 @@
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/tag-picker.js"></script>
     <script src="/static/js/combobox.js"></script>
-    <script src="/static/js/contract-term.js"></script>
+    <script src="/static/js/contract-term.js?v=2.5"></script>
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

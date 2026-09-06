@@ -2,6 +2,9 @@ from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 
 from app.services.financial_service import FinancialService
+from app.forms import ContractForm
+from app.routes.contract import populate_provider_choices
+from app.models import Tag, Contract
 
 bp = Blueprint('dashboard', __name__)
 
@@ -12,6 +15,15 @@ def index():
     contracts = current_user.contracts
     providers = current_user.providers
     user_currency = current_user.currency or "EUR"
+
+    contract_form = ContractForm()
+    populate_provider_choices(contract_form, current_user.id)
+    contract_form.currency.data = user_currency
+
+    all_tags = Tag.query.filter_by(user_id=current_user.id).order_by(Tag.name.asc()).all()
+    all_user_contracts = Contract.query.filter_by(user_id=current_user.id, is_archived=False).all()
+    user_categories = sorted(list(set(c.category for c in all_user_contracts if c.category)))
+    user_payment_methods = sorted(list(set(c.payment_method for c in all_user_contracts if c.payment_method)))
 
     fin_svc = FinancialService()
 
@@ -36,4 +48,8 @@ def index():
         distribution=distribution,
         critical_reminders=critical_reminders,
         missing_notice=missing_notice,
+        contract_form=contract_form,
+        all_tags=all_tags,
+        user_categories=user_categories,
+        user_payment_methods=user_payment_methods,
     )

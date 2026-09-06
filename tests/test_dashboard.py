@@ -85,6 +85,7 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
         c3 = Contract(
             user_id=user.id,
             provider_id=prov.id,
+            title="Fitness Club",
             category="Gym",
             status=ContractStatus.active,
             contract_number="GYM-003",
@@ -92,11 +93,31 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
             currency="EUR",
             frequency=Frequency.monthly,
             billing_anchor_date=date(2026, 1, 1),
+            renewal_type="monthly_rolling",
             cancellation_notice_amount=0, # missing notice!
         )
 
-        db.session.add_all([c1, c2, c3])
+        # Contract 4: Fixed-term contract without notice period (should not be in missing notice)
+        c4 = Contract(
+            user_id=user.id,
+            provider_id=prov.id,
+            title="Life Insurance",
+            category="Insurance",
+            status=ContractStatus.active,
+            contract_number="LIFE-004",
+            amount=50.0,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+            end_date=date(2052, 6, 30),
+            renewal_type="none",
+            cancellation_notice_amount=0,
+        )
+
+        db.session.add_all([c1, c2, c3, c4])
         db.session.commit()
+        c2_id = c2.id
+        c3_id = c3.id
 
     # Login
     client.post('/login', data={'username': 'finance_user', 'password': 'password123'}, follow_redirects=True)
@@ -106,8 +127,8 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
 
     html = resp.data.decode('utf-8')
 
-    # Monthly budget: 45 + 30 + 20 = 95.00 EUR
-    assert '95.00 EUR' in html
+    # Monthly budget: 45 + 30 + 20 + 50 = 145.00 EUR
+    assert '145.00 EUR' in html
     assert 'budgetValueDisplay' in html
     assert 'budgetLabelDisplay' in html
 
@@ -117,11 +138,22 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
     # Charts rendered
     assert 'id="cashflowChart"' in html
     assert 'id="categoryChart"' in html
-    assert ('Guaranteed Minimum Commitment' in html or 'Garantierte Mindestbindung' in html)
-    assert ('After Minimum Term' in html or 'Nach Mindestlaufzeit' in html)
+    assert ('Committed Obligations' in html or 'Verbindliche Verpflichtungen' in html)
+    assert ('Flexible Payments' in html or 'Flexible Zahlungen' in html)
 
-    # Critical reminders section has INS-002
+    # Critical reminders section has INS-002 and link
     assert 'INS-002' in html
+    assert f'href="/contracts/{c2_id}"' in html
 
-    # Missing notice section has GYM-003
+    # Missing notice section has GYM-003, title Fitness Club, link, and excludes fixed-term LIFE-004
     assert 'GYM-003' in html
+    assert 'Fitness Club' in html
+    assert f'href="/contracts/{c3_id}"' in html
+    assert 'LIFE-004' not in html
+
+    # Verify modular contract creation modal component is rendered
+    assert 'id="addContractModal"' in html
+    assert 'name="title"' in html
+    assert 'combobox-container' in html
+    assert 'contract-term-group' in html
+    assert 'name="tags"' in html

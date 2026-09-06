@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
@@ -13,6 +14,7 @@ from app.models import (
     Note,
     add_months,
     snap_to_target_period,
+    calculate_month_delta,
 )
 from app.forms import ContractForm, PriceEntryForm, NoteForm, ContractExtendForm
 from app.services.contract_service import (
@@ -21,6 +23,7 @@ from app.services.contract_service import (
     add_price_entry,
     sync_contract_prices,
     delete_price_entry,
+    apply_price_tiers,
 )
 from app.services.financial_service import FinancialService
 
@@ -55,8 +58,7 @@ def index():
             initial_term_end_val = form.initial_term_end_date.data
             initial_term_val = form.initial_term_months.data or 0
             if initial_term_end_val and form.start_date.data:
-                s = form.start_date.data
-                initial_term_val = max(0, (initial_term_end_val.year - s.year) * 12 + (initial_term_end_val.month - s.month))
+                initial_term_val = calculate_month_delta(form.start_date.data, initial_term_end_val)
         else:
             end_date_val = form.end_date.data
             initial_term_end_val = None
@@ -96,18 +98,38 @@ def index():
         # Synchronize tags
         sync_contract_tags(contract, current_user.id, form.tags.data or '')
 
-        # Automatically log initial price entry
-        initial_price = PriceEntry(
-            contract_id=contract.id,
-            valid_from=form.start_date.data or date.today(),
-            valid_to=None,
-            is_current=True,
-            amount=contract.amount,
-            currency=contract.currency,
-            note="Initialer Vertragspreis",
-        )
-        db.session.add(initial_price)
-        db.session.commit()
+        # Check if price tiers were submitted
+        price_tiers_raw = request.form.get('price_tiers_json')
+        tiers = None
+        if price_tiers_raw:
+            try:
+                parsed = json.loads(price_tiers_raw)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    tiers = parsed
+            except (json.JSONDecodeError, TypeError):
+                tiers = None
+
+        if tiers:
+            apply_price_tiers(
+                contract=contract,
+                base_date=form.start_date.data or date.today(),
+                tiers=tiers,
+                currency=contract.currency,
+                auto_adjust=True,
+            )
+        else:
+            # Automatically log initial price entry
+            initial_price = PriceEntry(
+                contract_id=contract.id,
+                valid_from=form.start_date.data or date.today(),
+                valid_to=None,
+                is_current=True,
+                amount=contract.amount,
+                currency=contract.currency,
+                note="Initialer Vertragspreis",
+            )
+            db.session.add(initial_price)
+            db.session.commit()
 
         flash('Vertrag erfolgreich erstellt.', 'success')
         if next_url and next_url.startswith('/'):
@@ -260,9 +282,8 @@ def edit(id):
             contract.end_date = None
             contract.initial_term_end_date = form.initial_term_end_date.data
             initial_term_val = form.initial_term_months.data or 0
-            if contract.initial_term_end_date and contract.start_date:
-                s = contract.start_date
-                initial_term_val = max(0, (contract.initial_term_end_date.year - s.year) * 12 + (contract.initial_term_end_date.month - s.month))
+            if not initial_term_val and contract.initial_term_end_date and contract.start_date:
+                initial_term_val = calculate_month_delta(contract.start_date, contract.initial_term_end_date)
             contract.initial_term_months = initial_term_val
         else:
             contract.end_date = form.end_date.data
@@ -308,14 +329,25 @@ def extend_contract(id):
 
         today = date.today()
         current_term_end = contract.initial_term_end_date or contract.earliest_cancellation_date or today
-        if start_mode == 'append' and current_term_end > today:
+        if start_mode == 'custom_date':
+            if not form.custom_start_date.data:
+                flash('Bitte gib ein gültiges Startdatum für die Verlängerung an.', 'danger')
+                return redirect(url_for('contract.detail', id=contract.id))
+            base_date = form.custom_start_date.data
+        elif start_mode == 'append' and current_term_end > today:
             base_date = current_term_end
         else:
             base_date = today
 
-        if period_choice == 'custom' and form.custom_end_date.data:
+        if period_choice == 'custom':
+            if not form.custom_end_date.data:
+                flash('Bitte gib ein gültiges Enddatum für die Verlängerung an.', 'danger')
+                return redirect(url_for('contract.detail', id=contract.id))
             new_end_date = form.custom_end_date.data
-            months_added = max(1, (new_end_date.year - base_date.year) * 12 + (new_end_date.month - base_date.month))
+            if new_end_date <= base_date:
+                flash('Das neue Mindestende muss nach dem Startdatum der Verlängerung liegen.', 'danger')
+                return redirect(url_for('contract.detail', id=contract.id))
+            months_added = max(1, calculate_month_delta(base_date, new_end_date))
         else:
             try:
                 months_to_add = int(period_choice)
@@ -327,10 +359,13 @@ def extend_contract(id):
         target_period = contract.cancellation_target_period or 'exact'
         new_end_date = snap_to_target_period(new_end_date, target_period)
 
+        if new_end_date <= base_date:
+            flash('Das neue Mindestende muss nach dem Startdatum der Verlängerung liegen.', 'danger')
+            return redirect(url_for('contract.detail', id=contract.id))
+
         # Update contract
         contract.initial_term_end_date = new_end_date
-        calc_start = contract.start_date or base_date
-        contract.initial_term_months = max(0, (new_end_date.year - calc_start.year) * 12 + (new_end_date.month - calc_start.month))
+        contract.initial_term_months = months_added
 
         # Reset cancellation status if pending or confirmed
         was_cancelled = contract.status in (ContractStatus.pending_cancellation, ContractStatus.cancellation_confirmed)
@@ -339,10 +374,28 @@ def extend_contract(id):
             contract.cancellation_sent_date = None
             contract.confirmed_end_date = None
 
-        # Add price entry if new_amount specified and > 0
+        # Add price entries (tiers or single amount)
+        price_start = today if start_mode == 'from_today' else base_date
+        price_tiers_raw = request.form.get('price_tiers_json')
         new_amt = form.new_amount.data
-        if new_amt is not None and float(new_amt) > 0:
-            price_start = today if start_mode == 'from_today' else base_date
+        tiers = None
+        if price_tiers_raw:
+            try:
+                parsed = json.loads(price_tiers_raw)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    tiers = parsed
+            except (json.JSONDecodeError, TypeError):
+                tiers = None
+
+        if tiers:
+            apply_price_tiers(
+                contract=contract,
+                base_date=price_start,
+                tiers=tiers,
+                currency=contract.currency,
+                auto_adjust=True,
+            )
+        elif new_amt is not None and float(new_amt) > 0:
             add_price_entry(
                 contract=contract,
                 amount=float(new_amt),
@@ -356,7 +409,9 @@ def extend_contract(id):
         # Add Note to history
         note_text = form.note.data.strip() if form.note.data else ""
         system_note = f"Vorzeitige Vertragsverlängerung um {months_added} Monate bis zum {new_end_date.strftime('%d.%m.%Y')}."
-        if new_amt is not None and float(new_amt) > 0:
+        if tiers:
+            system_note += f" Preisstaffel mit {len(tiers)} Stufen hinterlegt."
+        elif new_amt is not None and float(new_amt) > 0:
             system_note += f" Neuer Betrag: {new_amt:.2f} {contract.currency}."
         if note_text:
             system_note += f" Notiz: {note_text}"

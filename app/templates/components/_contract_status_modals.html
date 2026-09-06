@@ -1,0 +1,69 @@
+{# Modals: Confirm Cancellation & Delete Contract Modals #}
+
+<!-- Modal: Confirm Cancellation -->
+<div class="modal fade" id="confirmCancellationModal" tabindex="-1" aria-labelledby="confirmCancellationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="confirmCancellationModalLabel">
+          <i class="bi bi-calendar-x"></i>
+          <span>{{ _('contracts.confirm_cancellation.title') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.toggle_status', id=contract.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+        <input type="hidden" name="status" value="cancellation_confirmed" />
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">{{ _('contracts.confirm_cancellation.subtitle') }}</p>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.confirm_cancellation.date_label') }} <span class="text-danger">*</span></label>
+            {% set default_end = contract.confirmed_end_date or contract.earliest_cancellation_date or contract.end_date %}
+            <input type="date" name="confirmed_end_date" class="form-control" value="{{ default_end.isoformat() if default_end else '' }}" required />
+            <div class="form-text small text-muted">
+              {% if contract.earliest_cancellation_date %}
+              Vorberechnet anhand Kündigungsfrist: {{ contract.earliest_cancellation_date.strftime('%d.%m.%Y') }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.confirm_cancellation.submit') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Contract Confirmation -->
+<div class="modal fade" id="deleteContractModal" tabindex="-1" aria-labelledby="deleteContractModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deleteContractModalLabel">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ _('contracts.delete') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="mb-2 fw-semibold">{{ contract.category }}</p>
+        <p class="text-muted small mb-0">{{ _('contracts.delete_confirm') }}</p>
+      </div>
+      <div class="modal-footer border-top bg-body-tertiary">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+        <form method="post" action="{{ url_for('contract.delete', id=contract.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+          <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+            <i class="bi bi-trash"></i>
+            <span>{{ _('contracts.delete') }}</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

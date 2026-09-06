@@ -128,6 +128,7 @@
     const inputNoticeAmt = groupEl.querySelector('[name="cancellation_notice_amount"]');
     const selectNoticeUnit = groupEl.querySelector('[name="cancellation_notice_unit"]');
     const selectTargetPeriod = groupEl.querySelector('[name="cancellation_target_period"]');
+    const targetPeriodWrapper = groupEl.querySelector('.cancellation-target-wrapper');
 
     const previewAlert = groupEl.querySelector('.term-live-preview');
     const previewText = groupEl.querySelector('.term-live-preview-text');
@@ -150,12 +151,14 @@
         if (containerAuto) containerAuto.classList.add('d-none');
         if (containerFixed) containerFixed.classList.remove('d-none');
         if (renewalPeriodWrapper) renewalPeriodWrapper.classList.add('d-none');
+        if (targetPeriodWrapper) targetPeriodWrapper.classList.add('d-none');
         if (inputInitialTerm) inputInitialTerm.value = '0';
         if (inputInitialTermEndDate) inputInitialTermEndDate.value = '';
       } else {
         if (containerAuto) containerAuto.classList.remove('d-none');
         if (containerFixed) containerFixed.classList.add('d-none');
         if (inputEndDate) inputEndDate.value = '';
+        if (targetPeriodWrapper) targetPeriodWrapper.classList.remove('d-none');
 
         if (rType === 'fixed_period') {
           if (renewalPeriodWrapper) renewalPeriodWrapper.classList.remove('d-none');
@@ -273,6 +276,7 @@
         const m = parseInt(this.getAttribute('data-set-months'), 10);
         if (inputInitialTerm) {
           inputInitialTerm.value = m;
+          inputInitialTerm.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         if (inputInitialTermEndDate) {
@@ -284,21 +288,9 @@
             const startDateVal = inputStartDate ? inputStartDate.value : '';
             const start = parseDateInput(startDateVal) || todayClean;
 
-            // Base date calculation:
-            // For future start dates, extend from start.
-            // For historical / running contracts, extend from current future end if present, otherwise from today.
-            let baseDate = start;
-            if (start <= todayClean) {
-              const existingInitialEnd = parseDateInput(inputInitialTermEndDate ? inputInitialTermEndDate.value : '');
-              if (existingInitialEnd && existingInitialEnd > todayClean) {
-                baseDate = existingInitialEnd;
-              } else {
-                baseDate = todayClean;
-              }
-            }
-
+            // Mindestvertragslaufzeit (initial term) is always calculated from contract start date
             const targetPeriod = selectTargetPeriod ? selectTargetPeriod.value : 'exact';
-            let calculatedEnd = addMonths(baseDate, m);
+            let calculatedEnd = addMonths(start, m);
             calculatedEnd = snapToTargetPeriod(calculatedEnd, targetPeriod);
             inputInitialTermEndDate.value = formatISODate(calculatedEnd);
           }
@@ -316,12 +308,19 @@
         const today = new Date();
         const todayClean = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const startDt = parseDateInput(inputStartDate ? inputStartDate.value : '') || todayClean;
-        const baseRef = (startDt > todayClean) ? startDt : todayClean;
-        if (endDt && endDt > baseRef && inputInitialTerm) {
-          const diffMonths = (endDt.getFullYear() - baseRef.getFullYear()) * 12 + (endDt.getMonth() - baseRef.getMonth());
+        if (endDt && endDt > startDt && inputInitialTerm) {
+          let nextDay = new Date(endDt.getFullYear(), endDt.getMonth(), endDt.getDate() + 1);
+          let diffMonths;
+          if (nextDay.getDate() === startDt.getDate() || (startDt.getDate() === 1 && nextDay.getDate() === 1)) {
+            diffMonths = (nextDay.getFullYear() - startDt.getFullYear()) * 12 + (nextDay.getMonth() - startDt.getMonth());
+          } else {
+            diffMonths = (endDt.getFullYear() - startDt.getFullYear()) * 12 + (endDt.getMonth() - startDt.getMonth());
+          }
           inputInitialTerm.value = Math.max(0, diffMonths);
+          inputInitialTerm.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (!this.value && inputInitialTerm) {
           inputInitialTerm.value = 0;
+          inputInitialTerm.dispatchEvent(new Event('change', { bubbles: true }));
         }
         updatePillsHighlight();
         updatePreview();
@@ -411,59 +410,508 @@
     if (!modal || modal._extendInit) return;
     modal._extendInit = true;
 
-    const selectMonths = modal.querySelector('[name="extension_months"]');
+    const radioMonths = modal.querySelectorAll('[name="extension_months_radio"]');
+    const inputHiddenMonths = modal.querySelector('input[type="hidden"][name="extension_months"]');
+    const selectMonths = modal.querySelector('select[name="extension_months"]');
     const selectMode = modal.querySelector('[name="extension_start_mode"]');
     const inputCustomDate = modal.querySelector('[name="custom_end_date"]');
+    const inputCustomStartDate = modal.querySelector('[name="custom_start_date"]');
     const customDateWrapper = modal.querySelector('.custom-date-wrapper');
+    const customStartDateWrapper = modal.querySelector('.custom-start-date-wrapper');
     const previewBox = modal.querySelector('.extend-live-preview');
+    const submitBtn = modal.querySelector('button[type="submit"]');
 
     const baseCurrentEndStr = modal.getAttribute('data-current-end') || '';
     const currentEndDt = parseDateInput(baseCurrentEndStr);
 
     function updateExtendPreview() {
       if (!previewBox) return;
-      const monthsChoice = selectMonths ? selectMonths.value : '24';
+      let monthsChoice = '24';
+      if (inputHiddenMonths) {
+        monthsChoice = inputHiddenMonths.value || '24';
+      } else if (selectMonths) {
+        monthsChoice = selectMonths.value || '24';
+      }
       const mode = selectMode ? selectMode.value : 'append';
 
-      if (monthsChoice === 'custom') {
-        if (customDateWrapper) customDateWrapper.classList.remove('d-none');
-        const customDt = parseDateInput(inputCustomDate ? inputCustomDate.value : '');
-        if (customDt) {
-          previewBox.innerHTML = '<i class="bi bi-arrow-repeat text-primary me-1"></i>Neues Mindestende: <strong>' + formatDate(customDt) + '</strong>';
-        } else {
-          previewBox.innerHTML = '<i class="bi bi-info-circle text-muted me-1"></i>Bitte individuelles Datum wählen.';
-        }
-        return;
+      // Toggle custom start date wrapper
+      if (mode === 'custom_date') {
+        if (customStartDateWrapper) customStartDateWrapper.classList.remove('d-none');
+        if (inputCustomStartDate) inputCustomStartDate.required = true;
+      } else {
+        if (customStartDateWrapper) customStartDateWrapper.classList.add('d-none');
+        if (inputCustomStartDate) inputCustomStartDate.required = false;
       }
 
-      if (customDateWrapper) customDateWrapper.classList.add('d-none');
+      // Toggle custom end date wrapper
+      if (monthsChoice === 'custom') {
+        if (customDateWrapper) customDateWrapper.classList.remove('d-none');
+        if (inputCustomDate) inputCustomDate.required = true;
+      } else {
+        if (customDateWrapper) customDateWrapper.classList.add('d-none');
+        if (inputCustomDate) inputCustomDate.required = false;
+      }
 
+      // Determine baseDt
       const today = new Date();
       let baseDt = today;
-      if (mode === 'append' && currentEndDt && currentEndDt > today) {
+      let missingStartDate = false;
+
+      if (mode === 'custom_date') {
+        const parsedStart = parseDateInput(inputCustomStartDate ? inputCustomStartDate.value : '');
+        if (parsedStart) {
+          baseDt = parsedStart;
+        } else {
+          missingStartDate = true;
+        }
+      } else if (mode === 'append' && currentEndDt && currentEndDt > today) {
         baseDt = currentEndDt;
       }
 
+      // Failsafe 1: If custom start date chosen but missing
+      if (missingStartDate) {
+        previewBox.className = 'extend-live-preview alert alert-warning small py-2 px-3 mb-0';
+        previewBox.innerHTML = '<i class="bi bi-info-circle text-warning me-1"></i>Bitte individuelles Startdatum wählen.';
+        if (submitBtn) submitBtn.disabled = true;
+        return;
+      }
+
+      // Custom End Date Mode
+      if (monthsChoice === 'custom') {
+        const customDt = parseDateInput(inputCustomDate ? inputCustomDate.value : '');
+        if (!customDt) {
+          previewBox.className = 'extend-live-preview alert alert-info small py-2 px-3 mb-0';
+          previewBox.innerHTML = '<i class="bi bi-info-circle text-muted me-1"></i>Bitte individuelles Enddatum wählen.';
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        // Failsafe 2: End date must be after baseDt
+        if (customDt <= baseDt) {
+          previewBox.className = 'extend-live-preview alert alert-danger small py-2 px-3 mb-0';
+          previewBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i><strong>Fehler:</strong> Das Mindestende muss nach dem Startdatum (' + formatDate(baseDt) + ') liegen!';
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        previewBox.className = 'extend-live-preview alert alert-success-subtle border border-success-subtle small py-2 px-3 mb-0';
+        previewBox.innerHTML = '<div><span class="text-muted small d-block">Neues Mindestende (ab ' + formatDate(baseDt) + '):</span>' +
+          '<strong class="text-success fs-6"><i class="bi bi-calendar-check me-1"></i>' + formatDate(customDt) + '</strong></div>';
+        checkTiersValidityAndEnableSubmit();
+        return;
+      }
+
+      // Fixed duration (e.g. 12, 24 months)
       const addM = parseInt(monthsChoice, 10) || 24;
       const newEnd = addMonths(baseDt, addM);
 
-      let txt = '<div><span class="text-muted small d-block">Neues Mindestende:</span>';
+      previewBox.className = 'extend-live-preview alert alert-success-subtle border border-success-subtle small py-2 px-3 mb-0';
+      let txt = '<div><span class="text-muted small d-block">Neues Mindestende (ab ' + formatDate(baseDt) + '):</span>';
       txt += '<strong class="text-success fs-6"><i class="bi bi-calendar-plus me-1"></i>' + formatDate(newEnd) + '</strong>';
       txt += ' <span class="badge bg-success-subtle text-success border ms-2">+' + addM + ' Monate</span></div>';
 
       previewBox.innerHTML = txt;
+      checkTiersValidityAndEnableSubmit();
     }
+
+    function checkTiersValidityAndEnableSubmit() {
+      if (!submitBtn) return;
+      const tiersCard = modal.querySelector('.price-tier-card');
+      const jsonInput = modal.querySelector('.price-tiers-json-input');
+      if (tiersCard && !tiersCard.classList.contains('d-none')) {
+        if (!jsonInput || !jsonInput.value) {
+          submitBtn.disabled = true;
+          return;
+        }
+      }
+      submitBtn.disabled = false;
+    }
+
+    modal._updateExtendPreview = updateExtendPreview;
+
+    radioMonths.forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        if (radio.checked) {
+          if (inputHiddenMonths) inputHiddenMonths.value = radio.value;
+          updateExtendPreview();
+        }
+      });
+    });
 
     if (selectMonths) selectMonths.addEventListener('change', updateExtendPreview);
     if (selectMode) selectMode.addEventListener('change', updateExtendPreview);
     if (inputCustomDate) inputCustomDate.addEventListener('input', updateExtendPreview);
+    if (inputCustomStartDate) inputCustomStartDate.addEventListener('input', updateExtendPreview);
 
     updateExtendPreview();
+  }
+
+  // Live controller for reusable price tier components (.price-tier-component)
+  function initPriceTierControllers() {
+    document.querySelectorAll('.price-tier-component').forEach(function (container) {
+      if (container._tierInit) return;
+      container._tierInit = true;
+
+      const toggleBtn = container.querySelector('.toggle-price-tiers-btn');
+      const closeBtn = container.querySelector('.close-price-tiers-btn');
+      const card = container.querySelector('.price-tier-card');
+      const rowsList = container.querySelector('.tier-rows-list');
+      const addStepBtn = container.querySelector('.add-tier-btn');
+      const summaryBadge = container.querySelector('.tier-summary-badge');
+      const jsonInput = container.querySelector('.price-tiers-json-input');
+
+      const form = container.closest('form') || container.closest('.modal');
+      const singleAmountWrapper = form ? form.querySelector('.single-amount-wrapper') : null;
+      const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+
+      function getCurrency() {
+        if (!form) return 'EUR';
+        const curInput = form.querySelector('[name="currency"]');
+        return curInput ? (curInput.value || 'EUR') : 'EUR';
+      }
+
+      function getBaseStartDate() {
+        if (!form) return new Date();
+        const startInput = form.querySelector('[name="start_date"]');
+        if (startInput && startInput.value) {
+          const d = parseDateInput(startInput.value);
+          if (d) return d;
+        }
+        const modal = container.closest('#extendContractModal');
+        if (modal) {
+          const selectMode = modal.querySelector('[name="extension_start_mode"]');
+          const mode = selectMode ? selectMode.value : 'append';
+          if (mode === 'custom_date') {
+            const customStartInput = modal.querySelector('[name="custom_start_date"]');
+            if (customStartInput && customStartInput.value) {
+              const d = parseDateInput(customStartInput.value);
+              if (d) return d;
+            }
+          }
+          const currentEndStr = modal.getAttribute('data-current-end');
+          const currentEndDt = parseDateInput(currentEndStr);
+          const today = new Date();
+          if (mode === 'append' && currentEndDt && currentEndDt > today) {
+            return currentEndDt;
+          }
+          return today;
+        }
+        return new Date();
+      }
+
+      function getInitialTermMonths() {
+        if (!form) return 0;
+        const termInput = form.querySelector('[name="initial_term_months"]');
+        if (termInput && termInput.value !== undefined && termInput.value !== '') {
+          const v = parseInt(termInput.value, 10);
+          if (!isNaN(v)) return Math.max(0, v);
+        }
+        const extMonthsInput = form.querySelector('[name="extension_months"]');
+        if (extMonthsInput && extMonthsInput.value && extMonthsInput.value !== 'custom') {
+          const v = parseInt(extMonthsInput.value, 10);
+          if (!isNaN(v)) return Math.max(0, v);
+        }
+        return 0;
+      }
+
+      function getBaseAmount() {
+        if (!form) return '';
+        const amtInput = form.querySelector('[name="amount"], [name="new_amount"]');
+        return amtInput ? (amtInput.value || '') : '';
+      }
+
+      let tiers = [];
+
+      function parseAmount(val) {
+        if (val === undefined || val === null || val === '') return NaN;
+        return parseFloat(String(val).replace(',', '.'));
+      }
+
+      function syncToForm() {
+        if (card.classList.contains('d-none')) {
+          jsonInput.value = '';
+          return;
+        }
+
+        const validTiers = tiers
+          .filter(function (t) {
+            const num = parseAmount(t.amount);
+            return !isNaN(num) && num >= 0;
+          })
+          .map(function (t, idx) {
+            const isLast = idx === tiers.length - 1;
+            return {
+              months: isLast ? null : (parseInt(t.months, 10) || 1),
+              amount: parseAmount(t.amount),
+              note: t.note || (isLast ? 'Regulärer Folgepreis' : 'Rabattphase')
+            };
+          });
+
+        const lastTier = tiers.length > 0 ? tiers[tiers.length - 1] : null;
+        const lastTierNum = lastTier ? parseAmount(lastTier.amount) : NaN;
+        const lastTierHasAmount = !isNaN(lastTierNum) && lastTierNum >= 0;
+
+        if (validTiers.length >= 2 && lastTierHasAmount) {
+          jsonInput.value = JSON.stringify(validTiers);
+        } else {
+          jsonInput.value = '';
+        }
+
+        updateSummaryBadge();
+
+        const modal = container.closest('#extendContractModal');
+        if (modal && modal._updateExtendPreview) {
+          modal._updateExtendPreview();
+        } else if (submitBtn) {
+          if (!card.classList.contains('d-none') && !jsonInput.value) {
+            submitBtn.disabled = true;
+          } else {
+            submitBtn.disabled = false;
+          }
+        }
+      }
+
+      function updateSummaryBadge() {
+        if (!summaryBadge) return;
+        const lastTier = tiers.length > 0 ? tiers[tiers.length - 1] : null;
+        const lastTierNum = lastTier ? parseAmount(lastTier.amount) : NaN;
+        const missingFolgepreis = isNaN(lastTierNum) || lastTierNum < 0;
+
+        let totalMonths = 0;
+        tiers.forEach(function (t, idx) {
+          if (idx < tiers.length - 1) {
+            totalMonths += (parseInt(t.months, 10) || 0);
+          }
+        });
+
+        const expectedTerm = getInitialTermMonths();
+        if (missingFolgepreis) {
+          summaryBadge.className = 'tier-summary-badge badge bg-warning-subtle text-warning-emphasis border';
+          summaryBadge.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Bitte regulären Folgepreis eingeben';
+        } else if (expectedTerm === 0) {
+          summaryBadge.className = 'tier-summary-badge badge bg-info-subtle text-info-emphasis border';
+          summaryBadge.innerHTML = '<i class="bi bi-tag me-1"></i>Rabattphase: ' + totalMonths + ' Monate (Vertrag ist monatlich flexibel)';
+        } else if (totalMonths === expectedTerm) {
+          summaryBadge.className = 'tier-summary-badge badge bg-success-subtle text-success border';
+          summaryBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i>Deckt Mindestlaufzeit exakt ab (' + totalMonths + ' Monate)';
+        } else if (totalMonths < expectedTerm) {
+          const diff = expectedTerm - totalMonths;
+          summaryBadge.className = 'tier-summary-badge badge bg-warning-subtle text-warning-emphasis border';
+          summaryBadge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>' + totalMonths + ' von ' + expectedTerm + ' Monaten verplant (noch ' + diff + ' M. offen)';
+        } else {
+          summaryBadge.className = 'tier-summary-badge badge bg-info-subtle text-info-emphasis border';
+          summaryBadge.innerHTML = '<i class="bi bi-calendar-check me-1"></i>Laufzeit der Rabattphase: ' + totalMonths + ' Monate (Mindestlaufzeit: ' + expectedTerm + ' M.)';
+        }
+      }
+
+      function renderTiers() {
+        rowsList.innerHTML = '';
+        const baseDt = getBaseStartDate();
+        const cur = getCurrency();
+        let runningStart = new Date(baseDt.getTime());
+
+        let totalMonths = 0;
+
+        tiers.forEach(function (tier, idx) {
+          const isFirst = idx === 0;
+          const isLast = idx === tiers.length - 1;
+
+          let dateRangeText = '';
+          if (isLast) {
+            dateRangeText = '<i class="bi bi-calendar3 me-1"></i>ab ' + formatDate(runningStart);
+          } else {
+            const m = parseInt(tier.months, 10) || 0;
+            totalMonths += m;
+            const nextStart = addMonths(runningStart, m);
+            const endDate = new Date(nextStart.getTime());
+            endDate.setDate(endDate.getDate() - 1);
+            dateRangeText = '<i class="bi bi-calendar-range me-1"></i>' + formatDate(runningStart) + ' – ' + formatDate(endDate);
+            runningStart = nextStart;
+          }
+
+          const row = document.createElement('div');
+          row.className = 'border rounded p-2 bg-body';
+
+          let phaseBadgeHtml = '';
+          let durationInputHtml = '';
+          if (isFirst) {
+            phaseBadgeHtml = '<span class="badge bg-primary text-white me-1">1. Phase</span> <span class="fw-semibold small">Rabatt / Aktionspreis</span>';
+            durationInputHtml = '<div class="input-group input-group-sm">' +
+              '<span class="input-group-text">für</span>' +
+              '<input type="number" min="1" class="form-control tier-months-input" data-idx="' + idx + '" value="' + (tier.months || '') + '">' +
+              '<span class="input-group-text">Monate</span>' +
+            '</div>';
+          } else if (isLast) {
+            phaseBadgeHtml = '<span class="badge bg-secondary text-white me-1">Folgepreis</span> <span class="fw-semibold small">Regulär nach Rabattphase</span>';
+            durationInputHtml = '<div class="form-control form-control-sm text-muted bg-body-tertiary text-center">&infin; dauerhaft fortlaufend</div>';
+          } else {
+            phaseBadgeHtml = '<span class="badge bg-info-subtle text-info-emphasis border me-1">' + (idx + 1) + '. Phase</span> <span class="fw-semibold small">Zwischenstufe</span>';
+            durationInputHtml = '<div class="input-group input-group-sm">' +
+              '<span class="input-group-text">für</span>' +
+              '<input type="number" min="1" class="form-control tier-months-input" data-idx="' + idx + '" value="' + (tier.months || '') + '">' +
+              '<span class="input-group-text">Monate</span>' +
+            '</div>';
+          }
+
+          let removeBtnHtml = '';
+          if (!isFirst && !isLast) {
+            removeBtnHtml = '<button type="button" class="btn btn-sm btn-link text-danger p-0 tier-remove-btn ms-2" data-idx="' + idx + '" title="Stufe entfernen"><i class="bi bi-trash"></i></button>';
+          }
+
+          row.innerHTML = 
+            '<div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">' +
+              '<div class="d-flex align-items-center">' + phaseBadgeHtml + '</div>' +
+              '<div class="d-flex align-items-center gap-1">' +
+                '<span class="badge bg-body-tertiary text-muted border py-1 px-2 small" style="font-size: 0.72rem;">' +
+                  dateRangeText +
+                '</span>' +
+                removeBtnHtml +
+              '</div>' +
+            '</div>' +
+            '<div class="row g-2 align-items-center">' +
+              '<div class="col-12 col-sm-6">' + durationInputHtml + '</div>' +
+              '<div class="col-12 col-sm-6">' +
+                '<div class="input-group input-group-sm">' +
+                  '<input type="number" step="0.01" min="0" placeholder="0.00" class="form-control tier-amount-input" data-idx="' + idx + '" value="' + (tier.amount || '') + '">' +
+                  '<span class="input-group-text">' + cur + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+
+          rowsList.appendChild(row);
+        });
+
+        rowsList.querySelectorAll('.tier-months-input').forEach(function (inp) {
+          inp.addEventListener('input', function () {
+            const idx = parseInt(inp.getAttribute('data-idx'), 10);
+            tiers[idx].months = inp.value;
+            renderTiers();
+            syncToForm();
+          });
+        });
+
+        rowsList.querySelectorAll('.tier-amount-input').forEach(function (inp) {
+          inp.addEventListener('input', function () {
+            const idx = parseInt(inp.getAttribute('data-idx'), 10);
+            tiers[idx].amount = inp.value;
+            syncToForm();
+          });
+        });
+
+        rowsList.querySelectorAll('.tier-remove-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const idx = parseInt(btn.getAttribute('data-idx'), 10);
+            tiers.splice(idx, 1);
+            renderTiers();
+            syncToForm();
+          });
+        });
+
+        updateSummaryBadge();
+      }
+
+      function openTiers() {
+        card.classList.remove('d-none');
+        toggleBtn.classList.add('d-none');
+        if (singleAmountWrapper) {
+          singleAmountWrapper.classList.add('d-none');
+          const singleInput = singleAmountWrapper.querySelector('input');
+          if (singleInput) singleInput.disabled = true;
+        }
+        if (tiers.length === 0) {
+          const initialMonths = getInitialTermMonths();
+          const defaultMonths = initialMonths > 0 ? initialMonths : 6;
+          const baseAmt = getBaseAmount();
+          tiers = [
+            { months: defaultMonths, amount: baseAmt, note: 'Aktionspreis / Rabattphase' },
+            { months: null, amount: '', note: 'Regulärer Folgepreis' }
+          ];
+        }
+        renderTiers();
+        syncToForm();
+      }
+
+      function closeTiers() {
+        card.classList.add('d-none');
+        toggleBtn.classList.remove('d-none');
+        if (singleAmountWrapper) {
+          singleAmountWrapper.classList.remove('d-none');
+          const singleInput = singleAmountWrapper.querySelector('input');
+          if (singleInput) {
+            singleInput.disabled = false;
+            if ((!singleInput.value || singleInput.value === '0.00') && tiers.length > 0 && tiers[0].amount) {
+              singleInput.value = tiers[0].amount;
+            }
+          }
+        }
+        tiers = [];
+        jsonInput.value = '';
+        const modal = container.closest('#extendContractModal');
+        if (modal && modal._updateExtendPreview) {
+          modal._updateExtendPreview();
+        } else if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+
+      toggleBtn.addEventListener('click', openTiers);
+      closeBtn.addEventListener('click', closeTiers);
+
+      if (addStepBtn) {
+        addStepBtn.addEventListener('click', function () {
+          const lastIdx = tiers.length - 1;
+          tiers.splice(lastIdx, 0, {
+            months: 6,
+            amount: '',
+            note: 'Zwischenstufe'
+          });
+          renderTiers();
+          syncToForm();
+        });
+      }
+
+      if (form) {
+        form.addEventListener('input', function (e) {
+          if (e.target.name === 'amount' || e.target.name === 'new_amount') {
+            if (!card.classList.contains('d-none') && tiers.length >= 1) {
+              if (tiers[0].amount === '' || parseFloat(tiers[0].amount) === 0) {
+                tiers[0].amount = e.target.value;
+                renderTiers();
+                syncToForm();
+              }
+            }
+          } else if (e.target.name === 'start_date' || e.target.name === 'currency' || e.target.name === 'extension_start_mode' || e.target.name === 'custom_start_date') {
+            if (!card.classList.contains('d-none')) {
+              renderTiers();
+              syncToForm();
+            }
+          }
+        });
+        form.addEventListener('change', function (e) {
+          if (e.target.name === 'initial_term_months') {
+            const newTerm = parseInt(e.target.value, 10) || 0;
+            if (tiers.length === 2 && newTerm > 0) {
+              tiers[0].months = newTerm;
+            }
+            if (!card.classList.contains('d-none')) {
+              renderTiers();
+              syncToForm();
+            }
+          } else if (e.target.name === 'start_date' || e.target.name === 'currency' || e.target.name === 'extension_start_mode' || e.target.name === 'custom_start_date') {
+            if (!card.classList.contains('d-none')) {
+              renderTiers();
+              syncToForm();
+            }
+          }
+        });
+      }
+    });
   }
 
   function initAll() {
     document.querySelectorAll('.contract-term-group').forEach(initContractTermGroup);
     initExtendModal();
+    initPriceTierControllers();
   }
 
   if (document.readyState === 'loading') {
@@ -476,3 +924,4 @@
     initAll();
   });
 })();
+

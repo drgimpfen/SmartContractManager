@@ -202,3 +202,80 @@ def delete_price_entry(contract_id: int, price_entry_id: int, user_id: int) -> t
     db.session.commit()
     return True, None
 
+
+def apply_price_tiers(
+    contract: Contract,
+    base_date: date,
+    tiers: list[dict],
+    currency: str | None = None,
+    auto_adjust: bool = True,
+) -> list[PriceEntry]:
+    """
+    Apply a sequence of relative price tiers (e.g. promotional discount phases) to a contract.
+    Each tier in `tiers` is expected to be a dict with:
+      - 'months': int | None (duration in months, or None/0 for ongoing final tier)
+      - 'amount': float (monthly amount)
+      - 'note': str | None (optional label)
+
+    The tiers are chained sequentially starting at `base_date`.
+    The last tier (or any tier with months=None or months=0) is assigned valid_to=None (ongoing).
+    """
+    from app.models import add_months
+
+    curr_currency = currency or contract.currency or "EUR"
+    created_entries: list[PriceEntry] = []
+    curr_start = base_date
+
+    # Filter out empty or invalid tier entries
+    valid_tiers = []
+    for t in tiers:
+        amt = t.get("amount")
+        if amt is None:
+            continue
+        try:
+            amt_float = float(amt)
+            if amt_float < 0:
+                continue
+        except (ValueError, TypeError):
+            continue
+        valid_tiers.append(t)
+
+    if not valid_tiers:
+        return created_entries
+
+    total_count = len(valid_tiers)
+    for idx, tier in enumerate(valid_tiers):
+        amt = float(tier["amount"])
+        months_val = tier.get("months")
+        note = tier.get("note")
+
+        is_last = (idx == total_count - 1)
+
+        if is_last or months_val is None or months_val == "" or int(months_val) <= 0:
+            valid_to = None
+        else:
+            months = int(months_val)
+            next_start = add_months(curr_start, months)
+            valid_to = next_start - timedelta(days=1)
+
+        tier_note = note or (f"Staffelpreis Stufe {idx + 1}" if total_count > 1 else "Vertragspreis")
+        success, err, entry = add_price_entry(
+            contract=contract,
+            amount=amt,
+            currency=curr_currency,
+            valid_from=curr_start,
+            valid_to=valid_to,
+            note=tier_note,
+            auto_adjust=auto_adjust,
+        )
+        if success and entry:
+            created_entries.append(entry)
+
+        if valid_to is not None:
+            curr_start = valid_to + timedelta(days=1)
+
+    sync_contract_prices(contract)
+    db.session.commit()
+    return created_entries
+
+

@@ -765,5 +765,154 @@ def test_extend_contract_reverts_cancellation_status(client, app, user):
         assert float(c.amount) == 29.99
 
 
+def test_cancellation_deadline_displayed_for_scheduled_and_flexible(client, app, user):
+    """Ensure cancellation deadline date is rendered for both scheduled and monthly flexible contracts."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user)
+        sess["_fresh"] = True
+
+    with app.app_context():
+        # 1. Scheduled contract starting in 40 days
+        c_sched = Contract(
+            user_id=user,
+            title="Strom Zukunftsvertrag",
+            category="Energy",
+            status=ContractStatus.scheduled,
+            start_date=date.today() + timedelta(days=40),
+            initial_term_months=12,
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+            amount=50.00,
+            currency="EUR",
+        )
+        # 2. Monthly flexible contract past initial term
+        c_flex = Contract(
+            user_id=user,
+            title="sim24 Flexi",
+            category="Mobile",
+            status=ContractStatus.active,
+            start_date=date(2022, 1, 1),
+            initial_term_months=0,
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+            amount=10.00,
+            currency="EUR",
+        )
+        db.session.add_all([c_sched, c_flex])
+        db.session.commit()
+        sched_id = c_sched.id
+        flex_id = c_flex.id
+
+    # Check scheduled contract detail page
+    resp_sched = client.get(f"/contracts/{sched_id}?lang=de")
+    assert resp_sched.status_code == 200
+    sched_html = resp_sched.get_data(as_text=True)
+    # Both the cancellation deadline label and date should be present
+    assert "Kündigungsfrist bis" in sched_html
+    assert "Frist im Plan" in sched_html
+    with app.app_context():
+        c_sched_obj = db.session.get(Contract, sched_id)
+        assert c_sched_obj.cancellation_deadline.strftime("%d.%m.%Y") in sched_html
+
+    # Check monthly flexible contract detail page
+    resp_flex = client.get(f"/contracts/{flex_id}?lang=de")
+    assert resp_flex.status_code == 200
+    flex_html = resp_flex.get_data(as_text=True)
+    # Flexible badge AND cancellation deadline date must both be present
+    assert "Monatlich flexibel kündbar" in flex_html
+    assert "Kündigungsfrist bis" in flex_html
+    with app.app_context():
+        c_flex_obj = db.session.get(Contract, flex_id)
+        assert c_flex_obj.cancellation_deadline.strftime("%d.%m.%Y") in flex_html
+
+
+def test_cancellation_confirmed_hides_rollover_and_notice(client, app, user):
+    """Ensure confirmed canceled contracts hide rollover mechanics and notice deadlines."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user)
+        sess["_fresh"] = True
+
+    with app.app_context():
+        c = Contract(
+            user_id=user,
+            title="Strom Gekündigt",
+            category="Energy",
+            status=ContractStatus.cancellation_confirmed,
+            start_date=date(2025, 10, 13),
+            confirmed_end_date=date(2026, 10, 13),
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+            amount=53.23,
+            currency="EUR",
+        )
+        db.session.add(c)
+        db.session.commit()
+        c_id = c.id
+
+    resp = client.get(f"/contracts/{c_id}?lang=de")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    # Must show confirmed cancellation status
+    assert "Kündigung bestätigt" in html
+    assert "13.10.2026" in html
+
+    # Must NOT show rollover lifecycle 4-box row or notice period
+    assert "Monatlich rollierend" not in html
+    assert "Verlängerungsart" not in html
+
+
+def test_extend_contract_sets_exact_extension_months_not_history(client, app, user):
+    """Ensure extending an older contract sets initial_term_months to extension duration, not history."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user)
+        sess["_fresh"] = True
+
+    with app.app_context():
+        c = Contract(
+            user_id=user,
+            title="Old Gym Contract",
+            category="Sport",
+            status=ContractStatus.active,
+            start_date=date(2020, 10, 25),
+            initial_term_months=12,
+            initial_term_end_date=date(2021, 10, 25),
+            amount=29.99,
+            currency="EUR",
+            renewal_type="monthly_rolling",
+        )
+        db.session.add(c)
+        db.session.commit()
+        cid = c.id
+
+    # User extends by 24 months starting from custom date 2026-09-28 to 2028-09-28
+    resp = client.post(
+        f"/contracts/{cid}/extend",
+        data={
+            "extension_months": "24",
+            "extension_start_mode": "custom_date",
+            "custom_start_date": "2026-09-28",
+            "new_amount": "24.99",
+            "note": "VVL 24 Monate",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    with app.app_context():
+        updated = db.session.get(Contract, cid)
+        # initial_term_months must be 24, NOT 95!
+        assert updated.initial_term_months == 24
+        assert updated.initial_term_end_date == date(2028, 9, 28)
+
+
+
+
 
 

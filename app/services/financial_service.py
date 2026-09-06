@@ -144,11 +144,17 @@ class FinancialService:
 
         eligible_statuses = (
             ContractStatus.active,
+            ContractStatus.scheduled,
             ContractStatus.pending_cancellation,
             ContractStatus.cancellation_confirmed,
         )
 
-        if not contracts or not any(c.status in eligible_statuses and (c.billing_anchor_date or c.start_date) for c in contracts):
+        if not contracts or not any(
+            c.status in eligible_statuses
+            and not getattr(c, "is_archived", False)
+            and (c.billing_anchor_date or c.start_date)
+            for c in contracts
+        ):
             return []
 
         base_first_of_month = date(as_of_date.year, as_of_date.month, 1)
@@ -176,6 +182,8 @@ class FinancialService:
         horizon_end = buckets[-1]["end"]
 
         for contract in contracts:
+            if getattr(contract, "is_archived", False):
+                continue
             if contract.status not in eligible_statuses or not (contract.billing_anchor_date or contract.start_date):
                 continue
 
@@ -357,31 +365,49 @@ class FinancialService:
         critical = []
 
         for contract in contracts:
-            if contract.status != ContractStatus.active or not contract.end_date:
+            if contract.status != ContractStatus.active:
                 continue
 
-            notice_amt = contract.cancellation_notice_amount or 0
-            unit = (contract.cancellation_notice_unit or "days").lower()
+            # Fixed-term contracts terminate automatically and require no cancellation
+            if getattr(contract, "renewal_type", None) == "none":
+                continue
 
-            if unit == "months":
-                deadline = add_months(contract.end_date, -notice_amt)
-            elif unit == "weeks":
-                deadline = contract.end_date - timedelta(weeks=notice_amt)
-            else:
-                deadline = contract.end_date - timedelta(days=notice_amt)
+            deadline = None
+            if hasattr(contract, "get_cancellation_deadline"):
+                deadline = contract.get_cancellation_deadline(as_of=as_of_date)
+
+            if deadline is None and contract.end_date:
+                notice_amt = contract.cancellation_notice_amount or 0
+                unit = (contract.cancellation_notice_unit or "days").lower()
+
+                if unit == "months":
+                    deadline = add_months(contract.end_date, -notice_amt)
+                elif unit == "weeks":
+                    deadline = contract.end_date - timedelta(weeks=notice_amt)
+                else:
+                    deadline = contract.end_date - timedelta(days=notice_amt)
+
+            if not deadline:
+                continue
+
+            # Contracts that are monthly rolling without lock-in are not urgent
+            if getattr(contract, "is_monthly_flexible", False):
+                continue
 
             # Critical if contract hasn't ended and deadline is due within horizon_days (or already passed)
-            if contract.end_date >= as_of_date and deadline <= as_of_date + timedelta(days=horizon_days):
+            effective_end = contract.end_date or getattr(contract, "earliest_cancellation_date", None)
+            if (not effective_end or effective_end >= as_of_date) and deadline <= as_of_date + timedelta(days=horizon_days):
                 critical.append(contract)
 
-        return sorted(critical, key=lambda c: c.end_date or date.max)
+        return sorted(critical, key=lambda c: getattr(c, "cancellation_deadline", None) or c.end_date or date.max)
 
     def get_missing_notice(self, contracts: list[Contract]) -> list[Contract]:
-        """Identify active contracts missing cancellation notice terms."""
+        """Identify active contracts missing cancellation notice terms, excluding fixed-term contracts."""
         return [
             c
             for c in contracts
             if c.status == ContractStatus.active
+            and getattr(c, "renewal_type", None) != "none"
             and (not c.cancellation_notice_amount or c.cancellation_notice_amount <= 0)
         ]
 
@@ -465,19 +491,59 @@ class FinancialService:
                     initial_end = snap_to_target_period(add_months(calc_start, contract.initial_term_months), target_period)
                     term_months = contract.initial_term_months
 
-                range_end = initial_end - timedelta(days=1) if initial_end > calc_start else initial_end
+                term_start = add_months(initial_end, -term_months)
+                if term_start < calc_start:
+                    term_start = calc_start
+
+                range_end = initial_end - timedelta(days=1) if initial_end > term_start else initial_end
                 initial_due_dates = self._get_due_dates_in_range(
-                    contract, calc_start, range_end, override_anchor=anchor
+                    contract, term_start, range_end, override_anchor=anchor
                 )
                 initial_total = sum(get_contract_price_on_date(contract, d)[0] for d in initial_due_dates)
+                is_active = ref_date < initial_end
                 initial_commitment = {
                     "months": term_months,
                     "end_date": initial_end,
                     "total_amount": round(initial_total, 2),
                     "currency": curr,
                     "total_payments": len(initial_due_dates),
-                    "is_active": ref_date < initial_end,
+                    "is_active": is_active,
+                    "renewal_type": contract.renewal_type or "monthly_rolling",
+                    "renewal_period_months": contract.renewal_period_months or 1,
                 }
+
+            # If contract has past initial commitment but a fixed follow-up period (fixed_period)
+            current_period_commitment = None
+            if getattr(contract, "renewal_type", None) == "fixed_period" and (
+                not initial_commitment or not initial_commitment["is_active"]
+            ):
+                period_months = contract.renewal_period_months or 12
+                earliest_cancel = None
+                if hasattr(contract, "get_earliest_cancellation_date"):
+                    earliest_cancel = contract.get_earliest_cancellation_date(as_of=ref_date)
+                elif hasattr(contract, "earliest_cancellation_date"):
+                    earliest_cancel = contract.earliest_cancellation_date
+
+                if earliest_cancel and earliest_cancel >= ref_date:
+                    period_start = add_months(earliest_cancel, -period_months)
+                    if period_start < calc_start:
+                        period_start = calc_start
+                    period_due_dates = self._get_due_dates_in_range(
+                        contract, period_start, earliest_cancel, override_anchor=anchor
+                    )
+                    period_total = sum(get_contract_price_on_date(contract, d)[0] for d in period_due_dates)
+                    if not period_total:
+                        eff_amt, _ = get_contract_price_on_date(contract, ref_date)
+                        period_total = normalize_to_monthly(eff_amt, contract.frequency) * period_months
+
+                    current_period_commitment = {
+                        "bound_until": earliest_cancel,
+                        "months": period_months,
+                        "total_amount": round(period_total, 2),
+                        "currency": curr,
+                        "initial_months": initial_commitment["months"] if initial_commitment else 0,
+                        "initial_end_date": initial_commitment["end_date"] if initial_commitment else None,
+                    }
 
             return {
                 "is_fixed_term": False,
@@ -486,6 +552,7 @@ class FinancialService:
                 "annual_amount": round(annual_amount, 2),
                 "paid_payments": len(due_dates),
                 "initial_commitment": initial_commitment,
+                "current_period_commitment": current_period_commitment,
             }
 
     def calculate_provider_summary(

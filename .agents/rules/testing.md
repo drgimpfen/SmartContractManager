@@ -3,6 +3,13 @@
 ## 1. Core Paradigm & Libraries
 - **Test-Driven Development (TDD):** Write tests before or alongside implementation.
 - **Framework:** Use `pytest` for all testing.
+- **Execution Environment (Critical):** All test runs must strictly occur inside the Docker container (`web` service), as dependencies are containerized:
+  ```bash
+  docker compose exec web pytest
+  # or for specific test files:
+  docker compose exec web pytest tests/test_auth.py
+  ```
+  Never execute `pytest` directly on the host machine.
 - **Mandatory Libraries:**
   - `pytest-mock`: Strictly required for mocking all external dependencies to ensure tests run isolated without network or file I/O (e.g., mocking the Frankfurter API in Epic 3, or file system interactions during PDF uploads in Epic 4).
   - `factory_boy`: Strictly required for generating test data and fixtures. Due to the highly relational SQLAlchemy data model (`User -> Provider -> Contract -> PriceEntry`), this prevents boilerplate code and ensures consistent model states across tests.

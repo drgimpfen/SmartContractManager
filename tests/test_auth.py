@@ -38,3 +38,18 @@ def test_register_successful(client, app):
     with app.app_context():
         user = User.query.filter_by(username='newuser').first()
         assert user is not None
+
+
+def test_login_required_redirect_and_localized_flash(client):
+    # Unauthenticated access with default locale (en)
+    response = client.get('/', follow_redirects=True)
+    assert response.status_code == 200
+    assert 'Please log in to access this page.' in response.get_data(as_text=True)
+    assert 'alert-info' in response.get_data(as_text=True)
+
+    # With German language cookie or header
+    client.set_cookie('lang', 'de')
+    response_de = client.get('/', follow_redirects=True)
+    assert response_de.status_code == 200
+    assert 'Bitte melden Sie sich an, um auf diese Seite zuzugreifen.' in response_de.get_data(as_text=True)
+    assert 'alert-info' in response_de.get_data(as_text=True)

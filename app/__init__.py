@@ -4,11 +4,15 @@ from flask import Flask, request, redirect, url_for, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 
+from flask_wtf.csrf import generate_csrf
 from app.i18n import translate, get_locale, SUPPORTED_LOCALES, LANGUAGE_NAMES
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
+login_manager.login_message = 'login.login_required'
+login_manager.login_message_category = 'info'
+login_manager.localize_callback = lambda key: translate(key, get_locale())
 
 
 def is_safe_url(target):
@@ -44,7 +48,8 @@ def create_app(test_config=None):
         return dict(
             _=_,
             lang=current_loc,
-            languages={code: LANGUAGE_NAMES.get(code, code) for code in SUPPORTED_LOCALES}
+            languages={code: LANGUAGE_NAMES.get(code, code) for code in SUPPORTED_LOCALES},
+            csrf_token=generate_csrf,
         )
 
     @login_manager.user_loader

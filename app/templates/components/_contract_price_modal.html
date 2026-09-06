@@ -1,0 +1,98 @@
+{# Modal: Add Price Entry & Delete Price Entry Modals #}
+
+<!-- Modal: Add Price Entry -->
+<div class="modal fade" id="addPriceModal" tabindex="-1" aria-labelledby="addPriceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="addPriceModalLabel">
+          <i class="bi bi-currency-euro text-primary"></i>
+          <span>{{ _('contracts.add_price_entry') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.add_price', id=contract.id) }}">
+        {{ price_form.hidden_tag() }}
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-8">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }} <span class="text-danger">*</span></label>
+              <input name="amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required />
+            </div>
+            <div class="col-4">
+              <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
+              <input name="currency" class="form-control" value="{{ contract.currency }}" required />
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold">{{ _('form.valid_from') }} <span class="text-danger">*</span></label>
+              <input name="valid_from" type="date" class="form-control" required />
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold">{{ _('form.valid_to') }}</label>
+              <input name="valid_to" type="date" class="form-control" />
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="auto_adjust_overlap" id="autoAdjustDetail" checked />
+                <label class="form-check-label small" for="autoAdjustDetail">
+                  {{ _('form.auto_adjust') }}
+                </label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">{{ _('form.notes') }}</label>
+              <input name="note" class="form-control" placeholder="z. B. Preiserhöhung nach 12 Monaten" />
+            </div>
+            <div class="col-12">
+              <div class="p-2 px-3 bg-body-tertiary border rounded-2 text-muted d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle text-primary flex-shrink-0"></i>
+                <span style="font-size: 0.75rem;">{{ _('contracts.price_adjustment_notice') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+          <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.save_price') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% set price_list = prices if (prices is defined and prices) else (contract.price_history if (contract is defined and contract.price_history) else []) %}
+{% if price_list %}
+  {% for price in price_list %}
+  <!-- Modal: Delete Price Entry Confirmation -->
+  <div class="modal fade" id="deletePriceModal{{ price.id }}" tabindex="-1" aria-labelledby="deletePriceModalLabel{{ price.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border shadow">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="deletePriceModalLabel{{ price.id }}">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>{{ _('contracts.delete_price_title') }}</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('modal.close') }}"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-2 fw-semibold">{{ "%.2f"|format(price.amount) }} {{ price.currency }} ({{ price.valid_from.strftime('%d.%m.%Y') }} &rarr; {{ price.valid_to.strftime('%d.%m.%Y') if price.valid_to else _('contracts.open_ended') }})</p>
+          <p class="text-muted small mb-0">{{ _('contracts.delete_price_confirm') }}</p>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('modal.cancel') }}</button>
+          <form method="post" action="{{ url_for('contract.delete_price', id=contract.id, price_id=price.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}" />
+            <button type="submit" class="btn btn-danger d-flex align-items-center gap-2">
+              <i class="bi bi-trash"></i>
+              <span>{{ _('contracts.delete') }}</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}

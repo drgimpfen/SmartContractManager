@@ -397,6 +397,39 @@ def test_critical_deadlines_and_missing_notice():
     assert missing[0].contract_number == "C-MISSING"
 
 
+def test_fixed_term_excluded_from_missing_notice_and_critical_deadlines():
+    fin_svc = FinancialService()
+    today = date(2026, 9, 1)
+
+    # Fixed term contract ending in 10 days, no notice period configured
+    c_fixed = Contract(
+        status=ContractStatus.active,
+        contract_number="C-FIXED",
+        renewal_type="none",
+        end_date=today + timedelta(days=10),
+        cancellation_notice_amount=0,
+    )
+
+    # Standard rolling contract missing notice period
+    c_rolling_missing = Contract(
+        status=ContractStatus.active,
+        contract_number="C-ROLLING",
+        renewal_type="monthly_rolling",
+        cancellation_notice_amount=0,
+    )
+
+    contracts = [c_fixed, c_rolling_missing]
+
+    # Fixed term contract must not appear in missing notice
+    missing = fin_svc.get_missing_notice(contracts)
+    assert len(missing) == 1
+    assert missing[0].contract_number == "C-ROLLING"
+
+    # Fixed term contract must not appear in critical deadlines (it terminates automatically)
+    deadlines = fin_svc.get_critical_deadlines(contracts, as_of=today, horizon_days=30)
+    assert len(deadlines) == 0
+
+
 def test_financial_service_additional_edge_cases():
     fin_svc = FinancialService()
 
@@ -549,6 +582,47 @@ def test_calculate_contract_cost_summary_open_ended():
     assert summary["paid_amount"] == 120.0
     assert summary["paid_payments"] == 4
     assert summary["annual_amount"] == 360.0
+
+
+def test_calculate_contract_cost_summary_fixed_period_renewal():
+    fin_svc = FinancialService()
+
+    # Open-ended contract with expired initial term and fixed 12-month annual renewal (like KFZ)
+    c = Contract(
+        status=ContractStatus.active,
+        amount=500.0,
+        currency="EUR",
+        frequency=Frequency.yearly,
+        start_date=date(2021, 1, 1),
+        billing_anchor_date=date(2021, 1, 1),
+        end_date=None,
+        initial_term_months=12,
+        initial_term_end_date=date(2021, 12, 31),
+        renewal_type="fixed_period",
+        renewal_period_months=12,
+        cancellation_target_period="end_of_year",
+        cancellation_notice_amount=1,
+        cancellation_notice_unit="months",
+    )
+
+    as_of_date = date(2026, 9, 1)
+    summary = fin_svc.calculate_contract_cost_summary(c, as_of=as_of_date)
+    assert summary["is_fixed_term"] is False
+
+    init_c = summary["initial_commitment"]
+    assert init_c is not None
+    assert init_c["is_active"] is False
+    assert init_c["months"] == 12
+    assert init_c["end_date"] == date(2021, 12, 31)
+    assert init_c["renewal_type"] == "fixed_period"
+
+    curr_p = summary["current_period_commitment"]
+    assert curr_p is not None
+    assert curr_p["bound_until"] == date(2026, 12, 31)
+    assert curr_p["months"] == 12
+    assert curr_p["total_amount"] == 500.0
+    assert curr_p["initial_months"] == 12
+    assert curr_p["initial_end_date"] == date(2021, 12, 31)
 
 
 def test_calculate_contract_cost_summary_no_anchor_fallback():
@@ -780,6 +854,208 @@ def test_billing_anchor_fallback_to_start_date():
     assert proj[0]["amount"] == 12.99
     assert proj[1]["amount"] == 12.99
     assert proj[2]["amount"] == 12.99
+
+
+def test_cashflow_projection_scheduled_contract():
+    """Verify that a future scheduled contract appears in cashflow projection only on/after start_date."""
+    fin_svc = FinancialService()
+
+    # Scheduled contract starting in March 2026, 50 EUR/mo, 6 months minimum term
+    c_scheduled = Contract(
+        id=101,
+        title="Fiber Internet",
+        category="Internet",
+        status=ContractStatus.scheduled,
+        amount=50.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 3, 1),
+        billing_anchor_date=date(2026, 3, 1),
+        initial_term_months=6,
+        renewal_type="monthly_rolling",
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c_scheduled], "EUR", as_of=date(2026, 1, 1), months=12)
+    assert len(proj) == 12
+
+    # Jan & Feb 2026: contract not yet started -> 0 amount
+    assert proj[0]["month"] == "2026-01"
+    assert proj[0]["amount"] == 0.0
+    assert len(proj[0]["contract_items"]) == 0
+
+    assert proj[1]["month"] == "2026-02"
+    assert proj[1]["amount"] == 0.0
+    assert len(proj[1]["contract_items"]) == 0
+
+    # March 2026: contract starts -> 50 EUR committed
+    assert proj[2]["month"] == "2026-03"
+    assert proj[2]["amount"] == 50.0
+    assert proj[2]["committed_amount"] == 50.0
+    assert proj[2]["flexible_amount"] == 0.0
+    assert len(proj[2]["contract_items"]) == 1
+    assert proj[2]["contract_items"][0]["contract_id"] == 101
+
+    # Aug 2026: month 6 of initial term -> still committed
+    # Start: 2026-03-01 + 6 months = 2026-09-01 (min_term_end)
+    # Aug 2026 (index 7): d = 2026-08-01 <= 2026-09-01 -> committed
+    assert proj[7]["month"] == "2026-08"
+    assert proj[7]["amount"] == 50.0
+    assert proj[7]["committed_amount"] == 50.0
+    assert proj[7]["flexible_amount"] == 0.0
+
+    # Sep 2026 (index 8): d = 2026-09-01 is not > min_term_end -> committed
+    assert proj[8]["month"] == "2026-09"
+    assert proj[8]["amount"] == 50.0
+    assert proj[8]["committed_amount"] == 50.0
+    assert proj[8]["flexible_amount"] == 0.0
+
+    # Oct 2026 (index 9): d = 2026-10-01 > min_term_end -> flexible
+    assert proj[9]["month"] == "2026-10"
+    assert proj[9]["amount"] == 50.0
+    assert proj[9]["committed_amount"] == 0.0
+    assert proj[9]["flexible_amount"] == 50.0
+
+
+def test_cashflow_projection_scheduled_fallback_anchor():
+    """Verify that a scheduled contract without billing_anchor_date uses start_date."""
+    fin_svc = FinancialService()
+
+    c = Contract(
+        id=102,
+        title="Fitness Studio",
+        status=ContractStatus.scheduled,
+        amount=30.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 4, 15),
+        billing_anchor_date=None,
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c], "EUR", as_of=date(2026, 1, 1), months=6)
+    assert len(proj) == 6
+    assert proj[0]["amount"] == 0.0  # Jan
+    assert proj[1]["amount"] == 0.0  # Feb
+    assert proj[2]["amount"] == 0.0  # Mar
+    assert proj[3]["amount"] == 30.0  # Apr (2026-04-15 >= start_date)
+    assert proj[4]["amount"] == 30.0  # May
+    assert proj[5]["amount"] == 30.0  # Jun
+
+
+def test_cashflow_projection_scheduled_mixed_with_active():
+    """Verify combined cashflow projection with active and future scheduled contracts."""
+    fin_svc = FinancialService()
+
+    c_active = Contract(
+        id=1,
+        title="Active Gym",
+        status=ContractStatus.active,
+        amount=40.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2025, 1, 1),
+        billing_anchor_date=date(2025, 1, 1),
+    )
+    c_scheduled = Contract(
+        id=2,
+        title="Upcoming Cloud VPS",
+        status=ContractStatus.scheduled,
+        amount=20.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 3, 1),
+        billing_anchor_date=date(2026, 3, 1),
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c_active, c_scheduled], "EUR", as_of=date(2026, 1, 1), months=4)
+    assert len(proj) == 4
+    assert proj[0]["amount"] == 40.0  # Jan (only active)
+    assert len(proj[0]["contract_items"]) == 1
+    assert proj[1]["amount"] == 40.0  # Feb (only active)
+    assert len(proj[1]["contract_items"]) == 1
+    assert proj[2]["amount"] == 60.0  # Mar (both)
+    assert len(proj[2]["contract_items"]) == 2
+    assert proj[3]["amount"] == 60.0  # Apr (both)
+    assert len(proj[3]["contract_items"]) == 2
+
+
+def test_cashflow_projection_scheduled_beyond_horizon():
+    """Verify that a scheduled contract starting beyond the projection horizon produces 0 due dates."""
+    fin_svc = FinancialService()
+
+    c_far_future = Contract(
+        id=103,
+        title="Far Future Lease",
+        status=ContractStatus.scheduled,
+        amount=500.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2028, 1, 1),
+        billing_anchor_date=date(2028, 1, 1),
+    )
+
+    # In 2026 (12-month horizon), 2028 contract yields 0 amounts
+    proj = fin_svc.calculate_cashflow_projection([c_far_future], "EUR", as_of=date(2026, 1, 1), months=12)
+    assert len(proj) == 12
+    assert all(b["amount"] == 0.0 for b in proj)
+    assert all(len(b["contract_items"]) == 0 for b in proj)
+
+
+def test_cashflow_projection_scheduled_archived_excluded():
+    """Verify that an archived scheduled contract is strictly excluded."""
+    fin_svc = FinancialService()
+
+    c_archived = Contract(
+        id=104,
+        title="Archived Scheduled",
+        status=ContractStatus.scheduled,
+        is_archived=True,
+        amount=100.0,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2026, 2, 1),
+        billing_anchor_date=date(2026, 2, 1),
+    )
+
+    proj = fin_svc.calculate_cashflow_projection([c_archived], "EUR", as_of=date(2026, 1, 1), months=6)
+    assert proj == []
+
+
+def test_extended_contract_cost_summary_bounds_to_extension_period():
+    """Ensure cost summary calculates initial_commitment strictly over the extension term."""
+    fin_svc = FinancialService()
+
+    # Contract started in 2020, extended for 24 months until 2028-09-28
+    c = Contract(
+        id=201,
+        title="Extended Streaming",
+        status=ContractStatus.active,
+        amount=44.99,
+        currency="EUR",
+        frequency=Frequency.monthly,
+        start_date=date(2020, 10, 25),
+        billing_anchor_date=date(2020, 10, 25),
+        initial_term_months=24,
+        initial_term_end_date=date(2028, 9, 28),
+        renewal_type="monthly_rolling",
+    )
+    # Price tiers: 24.99 during the 24m extension (2026-09-28 to 2028-09-27), 44.99 afterwards
+    p_past = PriceEntry(contract_id=201, amount=30.0, currency="EUR", valid_from=date(2020, 10, 25), valid_to=date(2026, 9, 27))
+    p_ext = PriceEntry(contract_id=201, amount=24.99, currency="EUR", valid_from=date(2026, 9, 28), valid_to=date(2028, 9, 27))
+    p_future = PriceEntry(contract_id=201, amount=44.99, currency="EUR", valid_from=date(2028, 9, 28), valid_to=None)
+    c.price_history = [p_past, p_ext, p_future]
+
+    summary = fin_svc.calculate_contract_cost_summary(c, as_of=date(2026, 9, 1))
+
+    init_comm = summary["initial_commitment"]
+    assert init_comm is not None
+    assert init_comm["months"] == 24
+    assert init_comm["end_date"] == date(2028, 9, 28)
+    assert init_comm["is_active"] is True
+    assert init_comm["total_payments"] == 24
+    # 24 * 24.99 = 599.76 EUR, NOT including past payments since 2020!
+    assert init_comm["total_amount"] == 599.76
+
+
 
 
 

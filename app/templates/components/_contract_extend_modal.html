@@ -1,0 +1,103 @@
+{# Modal: Extend Contract (VVL) Component #}
+<div class="modal fade" id="extendContractModal" tabindex="-1" aria-labelledby="extendContractModalLabel" aria-hidden="true" data-current-end="{{ (contract.initial_term_end_date or contract.earliest_cancellation_date or '').isoformat() if (contract.initial_term_end_date or contract.earliest_cancellation_date) else '' }}">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border shadow">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-success d-flex align-items-center gap-2" id="extendContractModalLabel">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>{{ _('contracts.extend.title') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+      </div>
+      <form method="post" action="{{ url_for('contract.extend_contract', id=contract.id) }}">
+        {% if extend_form is defined and extend_form %}
+          {{ extend_form.hidden_tag() }}
+        {% else %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        {% endif %}
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3">{{ _('contracts.extend.subtitle') }}</p>
+
+          <!-- Extension Period -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.period_label') }}</label>
+            <div class="btn-group w-100 extension-period-btn-group" role="group">
+              <input type="radio" class="btn-check" name="extension_months_radio" id="extMonths12" value="12" autocomplete="off">
+              <label class="btn btn-outline-primary py-2" for="extMonths12">12 Monate</label>
+
+              <input type="radio" class="btn-check" name="extension_months_radio" id="extMonths24" value="24" autocomplete="off" checked>
+              <label class="btn btn-outline-primary py-2" for="extMonths24">24 Monate</label>
+
+              <input type="radio" class="btn-check" name="extension_months_radio" id="extMonthsCustom" value="custom" autocomplete="off">
+              <label class="btn btn-outline-primary py-2 d-flex align-items-center justify-content-center gap-1" for="extMonthsCustom">
+                <i class="bi bi-calendar-event"></i>
+                <span>{{ _('contracts.extend.custom_date_btn') }}</span>
+              </label>
+            </div>
+            <input type="hidden" name="extension_months" value="24" />
+          </div>
+
+          <!-- Custom End Date Wrapper (hidden by default) -->
+          <div class="mb-3 custom-date-wrapper d-none">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.custom_date_label') }}</label>
+            <input type="date" name="custom_end_date" class="form-control" />
+          </div>
+
+          <!-- Start Mode: Append vs From Today vs Custom Date -->
+          <div class="mb-3 extension-start-mode-wrapper">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.start_mode_label') }}</label>
+            <select name="extension_start_mode" class="form-select">
+              <option value="append" selected>{{ _('contracts.extend.mode_append') }}</option>
+              <option value="from_today">{{ _('contracts.extend.mode_from_today') }}</option>
+              <option value="custom_date">{{ _('contracts.extend.mode_custom_date') }}</option>
+            </select>
+            <div class="form-text small text-muted" style="font-size: 0.72rem;">
+              {{ _('contracts.extend.mode_hint') }}
+            </div>
+          </div>
+
+          <!-- Custom Start Date Wrapper (hidden by default) -->
+          <div class="mb-3 custom-start-date-wrapper d-none">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.custom_start_date_label') }}</label>
+            <input type="date" name="custom_start_date" class="form-control" />
+          </div>
+
+          <!-- Live Preview Box -->
+          <div class="mb-3">
+            <div class="extend-live-preview alert alert-success-subtle border border-success-subtle small py-2 px-3 mb-0">
+              <i class="bi bi-info-circle text-muted me-1"></i>Berechne Vorschau...
+            </div>
+          </div>
+
+          <!-- Single New Amount Field (hidden and disabled when price tiers are active) -->
+          <div class="mb-3 single-amount-wrapper">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.amount_label') }}</label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" name="new_amount" class="form-control" placeholder="{{ '%.2f'|format(contract.current_amount) }}" />
+              <span class="input-group-text small">{{ contract.currency }}</span>
+            </div>
+            <div class="form-text small text-muted" style="font-size: 0.72rem;">{{ _('contracts.extend.amount_hint') }}</div>
+          </div>
+
+          <!-- Promotional Tiers / Renewal Price Schedule -->
+          <div class="mb-3">
+            {% include 'components/_price_tier_inputs.html' %}
+          </div>
+
+          <!-- Note -->
+          <div class="mb-0">
+            <label class="form-label small fw-semibold">{{ _('contracts.extend.note_label') }}</label>
+            <textarea name="note" class="form-control" rows="2" placeholder="{{ _('contracts.extend.note_placeholder') }}"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top bg-body-tertiary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          <button type="submit" class="btn btn-success d-flex align-items-center gap-2">
+            <i class="bi bi-check-lg"></i>
+            <span>{{ _('contracts.extend.submit') }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
