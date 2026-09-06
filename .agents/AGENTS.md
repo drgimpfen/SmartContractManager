@@ -41,6 +41,8 @@ Your code must be modular, secure, and performant. Implement features strictly a
   * Test-Driven Development (TDD) is mandatory. No new features or bug fixes are accepted without corresponding `pytest` coverage (unit and integration).
   * **Test Execution:** Tests must strictly be executed inside the web container (`docker compose exec web pytest`), as host Python environments do not contain project dependencies.
   * Detailed testing conventions, mocking strategies, and strict coverage goals are defined in `.agents/rules/testing.md` and must be strictly followed.
+* **Contract & Legal Domain Rules (Critical):**
+  * All contract lifecycle calculations, statutory terms, notice periods, extensions, and consumer rights must strictly follow `.agents/rules/contracts_legal.md`.
 
 ## 4. UI/UX & Design Guidelines
 The system uses Server-Side Rendering (Jinja2) in strict combination with Bootstrap 5.3. There is no separate design agent; the Full-Stack Agent is responsible for adhering to the UI rules.
@@ -85,9 +87,10 @@ For any code creation, refactoring, or architectural modification, the following
 - **User Interaction & Planning Artifacts (Strictly German):**
   - All direct communication with the user (chat conversations, discussions, explanations, summaries, status updates, and questions) must strictly be conducted in **German**.
   - Interactive planning and review artifacts presented to the user (specifically `implementation_plan.md` and `walkthrough.md`) must strictly be authored in **German**.
-- **Codebase Documentation & Commits (Strictly English):**
-  - Project repository documentation files (`README.md`, `ROADMAP.md`, architectural decisions, and rule definitions) must strictly be authored in **English**.
-  - Internal code documentation, comments, and docstrings must strictly be written in **English**.
+- **Domain & Project Documentation (Strictly German):**
+  - Project documentation files (`README.md`, `ROADMAP.md`) and domain legal rule definitions (`.agents/rules/contracts_legal.md`) must strictly be authored in **German** to preserve the precision of statutory terms under German civil law (BGB, VVG, TKG, EnWG).
+- **Codebase, Framework Guidelines & Commits (Strictly English):**
+  - Technical framework guidelines (`.agents/rules/design.md`, `.agents/rules/testing.md`), Python code, database models, internal code comments, and docstrings must strictly be written in **English**.
   - Git commit messages (subject line and description) must strictly be written in **English** (per Section 5.3).
 - **UI Localization:**
   - Application UI strings remain managed via the structured JSON translation catalogs in `app/locales/*.json` as specified in Section 3.

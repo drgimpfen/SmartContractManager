@@ -912,7 +912,101 @@ def test_extend_contract_sets_exact_extension_months_not_history(client, app, us
         assert updated.initial_term_end_date == date(2028, 9, 28)
 
 
+def test_statutory_bgb_309_monthly_rolling_after_initial_term(app, user):
+    """Verify BGB § 309 Nr. 9 lit. b: Contracts concluded post March 2022 roll monthly with max 1m notice."""
+    with app.app_context():
+        c = Contract(
+            user_id=user,
+            title="Post-2022 Telco Contract",
+            category="Internet",
+            status=ContractStatus.active,
+            start_date=date(2023, 1, 1),
+            initial_term_months=24,
+            initial_term_end_date=date(2025, 1, 1),
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # As of 2025-05-10 (after 24-month initial commitment):
+        as_of = date(2025, 5, 10)
+        earliest_end = c.get_earliest_cancellation_date(as_of=as_of)
+        deadline = c.get_cancellation_deadline(as_of=as_of)
+
+        # In monthly rolling, next valid end is 2025-07-01 with deadline 2025-06-01 (>= 2025-05-10)
+        # (Candidate 2025-06-01 has deadline 2025-05-01 < 2025-05-10, so candidate is 2025-07-01)
+        assert earliest_end == date(2025, 7, 1)
+        assert deadline == date(2025, 6, 1)
 
 
+def test_insurance_vvg_fixed_period_exception(app, user):
+    """Verify VVG § 11 Abs. 2: Insurance contracts are exempt from BGB § 309 Nr. 9 and renew for up to 12m."""
+    with app.app_context():
+        c = Contract(
+            user_id=user,
+            title="KFZ-Haftpflicht",
+            category="Versicherung",
+            status=ContractStatus.active,
+            start_date=date(2023, 1, 1),
+            initial_term_months=12,
+            initial_term_end_date=date(2024, 1, 1),
+            renewal_type="fixed_period",
+            renewal_period_months=12,
+            cancellation_notice_amount=1,
+            cancellation_notice_unit="months",
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # As of 2024-03-15 (missed deadline for 2024-01-01, into cycle 2):
+        as_of = date(2024, 3, 15)
+        earliest_end = c.get_earliest_cancellation_date(as_of=as_of)
+        deadline = c.get_cancellation_deadline(as_of=as_of)
+
+        assert earliest_end == date(2025, 1, 1)
+        assert deadline == date(2024, 12, 1)
 
 
+def test_deadline_calculation_no_forward_shift_on_weekend(app, user):
+    """Verify BGH/BAG principle: § 193 BGB does NOT apply to cancellation deadlines in favor of the sender.
+    Deadlines falling on Saturday or Sunday must NEVER be pushed forward to Monday.
+    """
+    with app.app_context():
+        # Suppose a contract period ends on 2026-08-31.
+        # Notice period: 1 month.
+        # Calculated statutory deadline: 2026-07-31 (Friday).
+        # But if term ends on 2026-05-31 (Sunday) with 1 month notice:
+        # Notice deadline is 2026-04-30 (Thursday).
+        # If term ends on 2026-06-30 (Tuesday) with 30 days notice:
+        # Notice deadline is 2026-05-31 (Sunday).
+        c = Contract(
+            user_id=user,
+            title="Sunday Deadline Test",
+            category="General",
+            status=ContractStatus.active,
+            start_date=date(2026, 1, 1),
+            initial_term_months=6,
+            initial_term_end_date=date(2026, 7, 1),
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=30,
+            cancellation_notice_unit="days",
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # 2026-07-01 minus 30 days is 2026-06-01 (Monday).
+        # Let's test with end date 2026-07-05 (Sunday) and notice of 7 days:
+        # 2026-07-05 - 7 days = 2026-06-28 (Sunday).
+        c.end_date = date(2026, 7, 5)
+        c.cancellation_notice_amount = 7
+        c.cancellation_notice_unit = "days"
+        db.session.commit()
+
+        deadline = c.get_cancellation_deadline()
+        # 2026-06-28 is a Sunday. Under BGH/BAG, it must remain 2026-06-28, NOT 2026-06-29 (Monday).
+        assert deadline.weekday() == 6  # Sunday
+        assert deadline == date(2026, 6, 28)

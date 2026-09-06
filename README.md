@@ -1,55 +1,52 @@
 # SmartContract Manager
 
-A web application for centralized management of personal contracts, cancellation deadlines, and fixed expenses.
+Zentrale, selbstgehostete Webanwendung zur strukturierten Verwaltung privater Verträge, Kündigungsfristen und laufender Fixkosten nach deutschem Recht.
 
-## Features
+---
 
-- User management with classic login
-- Contract management with category, status, duration, payment, and tags
-- Provider management with contact and link data
-- Dashboard with cashflow and budget overview
-- PDF upload for contract documents and OCR-based text extraction
-- Dark/Light mode and responsive Bootstrap UI
-- PostgreSQL database in Docker
+## Entwicklungsstatus
 
-## Getting Started
+> [!NOTE]
+> Das Projekt befindet sich aktuell in **aktiver Entwicklung (Pre-Release)**. Eine offizielle Bereitstellung als fertiges Image auf Docker Hub und GitHub Container Registry (GHCR) sowie Installations- und Deployment-Anleitungen folgen mit Erreichen des ersten stabilen Releases.
 
-1. Optionally copy `.env.example` to `.env` and adjust settings.
-2. Start the application with Docker Compose:
+---
 
-```bash
-docker compose up --build
-```
+## Kernfunktionen
 
-3. Open `http://localhost:8000` in the browser.
+* 📋 **Vertrags-Cockpit & Fristenüberwachung:**
+  * Lückenlose Erfassung von Laufzeiten, Mindestvertragslaufzeiten und Kündigungsfristen.
+  * Automatische Abbildung des deutschen Verbraucherrechts (stillschweigende monatliche Verlängerung nach BGB § 309 Nr. 9).
+  * Exakte Stichtagsberechnung (Countdown bis zum letztmöglichen Kündigungseingang).
+  * Strukturierte Statusübergänge (*Aktiv*, *Kündigung eingereicht*, *Kündigung bestätigt*, *Ruhend*, *Beendet*, *Archiviert*).
 
-## Local development
+* 🏢 **Vertragspartner-Verwaltung:**
+  * Zentrale Bündelung aller Kontaktdaten, Kundennummern und Vertragsbeziehungen.
+  * Direkte Absprünge in Kundenportale und Kündigungsformulare.
+  * Integrierte Notiz-Historie für Gesprächs- und Korrespondenzprotokolle.
 
-1. Create a Python virtual environment.
-2. Install dependencies:
+* 📊 **Finanz-Dashboard & Cashflow-Vorschau:**
+  * Dynamische 12-Monats-Cashflow-Projektion unter Berücksichtigung individueller Abrechnungsanker (`billing_anchor_date`) und Zahlungsrhythmen.
+  * Monatsbudget-Analyse (Gegenüberstellung von normalisiertem Monatsmittelwert Ø und tatsächlichen Fälligkeiten).
+  * Integrierter Mehrwährungs-Support mit automatischer EZB-Wechselkursumrechnung.
 
-```bash
-pip install -r requirements.txt
-```
+* 🏷️ **Flexibles Tagging & Preishistorie:**
+  * Schnelle Kategorisierung über ein dynamisches Tagging-System mit automatischer Farberkennung.
+  * Verfolgung von Preisänderungen mit lückenlosem Gültigkeitsverlauf und Unterstützung für geplante künftige Preisstufen (z. B. nach Ablauf von Rabattphasen).
 
-3. Start the server:
+* 🌓 **Moderne Benutzeroberfläche:**
+  * Vollständig responsive Gestaltung (optimiert für Smartphones, Tablets und Desktop).
+  * Nativer Dark- und Light-Mode auf Basis von Bootstrap 5.3.
+  * Mehrsprachig vorbereitet (Deutsch und Englisch).
 
-```bash
-uvicorn app.main:app --reload
-```
+---
 
-## Structure
+## Roadmap & Meilensteine
 
-- `app/main.py` – FastAPI application and routing
-- `app/db.py` – SQLAlchemy configuration
-- `app/models.py` – data model
-- `app/routes/` – application routes
-- `app/templates/` – Jinja2 templates
-- `app/static/` – CSS/JS and upload directory
-- `app/app/locales/` – JSON translation files for i18n
+Einen vollständigen Überblick über abgeschlossene, aktive und geplante Epics bietet die [ROADMAP.md](ROADMAP.md).
 
-## Localization
+---
 
-Translation files are now stored in `app/locales/*.json`.
-Add a new language by creating a new locale file like `app/locales/fr.json` and adding translated strings.
-The app loads all available locale files automatically at startup.
+## Rechtlicher Hinweis
+
+SmartContract Manager ist ein digitales Organisationswerkzeug zur privaten Vertrags- und Ausgabenverwaltung und erbringt **keine Rechtsberatung** im Sinne des Rechtsdienstleistungsgesetzes (§ 2 Abs. 1 RDG). Sämtliche Frist-, Laufzeit- und Verlängerungsberechnungen erfolgen unverbindlich auf Grundlage der eingegebenen Daten. Der Nachweis des form- und fristgerechten Zugangs von Kündigungen (§ 130 BGB) obliegt stets dem Nutzer.
+

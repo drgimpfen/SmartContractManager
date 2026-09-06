@@ -45,9 +45,9 @@
       "current_month": "Dieser Monat",
       "yearly_total": "Gesamt / Jahr"
     },
-    "budget_label_monthly_avg": "Monatlicher Durchschnitt (Ø)",
-    "budget_label_current_month": "Ausgaben in diesem Monat",
-    "budget_label_yearly_total": "Jahresgesamtbudget",
+    "budget_label_monthly_avg": "Monatliche Kosten (Ø)",
+    "budget_label_current_month": "Fällig diesen Monat",
+    "budget_label_yearly_total": "Jährliche Gesamtkosten",
     "contracts": "Verträge",
     "providers": "Vertragspartner",
     "actions": {
@@ -412,5 +412,16 @@
     "search": "Suchen...",
     "actions": "Aktionen",
     "back": "Zurück"
+  },
+  "footer": {
+    "legal_notice_link": "Rechtliche Hinweise",
+    "legal_notice_title": "Rechtliche Hinweise & Haftungsausschluss",
+    "legal_disclaimer": "SmartContract Manager ist ein digitales Organisationswerkzeug zur privaten Vertrags- und Ausgabenverwaltung und erbringt keine Rechtsberatung im Sinne des Rechtsdienstleistungsgesetzes (§ 2 Abs. 1 RDG). Sämtliche Frist-, Laufzeit- und Verlängerungsberechnungen erfolgen unverbindlich auf Grundlage der eingegebenen Daten. Der Nachweis des form- und fristgerechten Zugangs von Kündigungen (§ 130 BGB) obliegt stets dem Nutzer.",
+    "section_rdg_title": "Keine Rechtsberatung (§ 2 Abs. 1 RDG)",
+    "section_rdg_text": "SmartContract Manager ist ein digitales Organisationswerkzeug für den privaten Gebrauch. Es erfolgt keine rechtliche Prüfung des Einzelfalls.",
+    "section_calc_title": "Unverbindliche Fristberechnung",
+    "section_calc_text": "Alle Stichtags-, Laufzeit- und Verlängerungsangaben basieren auf Ihren eingegebenen Vertragsdaten und stellen rechnerische Orientierungshilfen dar.",
+    "section_notice_title": "Rechtzeitiger Zugang (§ 130 BGB)",
+    "section_notice_text": "Kündigungserklärungen sind empfangsbedürftig. Der Nachweis des frist- und formgerechten Zugangs beim Vertragspartner obliegt stets dem Nutzer (empfohlener Post- und Bearbeitungspuffer: 5–7 Werktage vor Fristablauf)."
   }
 }

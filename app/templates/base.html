@@ -170,11 +170,69 @@
     <footer class="footer mt-auto py-3 border-top bg-body text-center text-muted small">
       <div class="container-xl d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
         <div>&copy; {{ _('app.brand.title') }} {{ _('app.brand.subtitle') }}</div>
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-link btn-sm text-secondary text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#legalNoticeModal" style="font-size: 0.8rem;">
+            <i class="bi bi-info-circle me-1"></i>{{ _('footer.legal_notice_link') }}
+          </button>
+          <span class="text-secondary opacity-50">&bull;</span>
           <span class="badge text-bg-secondary text-opacity-75">v0.2.0</span>
         </div>
       </div>
     </footer>
+
+    <!-- Legal Notice Modal -->
+    <div class="modal fade" id="legalNoticeModal" tabindex="-1" aria-labelledby="legalNoticeModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-sm border">
+          <div class="modal-header border-bottom py-3">
+            <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2" id="legalNoticeModalLabel">
+              <i class="bi bi-shield-check text-primary"></i>
+              <span>{{ _('footer.legal_notice_title') }}</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+          </div>
+          <div class="modal-body p-3 p-sm-4 text-start">
+            <div class="d-flex flex-column gap-3 small">
+              <!-- Item 1: Keine Rechtsberatung -->
+              <div class="d-flex align-items-start gap-3 p-3 rounded-3 bg-body-tertiary border">
+                <div class="p-2 rounded-2 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; min-width: 38px;">
+                  <i class="bi bi-briefcase fs-5"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body mb-1">{{ _('footer.section_rdg_title') }}</div>
+                  <div class="text-secondary" style="font-size: 0.8rem; line-height: 1.45;">{{ _('footer.section_rdg_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Item 2: Fristberechnung -->
+              <div class="d-flex align-items-start gap-3 p-3 rounded-3 bg-body-tertiary border">
+                <div class="p-2 rounded-2 bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; min-width: 38px;">
+                  <i class="bi bi-calculator fs-5"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body mb-1">{{ _('footer.section_calc_title') }}</div>
+                  <div class="text-secondary" style="font-size: 0.8rem; line-height: 1.45;">{{ _('footer.section_calc_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Item 3: Zugang (§ 130 BGB) -->
+              <div class="d-flex align-items-start gap-3 p-3 rounded-3 bg-body-tertiary border">
+                <div class="p-2 rounded-2 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; min-width: 38px;">
+                  <i class="bi bi-envelope-check fs-5"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body mb-1">{{ _('footer.section_notice_title') }}</div>
+                  <div class="text-secondary" style="font-size: 0.8rem; line-height: 1.45;">{{ _('footer.section_notice_text') }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-top py-2 px-3">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
     {% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

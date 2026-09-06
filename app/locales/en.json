@@ -45,9 +45,9 @@
       "current_month": "This Month",
       "yearly_total": "Total / Year"
     },
-    "budget_label_monthly_avg": "Monthly Average (Ø)",
-    "budget_label_current_month": "Expenses This Month",
-    "budget_label_yearly_total": "Annual Total Budget",
+    "budget_label_monthly_avg": "Monthly Costs (Ø)",
+    "budget_label_current_month": "Due This Month",
+    "budget_label_yearly_total": "Annual Total Costs",
     "contracts": "Contracts",
     "providers": "Providers",
     "actions": {
@@ -412,5 +412,16 @@
     "search": "Search...",
     "actions": "Actions",
     "back": "Back"
+  },
+  "footer": {
+    "legal_notice_link": "Legal Notice",
+    "legal_notice_title": "Legal Notice & Disclaimer",
+    "legal_disclaimer": "SmartContract Manager is a digital organization tool for personal contract and expense tracking and does not provide legal advice under the Legal Services Act (§ 2 (1) RDG). All deadline, term, and renewal calculations are non-binding estimates based on user-provided data. Proof of formal and timely receipt of termination declarations (§ 130 BGB) remains solely the responsibility of the user.",
+    "section_rdg_title": "No Legal Advice (§ 2 (1) RDG)",
+    "section_rdg_text": "SmartContract Manager is a digital organization tool for private use. No individual legal assessments or counsel are provided.",
+    "section_calc_title": "Non-Binding Deadline Projections",
+    "section_calc_text": "All deadline, term, and rollover projections are mathematically extrapolated from user-entered data and serve as guidance.",
+    "section_notice_title": "Proof of Receipt (§ 130 BGB)",
+    "section_notice_text": "Termination notices require confirmed receipt. Proof of timely and formal delivery to the provider remains solely the user's responsibility (recommended buffer: 5–7 working days before deadlines)."
   }
 }

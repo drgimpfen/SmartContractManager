@@ -8,56 +8,55 @@
   <div class="col-12 col-xl-8">
     <div class="card border shadow-sm h-100">
       <div class="card-body p-3 p-md-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
           <div>
             <h5 class="card-title fw-bold mb-1">{{ _('dashboard.title') }}</h5>
             <p class="text-muted small mb-0">{{ _('dashboard.subtitle') }}</p>
           </div>
+          <!-- Budget View Switcher im Header -->
+          <div class="btn-group btn-group-sm align-self-start align-self-md-auto" role="group" aria-label="{{ _('dashboard.monthly_budget') }}">
+            <button type="button" class="btn btn-outline-secondary active py-1 px-2 small budget-toggle-btn" data-value="{{ '%.2f'|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_monthly_avg') }}" style="font-size: 0.8rem;">
+              {{ _('dashboard.budget_toggle.monthly_avg') }}
+            </button>
+            <button type="button" class="btn btn-outline-secondary py-1 px-2 small budget-toggle-btn" data-value="{{ '%.2f'|format(current_month_expenses|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_current_month') }}" style="font-size: 0.8rem;">
+              {{ _('dashboard.budget_toggle.current_month') }}
+            </button>
+            <button type="button" class="btn btn-outline-secondary py-1 px-2 small budget-toggle-btn" data-value="{{ '%.2f'|format(annual_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_yearly_total') }}" style="font-size: 0.8rem;">
+              {{ _('dashboard.budget_toggle.yearly_total') }}
+            </button>
+          </div>
         </div>
         <div class="row g-3">
           <div class="col-12 col-sm-4">
-            <div class="p-3 rounded-3 border bg-body-tertiary d-flex flex-column justify-content-between h-100">
-              <div class="d-flex align-items-center gap-3 mb-2">
-                <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
-                  <i class="bi bi-wallet2 fs-4"></i>
-                </div>
-                <div>
-                  <div id="budgetValueDisplay" class="fs-4 fw-bold lh-1">{{ "%.2f"|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}</div>
-                  <div id="budgetLabelDisplay" class="text-muted small mt-1">{{ _('dashboard.budget_label_monthly_avg') }}</div>
-                </div>
+            <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
+              <div class="rounded-3 bg-primary bg-opacity-10 p-2 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-wallet2 fs-4"></i>
               </div>
-              <div class="btn-group btn-group-sm w-100 mt-2" role="group" aria-label="{{ _('dashboard.monthly_budget') }}">
-                <button type="button" class="btn btn-outline-primary active py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_monthly_avg') }}">
-                  {{ _('dashboard.budget_toggle.monthly_avg') }}
-                </button>
-                <button type="button" class="btn btn-outline-primary py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(current_month_expenses|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_current_month') }}">
-                  {{ _('dashboard.budget_toggle.current_month') }}
-                </button>
-                <button type="button" class="btn btn-outline-primary py-0 px-1 small budget-toggle-btn" data-value="{{ '%.2f'|format(annual_budget|default(0.0, true)) }} {{ current_user.currency }}" data-label="{{ _('dashboard.budget_label_yearly_total') }}">
-                  {{ _('dashboard.budget_toggle.yearly_total') }}
-                </button>
+              <div class="min-w-0">
+                <div id="budgetValueDisplay" class="fs-4 fw-bold lh-1 text-truncate">{{ "%.2f"|format(monthly_budget|default(0.0, true)) }} {{ current_user.currency }}</div>
+                <div id="budgetLabelDisplay" class="text-muted small mt-1 lh-sm" style="line-height: 1.25;">{{ _('dashboard.budget_label_monthly_avg') }}</div>
               </div>
             </div>
           </div>
           <div class="col-12 col-sm-4">
             <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
-              <div class="rounded-3 bg-info bg-opacity-10 p-2 text-info d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+              <div class="rounded-3 bg-info bg-opacity-10 p-2 text-info d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
                 <i class="bi bi-file-earmark-text fs-4"></i>
               </div>
-              <div>
-                <div class="fs-4 fw-bold lh-1">{{ contracts|length }}</div>
-                <div class="text-muted small mt-1">{{ _('dashboard.contracts') }}</div>
+              <div class="overflow-hidden">
+                <div class="fs-4 fw-bold lh-1 text-truncate">{{ contracts|length }}</div>
+                <div class="text-muted small mt-1 text-truncate">{{ _('dashboard.contracts') }}</div>
               </div>
             </div>
           </div>
           <div class="col-12 col-sm-4">
             <div class="p-3 rounded-3 border bg-body-tertiary d-flex align-items-center gap-3 h-100">
-              <div class="rounded-3 bg-success bg-opacity-10 p-2 text-success d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+              <div class="rounded-3 bg-success bg-opacity-10 p-2 text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
                 <i class="bi bi-building fs-4"></i>
               </div>
-              <div>
-                <div class="fs-4 fw-bold lh-1">{{ providers|length }}</div>
-                <div class="text-muted small mt-1">{{ _('dashboard.providers') }}</div>
+              <div class="overflow-hidden">
+                <div class="fs-4 fw-bold lh-1 text-truncate">{{ providers|length }}</div>
+                <div class="text-muted small mt-1 text-truncate">{{ _('dashboard.providers') }}</div>
               </div>
             </div>
           </div>
@@ -99,118 +98,142 @@
   </div>
 </div>
 
-<!-- Charts & Reminders Grid -->
+<!-- Deadlines & Critical Notices Row (Vorbereitung Epic 8) -->
 <div class="row g-3 mb-4">
-  <!-- Cashflow Forecast Chart -->
-  <div class="col-12 col-lg-8">
+  <div class="col-12 col-md-6">
     <div class="card border shadow-sm h-100">
-      <div class="card-body p-3 p-md-4">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-          <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
-            <i class="bi bi-graph-up text-primary"></i>
-            <span>{{ _('dashboard.cashflow_title') }}</span>
-          </h5>
-          {% if cashflow %}
-          <div class="d-flex flex-wrap align-items-center gap-2 small">
-            <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
-              <span style="display:inline-block;width:12px;height:12px;background:#0d6efd;border-radius:2px;"></span>
-              <span>{{ _('dashboard.cashflow_legend_committed') }}</span>
-            </span>
-            <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
-              <span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg,#0d6efd,#0d6efd 2px,#ffffff 2px,#ffffff 5px);border-radius:2px;border:1px solid rgba(0,0,0,0.15);"></span>
-              <span>{{ _('dashboard.cashflow_legend_flexible') }}</span>
-            </span>
+      <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="card-title fw-bold text-danger d-flex align-items-center gap-2 mb-0">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <span>{{ _('dashboard.critical_deadlines') }}</span>
+            </h6>
+            {% if critical_reminders %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2">{{ critical_reminders|length }}</span>
+            {% endif %}
+          </div>
+          {% if critical_reminders %}
+          <ul class="list-group list-group-flush">
+            {% for contract in critical_reminders %}
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center bg-transparent">
+              <a href="{{ url_for('contract.detail', id=contract.id) }}" class="text-decoration-none fw-semibold text-body-emphasis text-truncate me-2" title="{{ contract.title or (contract.provider.name if contract.provider else contract.category) }}">
+                {{ contract.title or (contract.provider.name if contract.provider else contract.category) }}
+              </a>
+              <span class="badge bg-danger text-nowrap">{{ contract.contract_number or _('common.no_number') }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-muted small d-flex align-items-center gap-2 py-1">
+            <i class="bi bi-check-circle text-success fs-6"></i>
+            <span>{{ _('dashboard.no_urgent_deadlines') }}</span>
           </div>
           {% endif %}
         </div>
-        {% if cashflow %}
-        <div class="chart-container">
-          <canvas id="cashflowChart"></canvas>
-        </div>
-        {% else %}
-        <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
-          <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
-          <p class="mb-1 fw-semibold">{{ _('dashboard.no_active_contracts') }}</p>
-          <p class="small mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
-        </div>
-        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Deadlines & Critical Notices -->
-  <div class="col-12 col-lg-4">
-    <div class="card border shadow-sm mb-3">
-      <div class="card-body p-3 p-md-4">
-        <h6 class="card-title fw-bold text-danger d-flex align-items-center gap-2 mb-3">
-          <i class="bi bi-exclamation-triangle-fill"></i>
-          <span>{{ _('dashboard.critical_deadlines') }}</span>
-        </h6>
-        {% if critical_reminders %}
-        <ul class="list-group list-group-flush">
-          {% for contract in critical_reminders %}
-          <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-            <a href="{{ url_for('contract.detail', id=contract.id) }}" class="text-decoration-none fw-semibold text-body-emphasis text-truncate me-2" title="{{ contract.title or (contract.provider.name if contract.provider else contract.category) }}">
-              {{ contract.title or (contract.provider.name if contract.provider else contract.category) }}
-            </a>
-            <span class="badge bg-danger text-nowrap">{{ contract.contract_number or _('common.no_number') }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="text-muted small d-flex align-items-center gap-2">
-          <i class="bi bi-check-circle text-success"></i>
-          <span>{{ _('dashboard.no_urgent_deadlines') }}</span>
+  <div class="col-12 col-md-6">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="card-title fw-bold text-warning d-flex align-items-center gap-2 mb-0">
+              <i class="bi bi-clock-history"></i>
+              <span>{{ _('dashboard.missing_notice') }}</span>
+            </h6>
+            {% if missing_notice %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2">{{ missing_notice|length }}</span>
+            {% endif %}
+          </div>
+          {% if missing_notice %}
+          <ul class="list-group list-group-flush">
+            {% for contract in missing_notice %}
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center bg-transparent">
+              <a href="{{ url_for('contract.detail', id=contract.id) }}" class="text-decoration-none fw-semibold text-body-emphasis text-truncate me-2" title="{{ contract.title or (contract.provider.name if contract.provider else contract.category) }}">
+                {{ contract.title or (contract.provider.name if contract.provider else contract.category) }}
+              </a>
+              <span class="badge bg-secondary text-nowrap">{{ contract.contract_number or _('common.no_number') }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-muted small d-flex align-items-center gap-2 py-1">
+            <i class="bi bi-check-circle text-success fs-6"></i>
+            <span>{{ _('dashboard.no_notice') }}</span>
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card border shadow-sm">
-      <div class="card-body p-3 p-md-4">
-        <h6 class="card-title fw-bold text-warning d-flex align-items-center gap-2 mb-3">
-          <i class="bi bi-clock-history"></i>
-          <span>{{ _('dashboard.missing_notice') }}</span>
-        </h6>
-        {% if missing_notice %}
-        <ul class="list-group list-group-flush">
-          {% for contract in missing_notice %}
-          <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-            <a href="{{ url_for('contract.detail', id=contract.id) }}" class="text-decoration-none fw-semibold text-body-emphasis text-truncate me-2" title="{{ contract.title or (contract.provider.name if contract.provider else contract.category) }}">
-              {{ contract.title or (contract.provider.name if contract.provider else contract.category) }}
-            </a>
-            <span class="badge bg-secondary text-nowrap">{{ contract.contract_number or _('common.no_number') }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="text-muted small d-flex align-items-center gap-2">
-          <i class="bi bi-check-circle text-success"></i>
-          <span>{{ _('dashboard.no_notice') }}</span>
-        </div>
-        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- Cost Distribution Chart -->
-<div class="card border shadow-sm mb-4">
-  <div class="card-body p-3 p-md-4">
-    <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
-      <i class="bi bi-pie-chart text-primary"></i>
-      <span>{{ _('dashboard.cost_distribution') }}</span>
-    </h5>
-    {% if distribution %}
-    <div class="chart-container chart-container-sm">
-      <canvas id="categoryChart"></canvas>
+<!-- Financial Analytics (Charts Grid) -->
+<div class="row g-3 mb-4">
+  <!-- Cashflow Forecast Chart -->
+  <div class="col-12 col-xl-8">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+        <div>
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h5 class="card-title fw-bold mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-graph-up text-primary"></i>
+              <span>{{ _('dashboard.cashflow_title') }}</span>
+            </h5>
+            {% if cashflow %}
+            <div class="d-flex flex-wrap align-items-center gap-2 small">
+              <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
+                <span style="display:inline-block;width:12px;height:12px;background:#0d6efd;border-radius:2px;"></span>
+                <span>{{ _('dashboard.cashflow_legend_committed') }}</span>
+              </span>
+              <span class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2">
+                <span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg,#0d6efd,#0d6efd 2px,#ffffff 2px,#ffffff 5px);border-radius:2px;border:1px solid rgba(0,0,0,0.15);"></span>
+                <span>{{ _('dashboard.cashflow_legend_flexible') }}</span>
+              </span>
+            </div>
+            {% endif %}
+          </div>
+          {% if cashflow %}
+          <div class="chart-container">
+            <canvas id="cashflowChart"></canvas>
+          </div>
+          {% else %}
+          <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+            <p class="mb-1 fw-semibold">{{ _('dashboard.no_active_contracts') }}</p>
+            <p class="small mb-0">{{ _('dashboard.no_contracts_hint') }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-    {% else %}
-    <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
-      <i class="bi bi-pie-chart fs-1 d-block mb-2 text-secondary opacity-50"></i>
-      <span>{{ _('dashboard.no_cost_distribution') }}</span>
+  </div>
+
+  <!-- Cost Distribution Chart -->
+  <div class="col-12 col-xl-4">
+    <div class="card border shadow-sm h-100">
+      <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+        <div>
+          <h5 class="card-title fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-pie-chart text-primary"></i>
+            <span>{{ _('dashboard.cost_distribution') }}</span>
+          </h5>
+          {% if distribution %}
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          {% else %}
+          <div class="p-4 rounded-3 border bg-body-tertiary text-center text-muted">
+            <i class="bi bi-pie-chart fs-1 d-block mb-2 text-secondary opacity-50"></i>
+            <span>{{ _('dashboard.no_cost_distribution') }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-    {% endif %}
   </div>
 </div>
 
