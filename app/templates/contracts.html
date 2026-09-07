@@ -13,6 +13,20 @@
       <p class="text-muted small mb-0">{{ _('contracts.subtitle') }}</p>
     </div>
     <div class="d-flex align-items-center gap-2">
+      <!-- View Mode Switcher (Table vs. Cards) -->
+      {% if contracts %}
+      <div class="btn-group btn-group-sm" role="group" aria-label="View Mode">
+        <button type="button" id="btnViewTable" class="btn btn-secondary text-white active d-inline-flex align-items-center gap-1 py-2 px-2" title="{{ _('contracts.view_mode_table') }}">
+          <i class="bi bi-table"></i>
+          <span class="d-none d-sm-inline">{{ _('contracts.view_mode_table') }}</span>
+        </button>
+        <button type="button" id="btnViewCards" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 py-2 px-2" title="{{ _('contracts.view_mode_cards') }}">
+          <i class="bi bi-grid"></i>
+          <span class="d-none d-sm-inline">{{ _('contracts.view_mode_cards') }}</span>
+        </button>
+      </div>
+      {% endif %}
+
       <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="modal" data-bs-target="#addContractModal">
         <i class="bi bi-plus-lg"></i>
         <span>{{ _('modal.add_contract') }}</span>
@@ -118,7 +132,7 @@
   </div>
 
   <!-- Contracts List Table Card -->
-  <div class="card border shadow-sm">
+  <div id="contractsTableView" class="card border shadow-sm">
     <div class="card-body p-0">
       {% if contracts %}
       <div class="table-responsive">
@@ -384,7 +398,329 @@
       {% endif %}
     </div>
   </div>
+
+  {% if contracts %}
+  <!-- Contracts Card Grid View -->
+  <div id="contractsCardView" class="d-none">
+    <div class="row g-3">
+      {% for contract in contracts %}
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card border shadow-sm h-100 d-flex flex-column justify-content-between">
+          <div class="card-body p-3 p-md-4 d-flex flex-column">
+            <!-- Top Status & Category Badges -->
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+              <div class="d-flex align-items-center gap-1">
+                {% if contract.is_archived %}
+                <span class="badge bg-secondary bg-opacity-15 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                  <i class="bi bi-archive-fill me-1"></i>{{ _('contracts.archived') }}
+                </span>
+                {% elif contract.status.value == 'active' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.active') }}
+                </span>
+                {% elif contract.status.value == 'scheduled' %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                  <i class="bi bi-calendar-plus me-1"></i>{{ _('contracts.scheduled') }}
+                </span>
+                {% elif contract.status.value == 'pending_cancellation' %}
+                <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1">
+                  <i class="bi bi-hourglass-split me-1"></i>{{ _('contracts.pending_cancellation') }}
+                </span>
+                {% elif contract.status.value == 'cancellation_confirmed' %}
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ _('contracts.cancellation_confirmed') }}
+                </span>
+                {% elif contract.status.value == 'paused' %}
+                <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1">
+                  <i class="bi bi-pause-circle me-1"></i>{{ _('contracts.paused') }}
+                </span>
+                {% else %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                  <i class="bi bi-x-circle me-1"></i>{{ _('contracts.canceled') }}
+                </span>
+                {% endif %}
+              </div>
+
+              <div class="d-flex align-items-center gap-1 flex-wrap">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">
+                  <i class="bi bi-tag me-1"></i>{{ contract.category }}
+                </span>
+                {% if contract.remaining_term_human %}
+                  {% if contract.remaining_term_human == 'unlimited' %}
+                  <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1" title="{{ _('contracts.remaining_term') }}">
+                    <i class="bi bi-infinity text-secondary"></i>
+                  </span>
+                  {% elif contract.remaining_term_human == 'ends_today' %}
+                  <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1">
+                    {{ _('contracts.ends_today') }}
+                  </span>
+                  {% elif contract.remaining_term_human == 'ended' %}
+                  <span class="badge bg-secondary bg-opacity-15 text-muted border px-2 py-1">
+                    {{ _('contracts.ended') }}
+                  </span>
+                  {% else %}
+                  <span class="badge bg-info bg-opacity-10 text-info-emphasis border border-info border-opacity-25 px-2 py-1">
+                    <i class="bi bi-hourglass-split me-1"></i>{{ contract.remaining_term_human }}
+                  </span>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Title, Provider, Contract & Customer Number -->
+            <div class="mb-3">
+              <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-body text-decoration-none d-block fs-5 lh-sm" title="{{ contract.title or contract.category }}" style="word-break: break-word;">
+                {{ contract.title or contract.category }}
+              </a>
+
+              <div class="mt-1 d-flex flex-wrap align-items-center gap-2 small text-muted">
+                {% if contract.provider %}
+                <a href="{{ url_for('provider.detail', id=contract.provider.id) }}" class="text-body text-decoration-none fw-medium d-inline-flex align-items-center gap-1">
+                  <i class="bi bi-building text-secondary"></i>
+                  <span>{{ contract.provider.name }}</span>
+                </a>
+                {% endif %}
+
+                {% if contract.contract_number %}
+                {% if contract.provider %}<span class="text-secondary opacity-50">•</span>{% endif %}
+                <span><span class="text-muted">{{ _('contracts.contract_number_label') }}</span> <span class="text-body fw-medium">{{ contract.contract_number }}</span></span>
+                {% endif %}
+
+                {% if contract.provider and contract.provider.customer_number %}
+                <span class="text-secondary opacity-50">•</span>
+                <span><span class="text-muted">{{ _('contracts.customer_number_label') }}</span> <span class="text-body fw-medium">{{ contract.provider.customer_number }}</span></span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Financial Hero Block (Strictly single-line) -->
+            <div class="p-3 rounded-3 bg-body-tertiary border mb-3">
+              <div class="d-flex align-items-baseline justify-content-between">
+                <div>
+                  <span class="fs-4 fw-bold text-body lh-1">{{ "%.2f"|format(contract.amount) }} {{ contract.currency }}</span>
+                  <span class="text-muted small">/ {{ _('form.' ~ contract.frequency.value) }}</span>
+                </div>
+
+                {% if contract.payment_method %}
+                <span class="badge bg-body-secondary text-body border px-2 py-1 small d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;" title="{{ _('contracts.payment_method_label') }}">
+                  <i class="bi bi-credit-card text-secondary"></i>
+                  <span>{{ contract.payment_method }}</span>
+                </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Due Date & Cancellation Status (Unified, Single Representation) -->
+            <div class="p-2 px-3 rounded-3 bg-body-tertiary border mb-3">
+              <!-- Next Billing with Relative Countdown -->
+              {% set next_bill = contract.next_billing_date %}
+              {% set days_left = contract.days_until_next_billing %}
+              <div class="d-flex align-items-center justify-content-between small">
+                <span class="text-muted d-inline-flex align-items-center gap-1">
+                  <i class="bi bi-calendar-event text-primary"></i>
+                  <span>{{ _('contracts.next_billing_label') }}:</span>
+                </span>
+                <div class="text-end">
+                  {% if next_bill %}
+                    <span class="fw-semibold text-body">{{ next_bill.strftime('%d.%m.%Y') }}</span>
+                    {% if days_left is not none %}
+                      {% if days_left == 0 %}
+                      <span class="badge bg-warning text-dark border border-warning-subtle ms-1" style="font-size: 0.68rem;">
+                        {{ _('contracts.due_today') }}
+                      </span>
+                      {% elif days_left > 0 and days_left <= 7 %}
+                      <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 0.68rem;">
+                        {{ _('contracts.due_in_days', days=days_left) }}
+                      </span>
+                      {% else %}
+                      <span class="text-muted ms-1" style="font-size: 0.72rem;">
+                        ({{ _('contracts.due_in_days', days=days_left) }})
+                      </span>
+                      {% endif %}
+                    {% endif %}
+                  {% elif contract.billing_anchor_date %}
+                    <span class="text-muted" style="font-size: 0.75rem;">{{ _('contracts.no_further_billing') }}</span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Contextual Cancellation & Term Status Line -->
+              <div class="d-flex align-items-center justify-content-between small mt-2 pt-2 border-top">
+                {% if contract.status.value == 'scheduled' and contract.start_date %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-calendar-plus text-primary"></i>
+                    <span>{{ _('contracts.contract_start_label') }}:</span>
+                  </span>
+                  <div class="text-end fw-semibold text-primary" style="font-size: 0.75rem;">
+                    {{ contract.start_date.strftime('%d.%m.%Y') }}
+                  </div>
+                {% elif contract.status.value == 'cancellation_confirmed' and contract.confirmed_end_date %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-calendar-x text-info-emphasis"></i>
+                    <span>{{ _('contracts.contract_end_label') }}:</span>
+                  </span>
+                  <div class="text-end fw-semibold text-info-emphasis" style="font-size: 0.75rem;">
+                    {{ contract.confirmed_end_date.strftime('%d.%m.%Y') }}
+                  </div>
+                {% elif contract.status.value == 'paused' %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-pause-circle text-warning"></i>
+                    <span>{{ _('contracts.status') }}:</span>
+                  </span>
+                  <div class="text-end text-warning-emphasis" style="font-size: 0.75rem;">
+                    {{ _('contracts.paused') }}
+                  </div>
+                {% elif not contract.end_date and contract.earliest_cancellation_date and contract.status.value in ('active', 'pending_cancellation') %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-calendar-check text-secondary"></i>
+                    <span>{{ _('contracts.cancellable_to_label') }}:</span>
+                  </span>
+                  <div class="text-end d-flex align-items-center gap-1">
+                    <span class="fw-semibold text-body" style="font-size: 0.75rem;">
+                      {{ contract.earliest_cancellation_date.strftime('%d.%m.%Y') }}
+                    </span>
+                    {% set c_stat = contract.cancellation_status %}
+                    {% if c_stat == 'flexible' %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size: 0.68rem;" title="{{ _('contracts.flexible_monthly') }}">
+                      <i class="bi bi-arrow-repeat"></i> {{ _('contracts.cancellation_traffic.flexible') }}
+                    </span>
+                    {% elif c_stat == 'urgent' %}
+                    <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25" style="font-size: 0.68rem;">
+                      <i class="bi bi-hourglass-top"></i> {{ _('contracts.cancellation_traffic.urgent', days=contract.days_until_cancellation_deadline) }}
+                    </span>
+                    {% elif c_stat == 'due_today' %}
+                    <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning border-opacity-25" style="font-size: 0.68rem;">
+                      <i class="bi bi-exclamation-triangle-fill"></i> {{ _('contracts.cancellation_traffic.due_today') }}
+                    </span>
+                    {% elif c_stat == 'missed' %}
+                    <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25" style="font-size: 0.68rem;">
+                      <i class="bi bi-exclamation-octagon-fill"></i> {{ _('contracts.cancellation_traffic.missed') }}
+                    </span>
+                    {% endif %}
+                  </div>
+                {% elif not contract.end_date %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-infinity text-secondary"></i>
+                    <span>{{ _('contracts.term_unlimited_label') }}:</span>
+                  </span>
+                  <div class="text-end text-muted" style="font-size: 0.75rem;">
+                    {{ _('contracts.unlimited') }}
+                  </div>
+                {% elif contract.days_until_end is not none %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-hourglass-split text-secondary"></i>
+                    <span>{{ _('contracts.term_until_label') }}:</span>
+                  </span>
+                  <div class="text-end" style="font-size: 0.75rem;">
+                    {% if contract.end_date %}
+                    <span class="fw-semibold text-body me-1">{{ contract.end_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    {% if contract.days_until_end == 0 %}
+                    <span class="badge bg-warning text-dark">{{ _('contracts.ends_today') }}</span>
+                    {% elif contract.days_until_end < 0 %}
+                    <span class="text-muted">({{ _('contracts.ended') }})</span>
+                    {% else %}
+                    <span class="text-secondary">({{ contract.days_until_end_formatted }})</span>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <span class="text-muted d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-shield-check text-secondary"></i>
+                    <span>{{ _('contracts.term_unlimited_label') }}:</span>
+                  </span>
+                  <div class="text-end text-muted" style="font-size: 0.75rem;">-</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Dedicated Price Change Info Box (if scheduled) -->
+            {% set next_p = contract.next_price_change %}
+            {% if next_p %}
+            <div class="p-2 px-3 rounded-3 bg-info-subtle border border-info-subtle text-info-emphasis small d-flex align-items-center justify-content-between mb-3">
+              <span class="d-inline-flex align-items-center gap-1">
+                <i class="bi bi-clock-history"></i>
+                <span>Preisanpassung:</span>
+              </span>
+              <span class="fw-bold">
+                {{ "%.2f"|format(next_p.amount) }} {{ next_p.currency }} <span class="fw-normal text-muted small">(ab {{ next_p.valid_from.strftime('%d.%m.%Y') }})</span>
+              </span>
+            </div>
+            {% endif %}
+
+          </div>
+
+          <!-- Card Footer Actions: Tags on left, Detail link on right (No duplicate anchor date) -->
+          <div class="card-footer bg-transparent border-top px-3 px-md-4 py-2 d-flex align-items-center justify-content-between">
+            <div class="d-flex flex-wrap gap-1 align-items-center min-w-0">
+              {% if contract.tags %}
+                {% for t in contract.tags %}
+                <span class="badge rounded-pill" style="background-color: {{ t.color }}; font-size: 0.68rem; color: #ffffff;">
+                  {{ t.name }}
+                </span>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <a href="{{ url_for('contract.detail', id=contract.id) }}" class="btn btn-sm btn-link text-decoration-none p-0 fw-semibold d-inline-flex align-items-center gap-1 flex-shrink-0 ms-2">
+              <span>{{ _('providers.view_details') }}</span>
+              <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<!-- Dual View JavaScript Controller -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const btnTable = document.getElementById('btnViewTable');
+  const btnCards = document.getElementById('btnViewCards');
+  const tableView = document.getElementById('contractsTableView');
+  const cardView = document.getElementById('contractsCardView');
+
+  if (!btnTable || !btnCards || !tableView || !cardView) return;
+
+  const STORAGE_KEY = 'smartcontract_contracts_view_mode';
+
+  function setViewMode(mode) {
+    if (mode === 'cards') {
+      tableView.classList.add('d-none');
+      cardView.classList.remove('d-none');
+      btnCards.classList.add('active', 'btn-secondary', 'text-white');
+      btnCards.classList.remove('btn-outline-secondary');
+      btnTable.classList.remove('active', 'btn-secondary', 'text-white');
+      btnTable.classList.add('btn-outline-secondary');
+    } else {
+      cardView.classList.add('d-none');
+      tableView.classList.remove('d-none');
+      btnTable.classList.add('active', 'btn-secondary', 'text-white');
+      btnTable.classList.remove('btn-outline-secondary');
+      btnCards.classList.remove('active', 'btn-secondary', 'text-white');
+      btnCards.classList.add('btn-outline-secondary');
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, mode);
+    } catch (e) {}
+  }
+
+  const savedMode = localStorage.getItem(STORAGE_KEY);
+  if (savedMode === 'cards' || savedMode === 'table') {
+    setViewMode(savedMode);
+  } else {
+    const isMobile = window.innerWidth < 768;
+    setViewMode(isMobile ? 'cards' : 'table');
+  }
+
+  btnTable.addEventListener('click', function() { setViewMode('table'); });
+  btnCards.addEventListener('click', function() { setViewMode('cards'); });
+});
+</script>
+
 <!-- Modal: Add Contract (Reusable Component) -->
 {% include "components/_contract_modal.html" %}
 {% endblock %}

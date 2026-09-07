@@ -84,6 +84,15 @@ def test_is_contract_active_on_date():
     c_canceled = Contract(status=ContractStatus.canceled)
     assert is_contract_active_on_date(c_canceled, date(2026, 6, 1)) is False
 
+    # Pending and confirmed cancellation remain active until effective end date
+    c_confirmed = Contract(status=ContractStatus.cancellation_confirmed, start_date=date(2026, 1, 1), confirmed_end_date=date(2026, 9, 15))
+    assert is_contract_active_on_date(c_confirmed, date(2026, 9, 1)) is True
+    assert is_contract_active_on_date(c_confirmed, date(2026, 9, 16)) is False
+
+    c_pending = Contract(status=ContractStatus.pending_cancellation, start_date=date(2026, 1, 1), end_date=date(2026, 10, 31))
+    assert is_contract_active_on_date(c_pending, date(2026, 9, 1)) is True
+    assert is_contract_active_on_date(c_pending, date(2026, 11, 1)) is False
+
 
 def test_calculate_monthly_and_annual_budget():
     dummy_curr = DummyCurrencyService({("USD", "EUR"): 0.80})

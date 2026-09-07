@@ -1267,6 +1267,47 @@ def test_contract_extension_with_tiers_strictly_ignores_single_amount(client, ap
         assert "Preisstaffel mit 2 Stufen" in combined_notes
 
 
+def test_contracts_dual_view_rendering(client, app):
+    from app import db
+    with app.app_context():
+        user = User(username="dual_view_user", hashed_password=generate_password_hash("pass123"))
+        db.session.add(user)
+        db.session.commit()
+
+        c = Contract(
+            user_id=user.id,
+            category="Streaming",
+            title="Spotify Premium",
+            amount=10.99,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            status=ContractStatus.active,
+            start_date=datetime.date(2025, 1, 1),
+        )
+        db.session.add(c)
+        db.session.commit()
+
+    client.post("/login", data={"username": "dual_view_user", "password": "pass123"}, follow_redirects=True)
+    resp = client.get("/contracts")
+    assert resp.status_code == 200
+
+    html = resp.data.decode("utf-8")
+    # Verify Dual View Switcher controls
+    assert 'id="btnViewTable"' in html
+    assert 'id="btnViewCards"' in html
+    # Verify Table View Container
+    assert 'id="contractsTableView"' in html
+    # Verify Card View Container
+    assert 'id="contractsCardView"' in html
+    # Verify Content rendered in both views
+    assert 'Spotify Premium' in html
+    assert '10,99' in html or '10.99' in html
+    assert ('Nächste Abbuchung' in html or 'Next billing' in html)
+
+
+
+
+
 
 
 

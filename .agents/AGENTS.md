@@ -61,6 +61,12 @@ For any code creation, refactoring, or architectural modification, the following
 - For every proposed change, the Agent MUST create or update an `implementation_plan.md` artifact.
 - NO file editing or Git commits may occur until the user explicitly clicks the 'Proceed' button to approve the Implementation Plan.
 - After execution, a brief summary of what was implemented is provided in the chat.
+- **Model Tier Recommendation & Complexity Assessment:**
+  - Every `implementation_plan.md` must include an explicit assessment and recommendation regarding which model tier (`Low`, `Medium`, or `High`) is best suited for executing the plan to optimize token consumption and operational cost.
+  - **Chat Output Requirement:** In addition to the plan artifact, the recommendation (recommended tier + concise 1-sentence rationale in German) MUST explicitly be included directly in the chat message when presenting the plan, enabling immediate model switching in the IDE interface before approval:
+    - **`Low` (Fast / Lightweight):** Pure UI/Bootstrap adjustments, text/typography polish, translation catalog maintenance (`de.json`, `en.json`), standard CRUD templates matching existing blueprints, or straightforward bugfixes with clear error traces.
+    - **`Medium` (Standard / Balanced):** Full-stack feature implementations across routes, forms, DB queries, and templates; schema extensions and Alembic migrations; or standard integration test suites.
+    - **`High` (Flagship / High-Reasoning):** Complex financial calculations (cashflow projections, multi-currency conversion), statutory legal logic (BGB § 309 Nr. 9, VVG, notice periods, calendar rules), intricate concurrency/OIDC pipelines, or deep architectural refactorings.
 
 ### 5.2 Objectivity, Critical Analysis & Authoritative Source Verification Mandate
 - Act strictly as an objective, critical analyst. The goal is finding factual truth, technical accuracy, and robust software architecture, not pleasing the user or uncritically agreeing.

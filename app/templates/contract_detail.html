@@ -687,7 +687,7 @@
           <div class="row g-2 mb-3">
             <!-- Initial Price -->
             <div class="col-6 col-md-3">
-              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center">
+              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
                 <span class="text-muted d-block" style="font-size: 0.72rem;">{{ _('contracts.price_chart_initial') }}</span>
                 <span class="fw-bold text-body small">{{ "%.2f"|format(price_chart_data.stats.initial_amount) }} {{ price_chart_data.currency }}</span>
                 <span class="text-secondary d-block" style="font-size: 0.65rem;">{{ price_chart_data.stats.initial_date }}</span>
@@ -695,7 +695,7 @@
             </div>
             <!-- Current Price -->
             <div class="col-6 col-md-3">
-              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center">
+              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
                 <span class="text-muted d-block" style="font-size: 0.72rem;">{{ _('contracts.price_chart_current') }}</span>
                 <span class="fw-bold text-success small">{{ "%.2f"|format(price_chart_data.stats.current_amount) }} {{ price_chart_data.currency }}</span>
                 <span class="text-muted d-block" style="font-size: 0.65rem;">{{ _('contracts.current_price') }}</span>
@@ -703,7 +703,7 @@
             </div>
             <!-- All-Time High -->
             <div class="col-6 col-md-3">
-              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center">
+              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
                 <span class="text-muted d-block" style="font-size: 0.72rem;">{{ _('contracts.price_chart_max') }}</span>
                 <span class="fw-bold text-primary small">{{ "%.2f"|format(price_chart_data.stats.max_amount) }} {{ price_chart_data.currency }}</span>
                 <span class="text-muted d-block" style="font-size: 0.65rem;">{{ _('contracts.price_chart_min') }}: {{ "%.2f"|format(price_chart_data.stats.min_amount) }}</span>
@@ -711,7 +711,7 @@
             </div>
             <!-- Net Change Since Start -->
             <div class="col-6 col-md-3">
-              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center">
+              <div class="p-2 px-3 bg-body-tertiary rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
                 <span class="text-muted d-block" style="font-size: 0.72rem;">{{ _('contracts.price_chart_change') }}</span>
                 {% if price_chart_data.stats.is_increase %}
                 <span class="fw-bold text-danger small">+{{ "%.2f"|format(price_chart_data.stats.change_since_start_amount) }} {{ price_chart_data.currency }}</span>

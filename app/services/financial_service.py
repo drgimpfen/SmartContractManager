@@ -41,11 +41,17 @@ def is_contract_active_on_date(contract: Contract, check_date: date) -> bool:
     """Check whether a contract is in force on the given date (respecting start_date & end_date)."""
     if getattr(contract, "is_archived", False):
         return False
-    if contract.status not in (ContractStatus.active, ContractStatus.scheduled):
+    if contract.status not in (
+        ContractStatus.active,
+        ContractStatus.scheduled,
+        ContractStatus.pending_cancellation,
+        ContractStatus.cancellation_confirmed,
+    ):
         return False
     if contract.start_date and contract.start_date > check_date:
         return False
-    if contract.end_date and contract.end_date < check_date:
+    effective_end = getattr(contract, "confirmed_end_date", None) or contract.end_date
+    if effective_end and effective_end < check_date:
         return False
     return True
 
@@ -567,7 +573,7 @@ class FinancialService:
         """
         as_of_date = as_of or date.today()
         total_contracts = len(contracts)
-        active_contracts = [c for c in contracts if c.status == ContractStatus.active]
+        active_contracts = [c for c in contracts if is_contract_active_on_date(c, as_of_date)]
         canceled_contracts = [c for c in contracts if c.status == ContractStatus.canceled]
         archived_contracts = [c for c in contracts if getattr(c, "is_archived", False) or c.status == ContractStatus.archived]
 

@@ -33,7 +33,40 @@ def index():
         return redirect(url_for('provider.index'))
 
     providers = Provider.query.filter_by(user_id=current_user.id).order_by(Provider.name.asc()).all()
-    return render_template('providers.html', form=form, providers=providers)
+    fin_service = FinancialService()
+    user_currency = current_user.currency or "EUR"
+    provider_spends = {}
+    provider_future_spends = {}
+    total_monthly_spend = 0.0
+
+    from datetime import date as dt_date
+    from app.models import ContractStatus
+    from app.services.financial_service import normalize_to_monthly
+
+    for p in providers:
+        spend = fin_service.calculate_monthly_budget(p.contracts, target_currency=user_currency)
+        provider_spends[p.id] = spend
+        total_monthly_spend += spend
+
+        if spend == 0.0:
+            scheduled = [c for c in p.contracts if c.status == ContractStatus.scheduled and not getattr(c, 'is_archived', False)]
+            if scheduled:
+                earliest = min(scheduled, key=lambda c: c.start_date or dt_date.max)
+                fut_amt = normalize_to_monthly(fin_service.currency_service.convert(earliest.amount, earliest.currency or 'EUR', user_currency), earliest.frequency)
+                provider_future_spends[p.id] = {
+                    "amount": round(fut_amt, 2),
+                    "start_date": earliest.start_date,
+                }
+
+    return render_template(
+        'providers.html',
+        form=form,
+        providers=providers,
+        provider_spends=provider_spends,
+        provider_future_spends=provider_future_spends,
+        total_monthly_spend=round(total_monthly_spend, 2),
+        user_currency=user_currency,
+    )
 
 
 @bp.route('/<int:id>')

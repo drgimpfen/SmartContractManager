@@ -336,4 +336,54 @@ def test_contract_creation_from_provider_detail_redirects_back(client, app):
     assert b'89.90' in follow_resp.data
 
 
+def test_provider_directory_card_grid(client, app):
+    from app import db
+    from app.models import Contract, ContractStatus, Frequency
+    from datetime import date
+
+    with app.app_context():
+        u = User(username='prov_grid_user', hashed_password=generate_password_hash('pass123'), currency='EUR')
+        db.session.add(u)
+        db.session.commit()
+        p = Provider(
+            user_id=u.id,
+            name='Grid Fiber Provider',
+            customer_number='FIBER-999',
+            customer_portal='https://portal.fiber.de',
+            cancel_url='https://fiber.de/cancel',
+            website='https://fiber.de',
+        )
+        db.session.add(p)
+        db.session.commit()
+
+        c = Contract(
+            user_id=u.id,
+            provider_id=p.id,
+            category='Fiber 1000',
+            status=ContractStatus.active,
+            amount=49.99,
+            currency='EUR',
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+        )
+        db.session.add(c)
+        db.session.commit()
+
+    client.post('/login', data={'username': 'prov_grid_user', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.get('/providers')
+    assert resp.status_code == 200
+
+    html = resp.data.decode('utf-8')
+    assert 'providerSearchInput' in html
+    assert 'provider-card' in html
+    assert 'Grid Fiber Provider' in html
+    assert 'FIBER-999' in html
+    assert 'https://portal.fiber.de' in html
+    assert 'https://fiber.de/cancel' in html
+    assert 'https://fiber.de' in html
+    assert '49,99' in html or '49.99' in html
+
+
+
 
