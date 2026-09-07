@@ -1010,3 +1010,33 @@ def test_deadline_calculation_no_forward_shift_on_weekend(app, user):
         # 2026-06-28 is a Sunday. Under BGH/BAG, it must remain 2026-06-28, NOT 2026-06-29 (Monday).
         assert deadline.weekday() == 6  # Sunday
         assert deadline == date(2026, 6, 28)
+
+
+def test_legacy_contract_started_over_10_years_ago(app, user):
+    """Ensure contracts started > 10 years ago (e.g. year 2000) do not get stuck in 120-cycle limit."""
+    with app.app_context():
+        c = Contract(
+            user_id=user,
+            title="Legacy Contract 2000",
+            category="Subscriptions",
+            status=ContractStatus.active,
+            start_date=date(2000, 2, 12),
+            billing_anchor_date=date(2000, 2, 12),
+            initial_term_months=0,
+            renewal_type="monthly_rolling",
+            renewal_period_months=1,
+            cancellation_notice_amount=0,
+            cancellation_notice_unit="days",
+        )
+        db.session.add(c)
+        db.session.commit()
+
+        # Earliest cancellation date must be in the future (on or after today)
+        earliest_cancel = c.earliest_cancellation_date
+        assert earliest_cancel is not None
+        assert earliest_cancel >= date.today()
+        # Must not report as ended in the past
+        assert c.current_commitment_days_left is not None
+        assert c.current_commitment_days_left >= 0
+        assert "ended" not in (c.current_commitment_days_left_formatted or "").lower()
+        assert "beendet" not in (c.current_commitment_days_left_formatted or "").lower()

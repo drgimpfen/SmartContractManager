@@ -483,7 +483,8 @@ class Contract(db.Model):
 
         cand_end = self.end_date or initial_end
         cycles = 0
-        while cycles < 120:
+        # Support long-running legacy contracts (up to 1200 cycles = 100 years for monthly rolling)
+        while cycles < 1200:
             cycles += 1
             cand_end = snap_to_target_period(cand_end, target_period)
             if cand_end > ref or (cycles > 1 and cand_end >= ref):
