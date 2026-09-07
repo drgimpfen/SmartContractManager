@@ -5,6 +5,7 @@
 * **Zero Custom CSS Rule:** Custom CSS rules are strictly forbidden unless Bootstrap provides no utility class or variable for the exact requirement. Use native Bootstrap utility classes (`d-flex`, `gap-3`, `text-muted`, `p-3`, `rounded-3`, `shadow-sm`, etc.).
 * **Mobile-First Responsive Layout:** All views must be developed mobile-first using the Bootstrap 12-column grid system (`col-12 col-md-6 col-lg-4`). Tabular data must be wrapped in `.table-responsive` to prevent horizontal clipping on mobile viewports.
 * **Independent Row Pattern (Whitespace Hole Prevention):** Never mix dynamic list widgets of variable vertical height (such as deadline reminders, agenda lists, or notification items) with tall fixed-height widgets (such as charts) within the same Bootstrap `.row`. Doing so forces the row to stretch to the tallest widget, creating massive vertical whitespace voids underneath short lists. Instead, isolate them into dedicated full-width rows (`col-12` or `col-md-6 + col-md-6`) that expand or collapse organically with their content, allowing subsequent content rows to follow naturally in the vertical document flow.
+* **Anti-Redundancy Principle (No Duplicate Global Links):** Avoid visual and interactive clutter. Elements, actions, or dialog triggers that are already permanently available in global layout components (e.g., the sticky footer containing the legal notice modal trigger or the global top navigation) must NOT be redundantly duplicated inside page cards, widget headers, or contextual alert boxes unless specifically demanded by a dedicated modal workflow.
 
 ## 2. Theming & Color Modes (Dark / Light)
 * **Native Switching:** The application relies strictly on Bootstrap 5.3 native color modes using the HTML attribute `data-bs-theme="dark"` or `data-bs-theme="light"` on the root `<html>` element.
@@ -52,3 +53,15 @@
   * Providers: `bi-building`
   * Settings: `bi-gear`
   * Actions: `bi-pencil` (edit), `bi-trash` (delete), `bi-plus-lg` (add/create), `bi-download` (export/download).
+
+## 7. Visual Anti-Redundancy & Clean Screen Mandate (Systematic UI Deduplication)
+Visual clutter, duplicated information, and redundant UI controls degrade user trust and cognitive clarity. Before finalizing any template or component layout, the Agent must perform a systematic **Visual Redundancy Audit** across four specific dimensions:
+1. **No Duplicated Global Layout Controls:**
+   - Elements permanently accessible in global layout chrome (sticky top navigation, sidebar, user profile menu, or the sticky footer with the `#legalNoticeModal` trigger) must NEVER be duplicated inside page content cards, widget headers, or contextual alerts.
+   - Example: Do not add a "Rechtliche Hinweise" button or link inside a dashboard widget header when it is already persistently visible in the sticky footer.
+2. **No Duplicated Metrics & Redundant KPIs:**
+   - If a metric or financial indicator is displayed in a primary hero stat card (e.g., Monthly Spend in the top KPI row), it must not be repeated in secondary sidebar cards or table headers on the same view without unique contextual differentiation.
+3. **No Redundant Badges & Status Echoing:**
+   - Do not display the same attribute twice in close visual proximity (e.g., showing a category or frequency badge immediately next to a text label that already states the exact same information).
+4. **No Repeated Explanatory Notes & Disclaimers:**
+   - Explanatory disclaimers (e.g., that converted currencies are estimates `~` based on central bank reference rates) must appear at most ONCE in an overarching view or footer, rather than being repeated inside every individual widget, card, or modal.

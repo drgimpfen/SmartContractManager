@@ -1,6 +1,6 @@
 import json
 from datetime import date
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 
 from app import db
@@ -26,6 +26,7 @@ from app.services.contract_service import (
     apply_price_tiers,
 )
 from app.services.financial_service import FinancialService
+from app.services.currency_service import CurrencyService
 
 bp = Blueprint('contract', __name__, url_prefix='/contracts')
 
@@ -143,16 +144,24 @@ def index():
         if next_url and next_url.startswith('/'):
             return redirect(next_url)
 
-    # Query contracts with filters
+    # Query all user contracts for responsive client-side live filtering
     status_filter = request.args.get('status', 'all')
     tag_filter = request.args.get('tag')
     category_filter = request.args.get('category', '').strip()
     search_query = request.args.get('q', '').strip()
 
-    archived_count = Contract.query.filter_by(user_id=current_user.id, is_archived=True).count()
+    all_user_contracts = Contract.query.filter_by(user_id=current_user.id).order_by(Contract.created_at.desc()).all()
+    archived_count = 0
+    for c in all_user_contracts:
+        c.sync_contract_status()
+        if c.price_history:
+            sync_contract_prices(c)
+        if c.is_archived:
+            archived_count += 1
+    db.session.commit()
 
+    # Query contracts with server-side filters
     query = Contract.query.filter_by(user_id=current_user.id)
-
     if status_filter == 'archived':
         query = query.filter(Contract.is_archived.is_(True))
     else:
@@ -178,18 +187,13 @@ def index():
         query = query.join(Contract.tags).filter(Tag.name == tag_filter)
 
     contracts = query.order_by(Contract.created_at.desc()).all()
-    for c in contracts:
-        c.sync_contract_status()
-        if c.price_history:
-            sync_contract_prices(c)
-    db.session.commit()
 
     providers = Provider.query.filter_by(user_id=current_user.id).order_by(Provider.name.asc()).all()
     all_tags = Tag.query.filter_by(user_id=current_user.id).order_by(Tag.name.asc()).all()
 
-    all_user_contracts = Contract.query.filter_by(user_id=current_user.id, is_archived=False).all()
-    user_categories = sorted(list(set(c.category for c in all_user_contracts if c.category)))
-    user_payment_methods = sorted(list(set(c.payment_method for c in all_user_contracts if c.payment_method)))
+    active_contracts = [c for c in all_user_contracts if not c.is_archived]
+    user_categories = sorted(list(set(c.category for c in active_contracts if c.category)))
+    user_payment_methods = sorted(list(set(c.payment_method for c in active_contracts if c.payment_method)))
 
     return render_template(
         'contracts.html',
@@ -582,3 +586,22 @@ def delete(id):
     prune_orphaned_tags(user_id)
     flash('Vertrag erfolgreich gelöscht.', 'success')
     return redirect(url_for('contract.index'))
+
+
+@bp.route('/api/currency/rate', methods=['GET'])
+@login_required
+def api_currency_rate():
+    from_curr = request.args.get('from', '').strip().upper()
+    to_curr = (request.args.get('to', '').strip().upper() or getattr(current_user, 'currency', 'EUR') or 'EUR').strip().upper()
+    if not from_curr:
+        return jsonify({'success': False, 'error': 'Missing from currency'}), 400
+
+    svc = CurrencyService()
+    rate = svc.get_rate(from_curr, to_curr)
+    return jsonify({
+        'success': True,
+        'from': from_curr,
+        'to': to_curr,
+        'rate': rate,
+        'date': date.today().strftime('%d.%m.%Y'),
+    })

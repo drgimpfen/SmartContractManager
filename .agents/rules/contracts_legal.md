@@ -106,6 +106,23 @@ Kündigungsschreiben (z. B. nach DIN 5008 generierte PDF-Briefe oder E-Mail-Vorl
 
 ---
 
-## 7. TDD-Absicherung & Qualitätssicherung
-* Jede der vorgenannten Invarianten (insbesondere 24-Monats-Grenze, monatliches Rollieren nach 01.03.2022, VVG-Ausnahme, strikte Stichtagsberechnung ohne § 193 BGB-Verschiebung) muss durch **automatisierte Pytest-Tests** in `tests/test_contract_lifecycle.py` und `tests/test_contract.py` abgesichert sein.
+## 7. Fremdwährungen, Wechselkurse & Vertragswahrheit
+
+### 7.1 Vertragswahrheit & Unverfälschtheit des Stammvertrags
+* Die vertraglich vereinbarte Währung und der Originalbetrag (z. B. 14,99 USD oder 19,90 CHF) sind die rechtlich verbindliche Primärinformation (Vertragswahrheit).
+* Das System darf den Originalbetrag in der Datenbank niemals stillschweigend überschreiben oder durch Rundungen verfälschen.
+
+### 7.2 Indikative Umrechnung & Kennzeichnungspflicht (Tilde `~`)
+* Alle in die Basiswährung des Nutzers (z. B. EUR) umgerechneten Werte auf Dashboards, Übersichten und Cashflow-Projektionen sind indikative Schätzwerte.
+* Umrechnungswerte müssen im Frontend stets eindeutig als Richtwert gekennzeichnet werden (durch vorangestellte Tilde `~` bzw. `≈` oder Kursdatum-Angabe), da tatsächliche Kreditkartenabrechnungen oder Bankabbuchungen aufgrund von Wechselkursaufschlägen oder Auslandseinsatzentgelten abweichen können.
+
+### 7.3 Taggenaue Einzelabrechnung vs. Monatsdurchschnitt
+* Für historische und prognostizierte Cashflow-Fälligkeiten (z. B. wöchentliche oder quartalsweise Abbuchungen) wird der Wechselkurs des konkreten Fälligkeitstags (`billing_date`) herangezogen.
+* Historische Wechselkurse vor dem heutigen Tag sind unveränderlich (*Write Once, Read Forever*).
+
+---
+
+## 8. TDD-Absicherung & Qualitätssicherung
+* Jede der vorgenannten Invarianten (insbesondere 24-Monats-Grenze, monatliches Rollieren nach 01.03.2022, VVG-Ausnahme, strikte Stichtagsberechnung ohne § 193 BGB-Verschiebung, Fremdwährungsumrechnung mit Fälligkeitstagsstempel) muss durch **automatisierte Pytest-Tests** in `tests/test_contract_lifecycle.py`, `tests/test_contract.py` und `tests/test_currency_service.py` abgesichert sein.
 * Regressionen bei Datums- und Fristenberechnungen führen zu sofortigem Testabbruch.
+

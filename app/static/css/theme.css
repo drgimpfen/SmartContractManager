@@ -30,7 +30,14 @@ body {
 }
 
 /* Compact controls scaling */
-.btn-sm, .btn-group-sm > .btn, .input-group-sm > .form-control, .input-group-sm > .btn, .input-group-sm > .input-group-text {
+.btn-sm,
+.btn-group-sm > .btn,
+.input-group-sm > .form-control,
+.input-group-sm > .form-select,
+.input-group-sm > .btn,
+.input-group-sm > .input-group-text,
+.form-select-sm,
+.form-control-sm {
   min-height: 34px;
 }
 
@@ -44,4 +51,17 @@ body {
 /* Smooth dark/light transitions */
 .card, .navbar, .table, .dropdown-menu {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Vibrant spotlight focus glow (harmonious full-element aura) */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+  border-color: #3d8bfd !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.35), 0 0 10px rgba(13, 110, 253, 0.25) !important;
 }

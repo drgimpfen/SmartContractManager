@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     Enum,
     Boolean,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -793,9 +794,14 @@ class PriceEntry(db.Model):
 
 class ExchangeRateCache(db.Model):
     __tablename__ = "exchange_rate_cache"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     base_currency = Column(String(8), nullable=False)
     target_currency = Column(String(8), nullable=False)
     rate = Column(Float, nullable=False)
+    rate_date = Column(Date, nullable=False, index=True, default=date.today)
     last_updated = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        UniqueConstraint('base_currency', 'target_currency', 'rate_date', name='uq_exchange_rate_cache_pair_date'),
+    )

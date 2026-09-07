@@ -34,100 +34,135 @@
     </div>
   </div>
 
-  <!-- Filter & Search Card -->
+  <!-- Unified Search & Filter Cockpit Card -->
   <div class="card border shadow-sm">
+    <!-- Card Header: Status Navigation (Card Header Pills) -->
+    <div class="card-header bg-body-tertiary border-bottom px-3 py-2">
+      <ul class="nav nav-pills card-header-pills flex-nowrap overflow-x-auto text-nowrap gap-1" id="contractStatusPills" style="scrollbar-width: none;">
+        <li class="nav-item">
+          <button type="button" data-status="all" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'all' %}active bg-primary text-white shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.filter_all') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="active" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'active' %}active bg-success text-white shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.active') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="scheduled" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'scheduled' %}active bg-primary text-white shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.scheduled') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="pending_cancellation" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'pending_cancellation' %}active bg-warning text-dark shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.pending_cancellation') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="cancellation_confirmed" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'cancellation_confirmed' %}active bg-info text-dark shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.cancellation_confirmed') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="paused" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'paused' %}active bg-info text-dark shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.paused') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="canceled" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center {% if active_status == 'canceled' %}active bg-secondary text-white shadow-sm{% else %}text-body-secondary{% endif %}">
+            {{ _('contracts.canceled') }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" data-status="archived" class="nav-link status-filter-btn py-1 px-3 rounded-2 small fw-medium d-inline-flex align-items-center gap-1 {% if active_status == 'archived' %}active bg-secondary text-white shadow-sm{% else %}text-body-secondary{% endif %}" title="{{ _('contracts.filter_archived') }}">
+            <i class="bi bi-archive{% if active_status == 'archived' %}-fill{% endif %}"></i>
+            <span>{{ _('contracts.filter_archived') }}</span>
+            {% if archived_count is defined and archived_count > 0 %}
+            <span class="badge rounded-pill ms-1 {% if active_status == 'archived' %}bg-light text-dark{% else %}bg-body-secondary text-secondary border{% endif %}">{{ archived_count }}</span>
+            {% endif %}
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Card Body: Live Search & Dropdowns -->
     <div class="card-body p-3">
-      <form method="get" action="{{ url_for('contract.index') }}" class="row g-2 align-items-center">
-        <!-- Status Filter Pills -->
-        <div class="col-12 col-xl-auto me-xl-auto">
-          <div class="d-flex align-items-center gap-2 flex-wrap">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Status Filter">
-              <a href="{{ url_for('contract.index', status='all', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'all' %}active fw-semibold text-white bg-primary border-primary{% endif %}">
-                {{ _('contracts.filter_all') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='active', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'active' %}active fw-semibold text-white bg-success border-success{% endif %}">
-                {{ _('contracts.active') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='scheduled', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'scheduled' %}active fw-semibold text-white bg-primary border-primary{% endif %}">
-                {{ _('contracts.scheduled') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='pending_cancellation', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'pending_cancellation' %}active fw-semibold text-white bg-warning border-warning{% endif %}">
-                {{ _('contracts.pending_cancellation') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='cancellation_confirmed', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'cancellation_confirmed' %}active fw-semibold text-white bg-info border-info{% endif %}">
-                {{ _('contracts.cancellation_confirmed') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='paused', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'paused' %}active fw-semibold text-white bg-info border-info{% endif %}">
-                {{ _('contracts.paused') }}
-              </a>
-              <a href="{{ url_for('contract.index', status='canceled', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center {% if active_status == 'canceled' %}active fw-semibold text-white bg-secondary border-secondary{% endif %}">
-                {{ _('contracts.canceled') }}
-              </a>
-            </div>
-            <a href="{{ url_for('contract.index', status='archived', category=active_category, tag=active_tag, q=search_query) }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 {% if active_status == 'archived' %}active fw-semibold text-white bg-secondary border-secondary{% endif %}" title="{{ _('contracts.filter_archived') }}">
-              <i class="bi bi-archive{% if active_status == 'archived' %}-fill{% endif %}"></i>
-              <span>{{ _('contracts.filter_archived') }}</span>
-              {% if archived_count is defined and archived_count > 0 %}
-              <span class="badge {% if active_status == 'archived' %}bg-light text-dark{% else %}bg-secondary text-light{% endif %} rounded-pill ms-1">{{ archived_count }}</span>
-              {% endif %}
-            </a>
+      <form id="contractFilterForm" class="row g-2 align-items-center">
+        <!-- 1. Live Search Input (Seamless Spotlight style, unified rounded-3 border) -->
+        <div class="col-12 col-md-6">
+          <div class="position-relative d-flex align-items-center">
+            <i class="bi bi-search position-absolute start-0 ms-3 text-secondary pointer-events-none" style="pointer-events: none;"></i>
+            <input type="text" id="contractSearchInput" name="q" value="{{ search_query }}" class="form-control form-control-sm rounded-3 ps-5 pe-5" placeholder="{{ _('contracts.search_placeholder') }}" autocomplete="off" />
+            <button type="button" id="contractSearchClearBtn" class="btn btn-sm btn-link position-absolute end-0 me-2 text-secondary text-decoration-none p-0 border-0 {% if not search_query %}d-none{% endif %}" title="{{ _('contracts.reset_filters') }}" style="min-height: auto; width: 24px; height: 24px;">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Category Dropdown & Search Input -->
-        <div class="col-12 col-xl-6">
-          <div class="row g-2">
-            <!-- Category Filter Dropdown -->
-            <div class="col-12 col-sm-5">
-              <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent text-secondary"><i class="bi bi-tag"></i></span>
-                <select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
-                  <option value="">{{ _('contracts.all_categories') }}</option>
-                  {% for cat in user_categories %}
-                  <option value="{{ cat }}" {% if active_category == cat %}selected{% endif %}>{{ cat }}</option>
-                  {% endfor %}
-                </select>
-                {% if active_category %}
-                <a href="{{ url_for('contract.index', status=active_status, tag=active_tag, q=search_query) }}" class="btn btn-outline-secondary" title="Kategorie-Filter aufheben">
-                  <i class="bi bi-x-lg"></i>
-                </a>
-                {% endif %}
-              </div>
-            </div>
+        <!-- 2. Category Filter Dropdown (Seamless Spotlight style) -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <div class="position-relative d-flex align-items-center">
+            <i class="bi bi-folder2 position-absolute start-0 ms-3 text-secondary pointer-events-none" style="pointer-events: none;" title="{{ _('form.category') }}"></i>
+            <select id="contractCategoryFilter" name="category" class="form-select form-select-sm rounded-3 ps-5">
+              <option value="">{{ _('contracts.all_categories') }}</option>
+              {% for cat in user_categories %}
+              <option value="{{ cat }}" {% if active_category == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
 
-            <!-- Search Input with inline Button -->
-            <div class="col-12 col-sm-7">
-              <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent border-end-0 text-secondary"><i class="bi bi-search"></i></span>
-                <input type="text" name="q" value="{{ search_query }}" class="form-control border-start-0 border-end-0" placeholder="{{ _('common.search') }}" />
-                {% if active_status != 'all' %}<input type="hidden" name="status" value="{{ active_status }}" />{% endif %}
-                {% if active_tag %}<input type="hidden" name="tag" value="{{ active_tag }}" />{% endif %}
-                {% if search_query %}
-                <a href="{{ url_for('contract.index', status=active_status, category=active_category, tag=active_tag) }}" class="btn btn-outline-secondary border-start-0" title="Suche zurücksetzen">
-                  <i class="bi bi-x-lg"></i>
-                </a>
-                {% endif %}
-                <button type="submit" class="btn btn-primary px-3">{{ _('common.search') }}</button>
-              </div>
-            </div>
+        <!-- 3. Tag Filter Dropdown (Seamless Spotlight style) -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <div class="position-relative d-flex align-items-center">
+            <i class="bi bi-tags position-absolute start-0 ms-3 text-secondary pointer-events-none" style="pointer-events: none;" title="{{ _('form.tags') }}"></i>
+            <select id="contractTagFilter" name="tag" class="form-select form-select-sm rounded-3 ps-5">
+              <option value="">{{ _('contracts.all_tags') }}</option>
+              {% for t in all_tags %}
+              <option value="{{ t.name }}" {% if active_tag == t.name %}selected{% endif %}>{{ t.name }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
       </form>
 
-      <!-- Tag Filter Pills (if any) -->
-      {% if all_tags %}
-      <div class="d-flex flex-wrap gap-1 align-items-center pt-2 mt-2 border-top">
-        <span class="small text-muted me-1"><i class="bi bi-tags"></i> Tags:</span>
-        <a href="{{ url_for('contract.index', status=active_status, category=active_category, q=search_query) }}" class="badge text-decoration-none rounded-pill px-2 py-1 {% if not active_tag %}bg-primary text-white{% else %}bg-body-secondary text-body border{% endif %}">
-          {{ _('contracts.filter_all') }}
-        </a>
-        {% for t in all_tags %}
-        <a href="{{ url_for('contract.index', status=active_status, category=active_category, tag=t.name, q=search_query) }}" class="badge text-decoration-none rounded-pill px-2 py-1 {% if active_tag == t.name %}border-2 border-primary shadow-sm{% endif %}" style="background-color: {{ t.color }}; color: #ffffff;">
-          {{ t.name }}
-        </a>
-        {% endfor %}
+      <!-- Active Filters Chips & Result Counter Bar (Tier 3) -->
+      <div id="activeFiltersBar" class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 mt-2 border-top {% if active_status == 'all' and not active_category and not active_tag and not search_query %}d-none{% endif %}">
+        <div class="d-flex flex-wrap align-items-center gap-1" id="activeFilterChips">
+          <span class="small text-muted me-1 fw-medium">{{ _('contracts.active_filters_label') }}</span>
+          <span id="activeStatusChip" class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2 d-none">
+            <span>{{ _('contracts.status') }}:</span>
+            <span class="fw-semibold" id="activeStatusLabel"></span>
+            <span role="button" class="text-secondary ms-1 lh-1" id="resetStatusChipBtn" title="{{ _('contracts.reset_filters') }}"><i class="bi bi-x-lg"></i></span>
+          </span>
+          <span id="activeCategoryChip" class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2 d-none">
+            <i class="bi bi-folder2 text-secondary"></i>
+            <span id="activeCategoryLabel"></span>
+            <span role="button" class="text-secondary ms-1 lh-1" id="resetCategoryChipBtn" title="{{ _('contracts.reset_filters') }}"><i class="bi bi-x-lg"></i></span>
+          </span>
+          <span id="activeTagChip" class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2 d-none">
+            <i class="bi bi-tag text-secondary"></i>
+            <span id="activeTagLabel"></span>
+            <span role="button" class="text-secondary ms-1 lh-1" id="resetTagChipBtn" title="{{ _('contracts.reset_filters') }}"><i class="bi bi-x-lg"></i></span>
+          </span>
+          <span id="activeSearchChip" class="badge bg-body-secondary text-body border d-inline-flex align-items-center gap-1 py-1 px-2 d-none">
+            <i class="bi bi-search text-secondary"></i>
+            <span id="activeSearchLabel"></span>
+            <span role="button" class="text-secondary ms-1 lh-1" id="resetSearchChipBtn" title="{{ _('contracts.reset_filters') }}"><i class="bi bi-x-lg"></i></span>
+          </span>
+          <button type="button" id="resetAllFiltersBtn" class="btn btn-sm btn-link text-danger text-decoration-none p-0 ms-2 d-inline-flex align-items-center gap-1 border-0" style="min-height: auto;">
+            <i class="bi bi-x-circle"></i>
+            <span>{{ _('contracts.clear_all_filters') }}</span>
+          </button>
+        </div>
+
+        <div class="small text-muted d-none d-md-inline-block" id="contractsCountWrapper">
+          <span class="badge bg-body-secondary text-secondary border">
+            <span id="contractsCountDisplay">{{ contracts|length }}</span> <span>{% if contracts|length == 1 %}{{ _('contracts.title')[:-1] if lang == 'en' else 'Vertrag' }}{% else %}{{ _('contracts.title') }}{% endif %}</span>
+          </span>
+        </div>
       </div>
-      {% endif %}
     </div>
   </div>
 
@@ -150,7 +185,7 @@
           </thead>
           <tbody>
             {% for contract in contracts %}
-            <tr>
+            <tr class="contract-table-row" data-status="{{ contract.status.value }}" data-archived="{{ 'true' if contract.is_archived else 'false' }}" data-category="{{ contract.category }}" data-tags="{{ contract.tags|map(attribute='name')|join(',') }}" data-search-term="{{ ((contract.title or '') ~ ' ' ~ (contract.category or '') ~ ' ' ~ (contract.provider.name if contract.provider else '') ~ ' ' ~ (contract.contract_number or '') ~ ' ' ~ (contract.notes or '') ~ ' ' ~ (contract.tags|map(attribute='name')|join(' ')))|lower }}">
               <!-- Title & Tags -->
               <td class="ps-3 py-3">
                 <a href="{{ url_for('contract.detail', id=contract.id) }}" class="fw-bold text-decoration-none text-body d-block">
@@ -352,6 +387,16 @@
               </td>
             </tr>
             {% endfor %}
+            <tr id="contractsTableLiveNoResults" class="d-none">
+              <td colspan="7" class="p-5 text-center text-muted">
+                <i class="bi bi-search fs-1 d-block mb-3 text-secondary opacity-50"></i>
+                <h5 class="fw-semibold mb-1">{{ _('contracts.empty_search') }}</h5>
+                <p class="small mb-3">{{ _('contracts.empty_search_hint') }}</p>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-clear-live-search">
+                  <i class="bi bi-x-circle me-1"></i>{{ _('contracts.reset_filters') }}
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -402,9 +447,9 @@
   {% if contracts %}
   <!-- Contracts Card Grid View -->
   <div id="contractsCardView" class="d-none">
-    <div class="row g-3">
+    <div class="row g-3" id="contractsCardGrid">
       {% for contract in contracts %}
-      <div class="col-12 col-md-6 col-xl-4">
+      <div class="col-12 col-md-6 col-xl-4 contract-card-item" data-status="{{ contract.status.value }}" data-archived="{{ 'true' if contract.is_archived else 'false' }}" data-category="{{ contract.category }}" data-tags="{{ contract.tags|map(attribute='name')|join(',') }}" data-search-term="{{ ((contract.title or '') ~ ' ' ~ (contract.category or '') ~ ' ' ~ (contract.provider.name if contract.provider else '') ~ ' ' ~ (contract.contract_number or '') ~ ' ' ~ (contract.notes or '') ~ ' ' ~ (contract.tags|map(attribute='name')|join(' ')))|lower }}">
         <div class="card border shadow-sm h-100 d-flex flex-column justify-content-between">
           <div class="card-body p-3 p-md-4 d-flex flex-column">
             <!-- Top Status & Category Badges -->
@@ -671,6 +716,16 @@
       </div>
       {% endfor %}
     </div>
+
+    <!-- Live Search Empty State for Card View -->
+    <div id="contractsCardLiveNoResults" class="p-5 text-center text-muted d-none">
+      <i class="bi bi-search fs-1 d-block mb-3 text-secondary opacity-50"></i>
+      <h5 class="fw-semibold mb-1">{{ _('contracts.empty_search') }}</h5>
+      <p class="small mb-3">{{ _('contracts.empty_search_hint') }}</p>
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-clear-live-search">
+        <i class="bi bi-x-circle me-1"></i>{{ _('contracts.reset_filters') }}
+      </button>
+    </div>
   </div>
   {% endif %}
 </div>
@@ -718,6 +773,328 @@ document.addEventListener('DOMContentLoaded', function() {
 
   btnTable.addEventListener('click', function() { setViewMode('table'); });
   btnCards.addEventListener('click', function() { setViewMode('cards'); });
+
+  // 100% Client-Side Live Filter Cockpit Controller
+  let currentStatus = '{{ active_status or "all" }}';
+  const searchInput = document.getElementById('contractSearchInput');
+  const searchClearBtn = document.getElementById('contractSearchClearBtn');
+  const categorySelect = document.getElementById('contractCategoryFilter');
+  const categoryClearBtn = document.getElementById('contractCategoryClearBtn');
+  const tagSelect = document.getElementById('contractTagFilter');
+  const tagClearBtn = document.getElementById('contractTagClearBtn');
+  const filterForm = document.getElementById('contractFilterForm');
+  const statusButtons = document.querySelectorAll('.status-filter-btn');
+
+  const tableRows = document.querySelectorAll('.contract-table-row');
+  const cardItems = document.querySelectorAll('.contract-card-item');
+  const countDisplay = document.getElementById('contractsCountDisplay');
+  const tableNoResults = document.getElementById('contractsTableLiveNoResults');
+  const cardNoResults = document.getElementById('contractsCardLiveNoResults');
+  const clearLiveButtons = document.querySelectorAll('.btn-clear-live-search');
+
+  // Active Filter Chips & Bar elements
+  const activeFiltersBar = document.getElementById('activeFiltersBar');
+  const activeStatusChip = document.getElementById('activeStatusChip');
+  const activeStatusLabel = document.getElementById('activeStatusLabel');
+  const resetStatusChipBtn = document.getElementById('resetStatusChipBtn');
+  const activeCategoryChip = document.getElementById('activeCategoryChip');
+  const activeCategoryLabel = document.getElementById('activeCategoryLabel');
+  const resetCategoryChipBtn = document.getElementById('resetCategoryChipBtn');
+  const activeTagChip = document.getElementById('activeTagChip');
+  const activeTagLabel = document.getElementById('activeTagLabel');
+  const resetTagChipBtn = document.getElementById('resetTagChipBtn');
+  const activeSearchChip = document.getElementById('activeSearchChip');
+  const activeSearchLabel = document.getElementById('activeSearchLabel');
+  const resetSearchChipBtn = document.getElementById('resetSearchChipBtn');
+  const resetAllFiltersBtn = document.getElementById('resetAllFiltersBtn');
+
+  const statusLabels = {
+    'all': '{{ _("contracts.filter_all") }}',
+    'active': '{{ _("contracts.active") }}',
+    'scheduled': '{{ _("contracts.scheduled") }}',
+    'pending_cancellation': '{{ _("contracts.pending_cancellation") }}',
+    'cancellation_confirmed': '{{ _("contracts.cancellation_confirmed") }}',
+    'paused': '{{ _("contracts.paused") }}',
+    'canceled': '{{ _("contracts.canceled") }}',
+    'archived': '{{ _("contracts.filter_archived") }}'
+  };
+
+  function updateStatusPillStyles(activeStat) {
+    statusButtons.forEach(btn => {
+      const s = btn.getAttribute('data-status');
+      btn.classList.remove('active', 'bg-primary', 'bg-success', 'bg-warning', 'bg-info', 'bg-secondary', 'text-white', 'text-dark', 'shadow-sm');
+      btn.classList.add('text-body-secondary');
+
+      if (s === activeStat) {
+        btn.classList.remove('text-body-secondary');
+        btn.classList.add('active', 'shadow-sm');
+        if (s === 'active') {
+          btn.classList.add('bg-success', 'text-white');
+        } else if (s === 'pending_cancellation') {
+          btn.classList.add('bg-warning', 'text-dark');
+        } else if (s === 'cancellation_confirmed' || s === 'paused') {
+          btn.classList.add('bg-info', 'text-dark');
+        } else if (s === 'canceled' || s === 'archived') {
+          btn.classList.add('bg-secondary', 'text-white');
+        } else {
+          btn.classList.add('bg-primary', 'text-white');
+        }
+      }
+    });
+  }
+
+  function filterContracts() {
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const selCategory = (categorySelect ? categorySelect.value : '').trim();
+    const selTag = (tagSelect ? tagSelect.value : '').trim();
+
+    let visibleCount = 0;
+
+    function itemMatches(el) {
+      const isArchived = el.getAttribute('data-archived') === 'true';
+      const status = el.getAttribute('data-status') || '';
+      const cat = el.getAttribute('data-category') || '';
+      const tags = (el.getAttribute('data-tags') || '').split(',').map(t => t.trim()).filter(Boolean);
+      const text = el.getAttribute('data-search-term') || '';
+
+      // 1. Status / Archive condition
+      if (currentStatus === 'archived') {
+        if (!isArchived) return false;
+      } else {
+        if (isArchived) return false; // Hide archived contracts from normal tabs
+        if (currentStatus !== 'all' && status !== currentStatus) return false;
+      }
+
+      // 2. Category condition
+      if (selCategory && cat !== selCategory) return false;
+
+      // 3. Tag condition
+      if (selTag && !tags.includes(selTag)) return false;
+
+      // 4. Text search condition
+      if (query && !text.includes(query)) return false;
+
+      return true;
+    }
+
+    // Filter table rows
+    tableRows.forEach(row => {
+      if (itemMatches(row)) {
+        row.classList.remove('d-none');
+        visibleCount++;
+      } else {
+        row.classList.add('d-none');
+      }
+    });
+
+    // Filter card items
+    cardItems.forEach(card => {
+      if (itemMatches(card)) {
+        card.classList.remove('d-none');
+      } else {
+        card.classList.add('d-none');
+      }
+    });
+
+    // Update counter display
+    if (countDisplay) {
+      countDisplay.textContent = visibleCount;
+    }
+
+    // Toggle Clear buttons inside input-groups
+    if (searchClearBtn) {
+      if (query.length > 0) searchClearBtn.classList.remove('d-none');
+      else searchClearBtn.classList.add('d-none');
+    }
+    if (categoryClearBtn) {
+      if (selCategory) categoryClearBtn.classList.remove('d-none');
+      else categoryClearBtn.classList.add('d-none');
+    }
+    if (tagClearBtn) {
+      if (selTag) tagClearBtn.classList.remove('d-none');
+      else tagClearBtn.classList.add('d-none');
+    }
+
+    // Update Active Filter Chips Bar (Tier 3)
+    const hasAnyFilter = (currentStatus !== 'all') || Boolean(selCategory) || Boolean(selTag) || Boolean(query);
+    if (activeFiltersBar) {
+      if (hasAnyFilter) activeFiltersBar.classList.remove('d-none');
+      else activeFiltersBar.classList.add('d-none');
+    }
+
+    if (activeStatusChip) {
+      if (currentStatus !== 'all') {
+        activeStatusChip.classList.remove('d-none');
+        if (activeStatusLabel) activeStatusLabel.textContent = statusLabels[currentStatus] || currentStatus;
+      } else {
+        activeStatusChip.classList.add('d-none');
+      }
+    }
+
+    if (activeCategoryChip) {
+      if (selCategory) {
+        activeCategoryChip.classList.remove('d-none');
+        if (activeCategoryLabel) activeCategoryLabel.textContent = selCategory;
+      } else {
+        activeCategoryChip.classList.add('d-none');
+      }
+    }
+
+    if (activeTagChip) {
+      if (selTag) {
+        activeTagChip.classList.remove('d-none');
+        if (activeTagLabel) activeTagLabel.textContent = selTag;
+      } else {
+        activeTagChip.classList.add('d-none');
+      }
+    }
+
+    if (activeSearchChip) {
+      if (query) {
+        activeSearchChip.classList.remove('d-none');
+        if (activeSearchLabel) activeSearchLabel.textContent = '"' + query + '"';
+      } else {
+        activeSearchChip.classList.add('d-none');
+      }
+    }
+
+    // Toggle empty states
+    const totalItems = tableRows.length;
+    if (totalItems > 0 && visibleCount === 0) {
+      if (tableNoResults) tableNoResults.classList.remove('d-none');
+      if (cardNoResults) cardNoResults.classList.remove('d-none');
+    } else {
+      if (tableNoResults) tableNoResults.classList.add('d-none');
+      if (cardNoResults) cardNoResults.classList.add('d-none');
+    }
+
+    // Transparent URL state synchronization without reload
+    const params = new URLSearchParams();
+    if (currentStatus !== 'all') params.set('status', currentStatus);
+    if (selCategory) params.set('category', selCategory);
+    if (selTag) params.set('tag', selTag);
+    if (query) params.set('q', query);
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState(null, '', newUrl);
+  }
+
+  // Prevent Form Submits on Enter
+  if (filterForm) {
+    filterForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      filterContracts();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      filterContracts();
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchInput.blur();
+      }
+    });
+  }
+
+  if (categorySelect) {
+    categorySelect.addEventListener('change', function() {
+      filterContracts();
+    });
+  }
+
+  if (tagSelect) {
+    tagSelect.addEventListener('change', function() {
+      filterContracts();
+    });
+  }
+
+  // Status Tab Buttons Click Handlers
+  statusButtons.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const newStatus = this.getAttribute('data-status');
+      if (newStatus) {
+        currentStatus = newStatus;
+        updateStatusPillStyles(currentStatus);
+        filterContracts();
+      }
+    });
+  });
+
+  // Individual Resets
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', function() {
+      if (searchInput) searchInput.value = '';
+      filterContracts();
+      if (searchInput) searchInput.focus();
+    });
+  }
+
+  if (categoryClearBtn) {
+    categoryClearBtn.addEventListener('click', function() {
+      if (categorySelect) categorySelect.value = '';
+      filterContracts();
+    });
+  }
+
+  if (tagClearBtn) {
+    tagClearBtn.addEventListener('click', function() {
+      if (tagSelect) tagSelect.value = '';
+      filterContracts();
+    });
+  }
+
+  if (resetStatusChipBtn) {
+    resetStatusChipBtn.addEventListener('click', function() {
+      currentStatus = 'all';
+      updateStatusPillStyles(currentStatus);
+      filterContracts();
+    });
+  }
+
+  if (resetCategoryChipBtn) {
+    resetCategoryChipBtn.addEventListener('click', function() {
+      if (categorySelect) categorySelect.value = '';
+      filterContracts();
+    });
+  }
+
+  if (resetTagChipBtn) {
+    resetTagChipBtn.addEventListener('click', function() {
+      if (tagSelect) tagSelect.value = '';
+      filterContracts();
+    });
+  }
+
+  if (resetSearchChipBtn) {
+    resetSearchChipBtn.addEventListener('click', function() {
+      if (searchInput) searchInput.value = '';
+      filterContracts();
+    });
+  }
+
+  function resetAllFilters() {
+    currentStatus = 'all';
+    updateStatusPillStyles(currentStatus);
+    if (searchInput) searchInput.value = '';
+    if (categorySelect) categorySelect.value = '';
+    if (tagSelect) tagSelect.value = '';
+    filterContracts();
+  }
+
+  if (resetAllFiltersBtn) {
+    resetAllFiltersBtn.addEventListener('click', resetAllFilters);
+  }
+
+  clearLiveButtons.forEach(function(btn) {
+    btn.addEventListener('click', resetAllFilters);
+  });
+
+  // Initial Run on Load
+  updateStatusPillStyles(currentStatus);
+  filterContracts();
 });
 </script>
 

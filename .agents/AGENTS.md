@@ -43,6 +43,9 @@ Your code must be modular, secure, and performant. Implement features strictly a
   * Detailed testing conventions, mocking strategies, and strict coverage goals are defined in `.agents/rules/testing.md` and must be strictly followed.
 * **Contract & Legal Domain Rules (Critical):**
   * All contract lifecycle calculations, statutory terms, notice periods, extensions, and consumer rights must strictly follow `.agents/rules/contracts_legal.md`.
+* **General Anti-Redundancy & DRY Mandate (System-Wide Deduplication):**
+  * The Agent must systematically audit and eliminate redundancies across all engineering layers (Single Source of Truth / DRY principle).
+  * Redundant calculations, duplicate helper functions, parallel caching layers, overlapping route handlers, duplicate database columns, or repeated translation keys are strictly prohibited.
 
 ## 4. UI/UX & Design Guidelines
 The system uses Server-Side Rendering (Jinja2) in strict combination with Bootstrap 5.3. There is no separate design agent; the Full-Stack Agent is responsible for adhering to the UI rules.
@@ -52,6 +55,10 @@ Detailed UI/UX conventions, component standards, Chart.js palettes, form validat
 * **Mobile First:** The layout must strictly be responsive (utilize the grid system correctly).
 * **Dark/Light Mode:** Strictly implement native Bootstrap 5.3 dark/light mode (`data-bs-theme`). Chart.js charts must be colored to remain readable in both modes.
 * **Error Feedback:** Forms must visually present server-side validation errors using Bootstrap alerts or native `is-invalid` / `invalid-feedback` classes.
+* **Visual Anti-Redundancy Mandate (Mandatory UI Deduplication Audit):**
+  - The Agent must systematically audit every template, card, and component to prevent visual clutter and duplicate elements across the entire viewport.
+  - Controls, links, badges, or dialog triggers that are already permanently accessible via global layout components (e.g., sticky header navigation, user menus, or the legal notice modal trigger in the sticky footer) must NOT be duplicated inside page cards, widget headers, or contextual alert boxes.
+  - Status indicators, descriptive labels, or explanatory disclaimers must never be echoed redundantly across adjacent widgets on the same page.
 
 ## 5. Rules & Output Guidelines
 For any code creation, refactoring, or architectural modification, the following rules must be strictly observed:
@@ -61,6 +68,11 @@ For any code creation, refactoring, or architectural modification, the following
 - For every proposed change, the Agent MUST create or update an `implementation_plan.md` artifact.
 - NO file editing or Git commits may occur until the user explicitly clicks the 'Proceed' button to approve the Implementation Plan.
 - After execution, a brief summary of what was implemented is provided in the chat.
+- **Anti-Redundancy & Disjoint Phasing Mandate:**
+  - Every `implementation_plan.md` must be actively scrutinized and audited for redundancies, duplicate tasks, or overlapping work packages across phases.
+  - Multi-phase plans (e.g., Phase 1 and Phase 2) must be strictly disjoint: each file modification, route, UI component, and localization key must have exactly one authoritative phase.
+  - Global UI elements must never be duplicated across sub-components or widgets.
+  - Code and data structures must be checked against existing abstractions before proposing new additions to prevent redundant logic.
 - **Model Tier Recommendation & Complexity Assessment:**
   - Every `implementation_plan.md` must include an explicit assessment and recommendation regarding which model tier (`Low`, `Medium`, or `High`) is best suited for executing the plan to optimize token consumption and operational cost.
   - **Chat Output Requirement:** In addition to the plan artifact, the recommendation (recommended tier + concise 1-sentence rationale in German) MUST explicitly be included directly in the chat message when presenting the plan, enabling immediate model switching in the IDE interface before approval:

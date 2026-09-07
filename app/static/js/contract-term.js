@@ -881,6 +881,10 @@
               }
             }
           } else if (e.target.name === 'start_date' || e.target.name === 'currency' || e.target.name === 'extension_start_mode' || e.target.name === 'custom_start_date') {
+            if (e.target.name === 'currency') {
+              const addon = form.querySelector('.currency-addon');
+              if (addon) addon.textContent = e.target.value || 'EUR';
+            }
             if (!card.classList.contains('d-none')) {
               renderTiers();
               syncToForm();
@@ -908,10 +912,112 @@
     });
   }
 
+  const rateCache = {};
+
+  function initCurrencyConversionPreview() {
+    const previewEl = document.getElementById('contractAmountConversionPreview');
+    if (!previewEl) return;
+
+    const form = previewEl.closest('form');
+    if (!form) return;
+
+    const amountInput = form.querySelector('[name="amount"]');
+    const currencyInput = form.querySelector('[name="currency"]');
+    const freqSelect = form.querySelector('[name="frequency"]');
+    const addon = form.querySelector('.currency-addon');
+    const userBase = (previewEl.dataset.userCurrency || 'EUR').toUpperCase();
+
+    function updatePreview() {
+      const curr = (currencyInput ? currencyInput.value : 'EUR').trim().toUpperCase();
+      if (addon) {
+        addon.textContent = curr || 'EUR';
+      }
+
+      if (!curr || curr === userBase) {
+        previewEl.classList.add('d-none');
+        previewEl.innerHTML = '';
+        return;
+      }
+
+      const amountVal = parseFloat(amountInput ? amountInput.value : 0) || 0;
+      if (amountVal <= 0) {
+        previewEl.classList.add('d-none');
+        previewEl.innerHTML = '';
+        return;
+      }
+
+      const cacheKey = `${curr}_${userBase}`;
+      if (rateCache[cacheKey]) {
+        renderPreview(amountVal, curr, rateCache[cacheKey]);
+      } else {
+        fetch(`/contracts/api/currency/rate?from=${encodeURIComponent(curr)}&to=${encodeURIComponent(userBase)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.rate) {
+              rateCache[cacheKey] = { rate: data.rate, date: data.date };
+              renderPreview(amountVal, curr, rateCache[cacheKey]);
+            } else {
+              previewEl.classList.add('d-none');
+            }
+          })
+          .catch(() => {
+            previewEl.classList.add('d-none');
+          });
+      }
+    }
+
+    function renderPreview(amountVal, curr, rateData) {
+      const rate = rateData.rate;
+      const rateDate = rateData.date;
+      const singleConv = (amountVal * rate).toFixed(2).replace('.', ',');
+      const rateStr = rate.toFixed(4).replace('.', ',');
+      const freq = freqSelect ? freqSelect.value : 'monthly';
+
+      let text = '';
+      if (freq === 'monthly') {
+        text = `&asymp; ${singleConv} ${userBase} <span class="opacity-75">(1 ${curr} = ${rateStr} ${userBase} &middot; Stand: ${rateDate})</span>`;
+      } else {
+        let monthlyVal = amountVal;
+        if (freq === 'weekly') monthlyVal = (amountVal * 52) / 12;
+        else if (freq === 'biweekly') monthlyVal = (amountVal * 26) / 12;
+        else if (freq === 'quarterly') monthlyVal = amountVal / 3;
+        else if (freq === 'yearly') monthlyVal = amountVal / 12;
+
+        const monthlyConv = (monthlyVal * rate).toFixed(2).replace('.', ',');
+        text = `&asymp; ${singleConv} ${userBase} je Abbuchung <span class="opacity-75">(&Oslash; ~ ${monthlyConv} ${userBase} / Monat &middot; 1 ${curr} = ${rateStr} ${userBase} &middot; Stand: ${rateDate})</span>`;
+      }
+
+      previewEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>${text}`;
+      previewEl.classList.remove('d-none');
+    }
+
+    if (form && !form.dataset.currencyPreviewBound) {
+      form.dataset.currencyPreviewBound = 'true';
+      form.addEventListener('input', function (e) {
+        if (e.target.name === 'amount' || e.target.name === 'currency') {
+          updatePreview();
+        }
+      });
+      form.addEventListener('change', function (e) {
+        if (e.target.name === 'amount' || e.target.name === 'currency' || e.target.name === 'frequency') {
+          updatePreview();
+        }
+      });
+      form.querySelectorAll('.combobox-select-item').forEach(item => {
+        item.addEventListener('click', function () {
+          setTimeout(updatePreview, 50);
+        });
+      });
+    }
+
+    updatePreview();
+  }
+
   function initAll() {
     document.querySelectorAll('.contract-term-group').forEach(initContractTermGroup);
     initExtendModal();
     initPriceTierControllers();
+    initCurrencyConversionPreview();
   }
 
   if (document.readyState === 'loading') {

@@ -98,6 +98,7 @@ Dieses Dokument dokumentiert die Projekt-Meilensteine, aktiven Epics und den Ent
 - [ ] **Finanz-Engine (`FinancialService`):**
   - Implementierung von `get_provider_cashflow(user_id, provider_id, past_months=12, future_months=12)` zur Berechnung monatlicher Ist-Zahlungen der letzten 12 Monate und Prognosen der nächsten 12 Monate.
   - Multi-Vertrags-Aufschlüsselung: Stapelung von Ausgaben nach Vertrag bei Partnern mit mehreren Verträgen (z. B. DSL + Mobilfunk bei Vodafone).
+  - Multi-Currency-Integration: Taggenaue Umrechnung von Fremdwährungen zum Stichtag (`billing_date`) via Frankfurter API v2 und DB-Cache (*Write Once, Read Forever*).
 - [ ] **Interaktive visuelle Analysen (`provider_detail.html`):**
   - Gestapeltes Balkendiagramm (Chart.js) mit vergangenen Zahlungen und Zukunftsprognosen mit visueller Trennung der Zeitachsen.
   - Vertragspartner-KPI-Karten: Gesamtausgaben über die Vertragslaufzeit, monatlicher Durchschnitt (historisch vs. prognostiziert), Gesamtsumme der festen Bindung der nächsten 12 Monate.

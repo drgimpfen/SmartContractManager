@@ -80,7 +80,7 @@ class FinancialService:
                 continue
 
             amt, curr = get_contract_price_on_date(contract, as_of_date)
-            converted = self.currency_service.convert(amt, curr, target_currency)
+            converted = self.currency_service.convert(amt, curr, target_currency, as_of=as_of_date)
             monthly = normalize_to_monthly(converted, contract.frequency)
             total += monthly
 
@@ -122,7 +122,7 @@ class FinancialService:
             if not anchor:
                 if is_contract_active_on_date(contract, as_of_date):
                     amt, curr = get_contract_price_on_date(contract, as_of_date)
-                    converted = self.currency_service.convert(amt, curr, target_currency)
+                    converted = self.currency_service.convert(amt, curr, target_currency, as_of=as_of_date)
                     total += normalize_to_monthly(converted, contract.frequency)
                 continue
 
@@ -130,7 +130,7 @@ class FinancialService:
             due_dates = self._get_due_dates_in_range(contract, m_start, m_end)
             for d in due_dates:
                 amt, curr = get_contract_price_on_date(contract, d)
-                converted = self.currency_service.convert(amt, curr, target_currency)
+                converted = self.currency_service.convert(amt, curr, target_currency, as_of=d)
                 total += converted
 
         return round(total, 2)
@@ -235,7 +235,7 @@ class FinancialService:
                 # Find matching bucket
                 d_key = d.strftime("%Y-%m")
                 amt, curr = get_contract_price_on_date(contract, d)
-                converted = self.currency_service.convert(amt, curr, target_currency)
+                converted = self.currency_service.convert(amt, curr, target_currency, as_of=d)
 
                 for b in buckets:
                     if b["month"] == d_key:
@@ -345,7 +345,7 @@ class FinancialService:
 
             cat = (contract.category or "Sonstiges").strip()
             amt, curr = get_contract_price_on_date(contract, as_of_date)
-            converted = self.currency_service.convert(amt, curr, target_currency)
+            converted = self.currency_service.convert(amt, curr, target_currency, as_of=as_of_date)
             monthly = normalize_to_monthly(converted, contract.frequency)
 
             categories[cat] = categories.get(cat, 0.0) + monthly

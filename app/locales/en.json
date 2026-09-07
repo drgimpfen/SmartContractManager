@@ -89,6 +89,8 @@
     "contract_number": "Contract number",
     "amount": "Amount",
     "currency": "Currency",
+    "currency_top_group": "Frequently Used",
+    "currency_all_group": "All Currencies (A–Z)",
     "frequency": "Payment rhythm",
     "monthly": "Monthly",
     "quarterly": "Quarterly",
@@ -347,7 +349,11 @@
     "empty_search": "No contracts found matching your filter criteria.",
     "empty_search_hint": "Adjust your search terms or filters to find contracts.",
     "reset_filters": "Reset filters",
+    "clear_all_filters": "Clear all filters",
     "all_categories": "All Categories",
+    "all_tags": "All Tags",
+    "search_placeholder": "Search contracts...",
+    "active_filters_label": "Active filters:",
     "filter_by_category": "Filter by '{category}'",
     "table": {
       "title": "Contract / Label",
@@ -443,6 +449,8 @@
     "section_calc_title": "Non-Binding Deadline Projections",
     "section_calc_text": "All deadline, term, and rollover projections are mathematically extrapolated from user-entered data and serve as guidance.",
     "section_notice_title": "Proof of Receipt (§ 130 BGB)",
-    "section_notice_text": "Termination notices require confirmed receipt. Proof of timely and formal delivery to the provider remains solely the user's responsibility (recommended buffer: 5–7 working days before deadlines)."
+    "section_notice_text": "Termination notices require confirmed receipt. Proof of timely and formal delivery to the provider remains solely the user's responsibility (recommended buffer: 5–7 working days before deadlines).",
+    "section_currency_title": "Currency Conversion & Exchange Fluctuations",
+    "section_currency_text": "Foreign currency amounts are converted into your base currency using daily reference rates from the European Central Bank (ECB) via Frankfurter.app. Actual debit amounts on credit cards or bank statements may vary slightly due to provider surcharges or foreign transaction fees."
   }
 }

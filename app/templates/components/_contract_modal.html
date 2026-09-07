@@ -111,16 +111,47 @@
               </h6>
             </div>
 
-            <!-- Amount, Currency & Payment Method -->
-            <div class="col-12 col-md-4">
-              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
-              <input type="number" step="0.01" inputmode="decimal" name="amount" class="form-control" value="0.00" required />
+            <!-- Frequency & Currency (Row 1: 6 + 6) -->
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
+              <select name="frequency" class="form-select">
+                {% for val, label in active_form.frequency.choices %}
+                <option value="{{ val }}" {% if val == 'monthly' %}selected{% endif %}>{{ _('form.' ~ val) if _('form.' ~ val) != 'form.' ~ val else label }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.currency') }}</label>
-              <input name="currency" class="form-control" value="EUR" required />
+              <div class="position-relative combobox-container">
+                <input 
+                  type="text" 
+                  name="currency" 
+                  class="form-control pe-5 combobox-input" 
+                  placeholder="z. B. EUR, USD" 
+                  value="EUR"
+                  autocomplete="off" 
+                  required
+                />
+                <button type="button" class="btn p-0 pe-3 position-absolute end-0 top-50 translate-middle-y text-secondary d-flex align-items-center combobox-toggle" data-bs-toggle="dropdown" data-bs-reference="parent" aria-expanded="false" title="{{ _('form.select_option') }}" style="border: none; background: transparent; box-shadow: none;">
+                  <i class="bi bi-chevron-down small"></i>
+                  <span class="visually-hidden">{{ _('form.currency') }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                  <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.currency_top_group') }}</li>
+                  {% for code, label in top_currencies %}
+                  <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ code }}"><span class="fw-bold">{{ code }}</span> <span class="text-muted small ms-1">- {{ label }}</span></button></li>
+                  {% endfor %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li class="dropdown-header small text-uppercase fw-bold">{{ _('form.currency_all_group') }}</li>
+                  {% for code, label in all_currencies %}
+                  <li><button class="dropdown-item combobox-select-item" type="button" data-value="{{ code }}"><span class="fw-bold">{{ code }}</span> <span class="text-muted small ms-1">- {{ label }}</span></button></li>
+                  {% endfor %}
+                </ul>
+              </div>
             </div>
-            <div class="col-12 col-md-4">
+
+            <!-- Payment Method & Billing Anchor Date (Row 2: 6 + 6) -->
+            <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.payment_method') }}</label>
               <div class="position-relative combobox-container">
                 <input 
@@ -151,16 +182,6 @@
                 </ul>
               </div>
             </div>
-
-            <!-- Frequency & Billing Anchor Date -->
-            <div class="col-12 col-md-6">
-              <label class="form-label small fw-semibold">{{ _('form.frequency') }}</label>
-              <select name="frequency" class="form-select">
-                {% for val, label in active_form.frequency.choices %}
-                <option value="{{ val }}" {% if val == 'monthly' %}selected{% endif %}>{{ _('form.' ~ val) if _('form.' ~ val) != 'form.' ~ val else label }}</option>
-                {% endfor %}
-              </select>
-            </div>
             <div class="col-12 col-md-6">
               <label class="form-label small fw-semibold">{{ _('form.billing_anchor_date') }} <span class="text-muted fw-normal">({{ _('form.optional') }})</span></label>
               <input name="billing_anchor_date" type="date" class="form-control" />
@@ -169,6 +190,17 @@
                   <span class="next-billing-preview-badge badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 d-none" style="font-size: 0.70rem;"></span>
                 </div>
                 <div class="form-text small text-muted m-0" style="font-size: 0.72rem;">{{ _('form.billing_anchor_hint') }}</div>
+              </div>
+            </div>
+
+            <!-- Single Amount Field (Hidden and disabled automatically when price tiers are active) -->
+            <div class="col-12 single-amount-wrapper">
+              <label class="form-label small fw-semibold">{{ _('form.amount') }}</label>
+              <div class="input-group">
+                <input type="number" step="0.01" inputmode="decimal" name="amount" class="form-control" value="0.00" required />
+                <span class="input-group-text currency-addon text-secondary">EUR</span>
+              </div>
+              <div class="currency-conversion-preview form-text small text-body-secondary d-none mt-1" id="contractAmountConversionPreview" data-user-currency="{{ (current_user.currency or current_user.base_currency or 'EUR')|upper }}">
               </div>
             </div>
 

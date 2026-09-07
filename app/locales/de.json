@@ -89,6 +89,8 @@
     "contract_number": "Vertragsnummer",
     "amount": "Betrag",
     "currency": "Währung",
+    "currency_top_group": "Häufig verwendet",
+    "currency_all_group": "Alle Währungen (A–Z)",
     "frequency": "Zahlungsrhythmus",
     "monthly": "Monatlich",
     "quarterly": "Vierteljährlich",
@@ -346,7 +348,11 @@
     "empty_search": "Keine Verträge für diese Filterkriterien gefunden.",
     "empty_search_hint": "Passe deine Suchbegriffe oder Filter an, um passende Verträge anzuzeigen.",
     "reset_filters": "Filter zurücksetzen",
+    "clear_all_filters": "Alle Filter zurücksetzen",
     "all_categories": "Alle Kategorien",
+    "all_tags": "Alle Tags",
+    "search_placeholder": "Verträge durchsuchen...",
+    "active_filters_label": "Aktive Filter:",
     "filter_by_category": "Nach '{category}' filtern",
     "table": {
       "title": "Vertrag / Bezeichnung",
@@ -442,6 +448,8 @@
     "section_calc_title": "Unverbindliche Fristberechnung",
     "section_calc_text": "Alle Stichtags-, Laufzeit- und Verlängerungsangaben basieren auf Ihren eingegebenen Vertragsdaten und stellen rechnerische Orientierungshilfen dar.",
     "section_notice_title": "Rechtzeitiger Zugang (§ 130 BGB)",
-    "section_notice_text": "Kündigungserklärungen sind empfangsbedürftig. Der Nachweis des frist- und formgerechten Zugangs beim Vertragspartner obliegt stets dem Nutzer (empfohlener Post- und Bearbeitungspuffer: 5–7 Werktage vor Fristablauf)."
+    "section_notice_text": "Kündigungserklärungen sind empfangsbedürftig. Der Nachweis des frist- und formgerechten Zugangs beim Vertragspartner obliegt stets dem Nutzer (empfohlener Post- und Bearbeitungspuffer: 5–7 Werktage vor Fristablauf).",
+    "section_currency_title": "Währungsumrechnungen & Kursschwankungen",
+    "section_currency_text": "Fremdwährungsbeträge werden tagesaktuell anhand der Referenzkurse der Europäischen Zentralbank (EZB) über Frankfurter.app in Ihre Basiswährung umgerechnet. Bei Abbuchungen vor Ort oder auf Kreditkartenabrechnungen können die tatsächlichen Beträge durch Wechselkursaufschläge oder Auslandseinsatzentgelte Ihres Zahlungsdienstleisters geringfügig abweichen."
   }
 }

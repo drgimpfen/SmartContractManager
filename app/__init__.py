@@ -45,11 +45,14 @@ def create_app(test_config=None):
         current_loc = get_locale()
         def _(key, **kwargs):
             return translate(key, current_loc, **kwargs)
+        from app.services.currency_service import TOP_CURRENCIES, ALL_CURRENCIES
         return dict(
             _=_,
             lang=current_loc,
             languages={code: LANGUAGE_NAMES.get(code, code) for code in SUPPORTED_LOCALES},
             csrf_token=generate_csrf,
+            top_currencies=TOP_CURRENCIES,
+            all_currencies=ALL_CURRENCIES,
         )
 
     @login_manager.user_loader

@@ -15,15 +15,15 @@ class DummyCurrencyService:
     def __init__(self, rates=None):
         self.rates = rates or {}
 
-    def get_rate(self, base, target):
+    def get_rate(self, base, target, as_of=None):
         if base == target:
             return 1.0
         return self.rates.get((base, target), 1.0)
 
-    def convert(self, amount, from_curr, to_curr):
+    def convert(self, amount, from_curr, to_curr, as_of=None):
         if not amount:
             return 0.0
-        return round(amount * self.get_rate(from_curr, to_curr), 2)
+        return round(amount * self.get_rate(from_curr, to_curr, as_of=as_of), 2)
 
 
 def test_normalize_to_monthly():
