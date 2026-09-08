@@ -81,8 +81,11 @@ For any code creation, refactoring, or architectural modification, the following
   - Every `implementation_plan.md` must include an explicit assessment and recommendation regarding which model tier (`Low`, `Medium`, or `High`) is best suited for executing the plan to optimize token consumption and operational cost.
   - **Chat Output Requirement:** In addition to the plan artifact, the recommendation (recommended tier + concise 1-sentence rationale in German) MUST explicitly be included directly in the chat message when presenting the plan, enabling immediate model switching in the IDE interface before approval:
     - **`Low` (Fast / Lightweight):** Pure UI/Bootstrap adjustments, text/typography polish, translation catalog maintenance (`de.json`, `en.json`), standard CRUD templates matching existing blueprints, or straightforward bugfixes with clear error traces.
+      *Primary:* Gemini 3.8 Flash Low · *Fallback (quota limit):* GPT-OSS 120B (Medium)
     - **`Medium` (Standard / Balanced):** Full-stack feature implementations across routes, forms, DB queries, and templates; schema extensions and Alembic migrations; or standard integration test suites.
+      *Primary:* Gemini 3.8 Flash Medium · *Actively recommend when* the task requires complex reasoning chains (e.g. cashflow logic at the Medium/High boundary): Claude Sonnet 4.6 (Thinking) · *Fallback (quota limit):* GPT-OSS 120B (Medium)
     - **`High` (Flagship / High-Reasoning):** Complex financial calculations (cashflow projections, multi-currency conversion), statutory legal logic (BGB § 309 Nr. 9, VVG, notice periods, calendar rules), intricate concurrency/OIDC pipelines, or deep architectural refactorings.
+      *Primary:* Gemini 3.8 Flash High · Gemini 3.1 Pro Low · Gemini 3.1 Pro High · *Actively recommend when* the task involves deep statutory legal logic (BGB, VVG, EnWG) or complex multi-currency financial calculations: Claude Opus 4.6 (Thinking) · *Alternative for strong reasoning requirements:* Claude Sonnet 4.6 (Thinking)
 - **Mandatory Canonical Structure of `implementation_plan.md`:**
   Every `implementation_plan.md` MUST strictly adhere to the exact same canonical section hierarchy and order:
   1. `# [Titel des Plans]` gefolgt von einer kurzen 1–2 Sätze Einführung zum Ziel des Plans.
