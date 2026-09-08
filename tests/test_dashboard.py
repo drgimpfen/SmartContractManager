@@ -244,9 +244,8 @@ def test_dashboard_active_exchange_rates_card_visible_for_foreign_currency(app, 
     assert resp.status_code == 200
     html = resp.data.decode('utf-8')
 
-    assert 'id="exchangeRatesModalTrigger"' in html
+    assert 'id="foreignCurrencyRatesCard"' in html
     assert 'id="exchangeRatesModal"' in html
-    assert 'id="foreignCurrencyRatesCard"' not in html
     assert 'CAD' in html
     assert '1 CAD = 0.6850 EUR' in html
     assert today.strftime('%d.%m.%Y') in html

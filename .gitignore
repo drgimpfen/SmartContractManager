@@ -9,3 +9,5 @@ venv/
 db_data/
 .coverage
 .pytest_cache/
+implementation_plan.md
+walkthrough.md
