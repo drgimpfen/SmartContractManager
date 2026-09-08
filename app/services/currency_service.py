@@ -221,9 +221,19 @@ class CurrencyService:
             rate_date=rate_date
         ).first()
 
+        inv_cached = None
+        if not cached:
+            inv_cached = ExchangeRateCache.query.filter_by(
+                base_currency=target,
+                target_currency=base,
+                rate_date=rate_date
+            ).first()
+
         # Immutable historical rate: once cached for a past date, it never expires
         if cached and rate_date < today:
             return cached.rate
+        if inv_cached and rate_date < today and inv_cached.rate:
+            return round(1.0 / inv_cached.rate, 6)
 
         # Today's live rate: check 24-hour cache freshness
         if cached and rate_date >= today and cached.last_updated:
@@ -232,6 +242,13 @@ class CurrencyService:
                 last_updated = last_updated.replace(tzinfo=timezone.utc)
             if now - last_updated < self.CACHE_DURATION:
                 return cached.rate
+
+        if inv_cached and rate_date >= today and inv_cached.last_updated:
+            last_updated = inv_cached.last_updated
+            if last_updated.tzinfo is None:
+                last_updated = last_updated.replace(tzinfo=timezone.utc)
+            if now - last_updated < self.CACHE_DURATION and inv_cached.rate:
+                return round(1.0 / inv_cached.rate, 6)
 
         # Fetch rate from Frankfurter API v2
         try:
@@ -291,6 +308,8 @@ class CurrencyService:
         # Fallback to existing cache if available
         if cached:
             return cached.rate
+        if inv_cached and inv_cached.rate:
+            return round(1.0 / inv_cached.rate, 6)
 
         # Fallback to most recent known rate in cache
         most_recent = ExchangeRateCache.query.filter_by(
@@ -299,6 +318,13 @@ class CurrencyService:
         ).order_by(ExchangeRateCache.rate_date.desc()).first()
         if most_recent:
             return most_recent.rate
+
+        most_recent_inv = ExchangeRateCache.query.filter_by(
+            base_currency=target,
+            target_currency=base
+        ).order_by(ExchangeRateCache.rate_date.desc()).first()
+        if most_recent_inv and most_recent_inv.rate:
+            return round(1.0 / most_recent_inv.rate, 6)
 
         return 1.0
 
@@ -317,20 +343,37 @@ class CurrencyService:
         Return active exchange rate items for all foreign currencies present in user's contracts.
         """
         target = (getattr(user, 'currency', None) or getattr(user, 'base_currency', None) or "EUR").strip().upper()
-        currencies = set()
+        # Count non-archived contracts per foreign currency
+        currency_counts: dict[str, int] = {}
         for c in contracts:
+            if getattr(c, 'is_archived', False):
+                continue
             c_curr = (getattr(c, 'currency', None) or "EUR").strip().upper()
             if c_curr != target:
-                currencies.add(c_curr)
+                currency_counts[c_curr] = currency_counts.get(c_curr, 0) + 1
 
         rates = []
         today = date.today()
-        for curr in sorted(currencies):
+        for curr in sorted(currency_counts.keys()):
             rate = self.get_rate(curr, target, as_of=today)
+            # Retrieve exact rate_date from cache entry if available (most recent on or before today)
+            cached = ExchangeRateCache.query.filter(
+                ExchangeRateCache.base_currency == curr,
+                ExchangeRateCache.target_currency == target,
+                ExchangeRateCache.rate_date <= today
+            ).order_by(ExchangeRateCache.rate_date.desc()).first()
+            if not cached:
+                cached = ExchangeRateCache.query.filter(
+                    ExchangeRateCache.base_currency == target,
+                    ExchangeRateCache.target_currency == curr,
+                    ExchangeRateCache.rate_date <= today
+                ).order_by(ExchangeRateCache.rate_date.desc()).first()
+            actual_date = cached.rate_date if cached else today
             rates.append({
                 "from_currency": curr,
                 "to_currency": target,
                 "rate": rate,
-                "rate_date": today,
+                "rate_date": actual_date,
+                "contract_count": currency_counts[curr],
             })
         return rates

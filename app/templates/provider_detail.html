@@ -88,10 +88,10 @@
           <div class="min-w-0">
             <span class="text-muted small d-block lh-sm mb-1">{{ _('providers.kpi_monthly_cost') }}</span>
             <div class="h4 fw-bold text-body mb-0">
-              {{ "%.2f"|format(summary.monthly_spend) }} {{ summary.target_currency }}
+              {% if summary.has_foreign_currency %}~ {% endif %}{{ "%.2f"|format(summary.monthly_spend) }} {{ summary.target_currency }}
             </div>
             <small class="text-secondary d-block lh-sm mt-1">
-              {{ _('providers.kpi_annual_projected') }}: {{ "%.2f"|format(summary.annual_projected) }} {{ summary.target_currency }}
+              {{ _('providers.kpi_annual_projected') }}: {% if summary.has_foreign_currency %}~ {% endif %}{{ "%.2f"|format(summary.annual_projected) }} {{ summary.target_currency }}
             </small>
           </div>
         </div>
@@ -108,7 +108,7 @@
           <div class="min-w-0">
             <span class="text-muted small d-block lh-sm mb-1">{{ _('providers.kpi_paid_so_far') }}</span>
             <div class="h4 fw-bold text-success mb-0">
-              {{ "%.2f"|format(summary.total_paid) }} {{ summary.target_currency }}
+              {% if summary.has_foreign_currency %}~ {% endif %}{{ "%.2f"|format(summary.total_paid) }} {{ summary.target_currency }}
             </div>
             <small class="text-muted d-block lh-sm mt-1">
               {{ _('providers.kpi_paid_hint') }}
@@ -129,7 +129,7 @@
           <div class="min-w-0">
             <span class="text-muted small d-block lh-sm mb-1">{{ _('providers.kpi_remaining_cost') }}</span>
             <div class="h4 fw-bold text-primary mb-0">
-              {{ "%.2f"|format(summary.total_remaining) }} {{ summary.target_currency }}
+              {% if summary.has_foreign_currency %}~ {% endif %}{{ "%.2f"|format(summary.total_remaining) }} {{ summary.target_currency }}
             </div>
             <small class="text-muted d-block lh-sm mt-1">
               {{ _('providers.kpi_remaining_hint') }}
@@ -142,7 +142,7 @@
           <div class="min-w-0">
             <span class="text-muted small d-block lh-sm mb-1">{{ _('providers.kpi_total_cost') }}</span>
             <div class="h4 fw-bold text-body mb-0">
-              {{ "%.2f"|format(summary.total_cost) }} {{ summary.target_currency }}
+              {% if summary.has_foreign_currency %}~ {% endif %}{{ "%.2f"|format(summary.total_cost) }} {{ summary.target_currency }}
             </div>
             <small class="text-secondary d-block lh-sm mt-1">
               {{ _('providers.kpi_annual_projected') }}
@@ -266,6 +266,11 @@
                     <span class="fw-semibold text-body">
                       {{ "%.2f"|format(contract.amount) }} {{ contract.currency }}
                     </span>
+                    {% if converted_amounts and contract.id in converted_amounts %}
+                    <small class="text-secondary d-block" style="font-size: 0.75rem;">
+                      &asymp; {{ "%.2f"|format(converted_amounts[contract.id]) }} {{ summary.target_currency }}
+                    </small>
+                    {% endif %}
                     <small class="text-muted d-block" style="font-size: 0.75rem;">
                       {{ _('form.' ~ contract.frequency.value) }}
                     </small>

@@ -71,7 +71,14 @@
     "missing_notice": "Fehlende Kündigungsfrist",
     "no_notice": "Alle aktiven Verträge haben eine Kündigungsfrist.",
     "cost_distribution": "Kostenverteilung",
-    "no_cost_distribution": "Noch keine Kostenverteilung verfügbar."
+    "no_cost_distribution": "Noch keine Kostenverteilung verfügbar.",
+    "exchange_rates_title": "Aktive Wechselkurse & Devisen",
+    "exchange_rates_active_count": "Fremdwährungen",
+    "exchange_rates_hint": "Klicken für Details",
+    "exchange_rates_contracts": "Verträge",
+    "exchange_rates_as_of": "Stand",
+    "exchange_rates_ecb": "EZB-Referenzkurs",
+    "exchange_rates_modal_hint": "Diese Kurse basieren auf den offiziellen täglichen Referenzkursen der Europäischen Zentralbank (EZB) via Frankfurter API und dienen der einheitlichen Vergleichbarkeit deiner Verträge. Reale Kreditkarten- und Bankabrechnungen können aufgrund individueller Auslandseinsatzentgelte deiner Bank geringfügig abweichen."
   },
   "modal": {
     "close": "Schließen",

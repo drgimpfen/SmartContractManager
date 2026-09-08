@@ -10,7 +10,9 @@
       <div class="card-body p-3 p-md-4">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
           <div>
-            <h5 class="card-title fw-bold mb-1">{{ _('dashboard.title') }}</h5>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <h5 class="card-title fw-bold mb-0">{{ _('dashboard.title') }}</h5>
+            </div>
             <p class="text-muted small mb-0">{{ _('dashboard.subtitle') }}</p>
           </div>
           <!-- Budget View Switcher im Header -->
@@ -61,7 +63,16 @@
             </div>
           </div>
         </div>
+
       </div>
+      {% if active_exchange_rates %}
+      <div class="card-footer px-3 px-md-4 py-2 border-top d-flex align-items-center">
+        <button type="button" id="foreignCurrencyRatesCard" class="btn p-0 border-0 bg-transparent d-flex align-items-center gap-2 text-muted" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#exchangeRatesModal">
+          <i class="bi bi-currency-exchange text-warning"></i>
+          <span>{{ active_exchange_rates|length }} {{ _('dashboard.exchange_rates_active_count') }} &mdash; {{ _('dashboard.exchange_rates_hint') }}</span>
+        </button>
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -236,6 +247,59 @@
     </div>
   </div>
 </div>
+
+{% if active_exchange_rates %}
+<!-- Foreign Currency Rates Modal Dialog -->
+<div class="modal fade" id="exchangeRatesModal" tabindex="-1" aria-labelledby="exchangeRatesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-sm border">
+      <div class="modal-header border-bottom py-3">
+        <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0" id="exchangeRatesModalLabel">
+          <i class="bi bi-currency-exchange text-primary"></i>
+          <span>{{ _('dashboard.exchange_rates_title') }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('sidebar.close') }}"></button>
+      </div>
+      <div class="modal-body p-3 p-sm-4 text-start">
+        <div class="d-flex flex-column gap-3">
+          {% for rate_item in active_exchange_rates %}
+          <div class="p-3 rounded-3 bg-body-tertiary border d-flex flex-column gap-2">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary text-white fw-bold px-2 py-1">{{ rate_item.from_currency }}</span>
+                <i class="bi bi-arrow-right text-secondary small"></i>
+                <span class="badge bg-body-secondary text-body fw-semibold px-2 py-1 border">{{ rate_item.to_currency }}</span>
+              </div>
+              <span class="badge bg-secondary-subtle text-secondary small">
+                {{ rate_item.contract_count }} {{ _('dashboard.exchange_rates_contracts') }}
+              </span>
+            </div>
+            <div>
+              <div class="fs-5 fw-bold text-body">
+                1 {{ rate_item.from_currency }} = {{ "%.4f"|format(rate_item.rate) }} {{ rate_item.to_currency }}
+              </div>
+              <div class="text-secondary small d-flex align-items-center gap-1 mt-1" style="font-size: 0.75rem;">
+                <i class="bi bi-clock-history"></i>
+                <span>{{ _('dashboard.exchange_rates_as_of') }}: {{ rate_item.rate_date.strftime('%d.%m.%Y') if rate_item.rate_date else '' }} &middot; {{ _('dashboard.exchange_rates_ecb') }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <!-- Transparenzhinweis -->
+          <div class="p-3 rounded-3 bg-body-tertiary border d-flex align-items-start gap-2 text-secondary small" style="font-size: 0.8rem; line-height: 1.45;">
+            <i class="bi bi-info-circle text-primary fs-6 mt-0 flex-shrink-0"></i>
+            <div>{{ _('dashboard.exchange_rates_modal_hint') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top py-2 px-3">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ _('sidebar.close') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Add Contract Modal Component -->
 {% with action_url=url_for('contract.index', next=url_for('dashboard.index')) %}

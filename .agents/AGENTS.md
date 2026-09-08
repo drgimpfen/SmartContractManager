@@ -20,8 +20,12 @@ Your code must be modular, secure, and performant. Implement features strictly a
   * Payment intervals are strictly based on a `billing_anchor_date` (reference payment date) to extrapolate complex rhythms (annually, quarterly) mathematically correctly.
 * **Currency Conversion (Multi-Currency):**
   * The system stores foreign currencies on the contract.
-  * For dashboard aggregations, a database cache (`ExchangeRateCache`) is used. The backend logic retrieves exchange rates (e.g., via the free *Frankfurter API*).
-  * **Rule:** The API call occurs at most once every 24 hours; otherwise, the DB cache is used.
+  * For dashboard aggregations and historical calculations, a database cache (`ExchangeRateCache`) is used. The backend logic retrieves exchange rates via the *Frankfurter API*.
+  * **Rule (Daily Refresh):** The live API call for today's spot rate occurs at most once every 24 hours; otherwise, the DB cache is used.
+  * **Strict Prohibition of Future Rates (Zukunftskurs-Verbot):** Under NO circumstances may future exchange rates ($rate\_date > \text{today}$) be queried from external APIs or persisted to the database. Future cash flow projections must exclusively apply today's spot rate as the estimator without storing future dates.
+  * **Calendar-Year Chunking Strategy:**
+    * Completed past years ($year < current\_year$) are strictly retrieved as full calendar years (`YYYY-01-01` to `YYYY-12-31`) in a single bulk request and permanently persisted (*Write Once, Read Forever*), providing a 100% cache hit rate for all contracts in that currency.
+    * The current calendar year is retrieved strictly from `YYYY-01-01` to `date.today()`, with subsequent updates only querying the missing delta up to today.
 * **File Management & Security (Critical):**
   * **Sanitization:** Filenames from user inputs must strictly be sanitized before storage using `werkzeug.utils.secure_filename()`.
   * **Validation:** Strict server-side MIME type validation (only `application/pdf`). File extensions alone are insufficient.
@@ -79,6 +83,22 @@ For any code creation, refactoring, or architectural modification, the following
     - **`Low` (Fast / Lightweight):** Pure UI/Bootstrap adjustments, text/typography polish, translation catalog maintenance (`de.json`, `en.json`), standard CRUD templates matching existing blueprints, or straightforward bugfixes with clear error traces.
     - **`Medium` (Standard / Balanced):** Full-stack feature implementations across routes, forms, DB queries, and templates; schema extensions and Alembic migrations; or standard integration test suites.
     - **`High` (Flagship / High-Reasoning):** Complex financial calculations (cashflow projections, multi-currency conversion), statutory legal logic (BGB § 309 Nr. 9, VVG, notice periods, calendar rules), intricate concurrency/OIDC pipelines, or deep architectural refactorings.
+- **Mandatory Canonical Structure of `implementation_plan.md`:**
+  Every `implementation_plan.md` MUST strictly adhere to the exact same canonical section hierarchy and order:
+  1. `# [Titel des Plans]` gefolgt von einer kurzen 1–2 Sätze Einführung zum Ziel des Plans.
+  2. `## 🤖 Modell-Tier-Empfehlung & Komplexitätsbewertung` (Ausnahmslos als allererste Sektion direkt unter Titel/Intro):
+     - `Empfohlenes Modell-Tier`: `Low`, `Medium` oder `High`
+     - `Begründung`: 1–2 prägnante Sätze auf Deutsch (ohne Erwähnung von Agentenrollen).
+  3. `## 🔍 Anti-Redundanz & Deduplizierungs-Audit`:
+     - Bestehende Abstraktionen (DRY / Single Source of Truth)
+     - Visuelle Deduplizierung (UI Anti-Redundancy Mandate)
+     - Disjunkte Phasenabgrenzung (bei mehrphasigen Plänen)
+  4. `## ⚠️ User Review Required`:
+     - Relevante Design-Entscheidungen, visuelle Verhaltensweisen oder Warnhinweise.
+  5. `## 🛠️ Proposed Changes`:
+     - Gegliedert nach Schichten (z. B. Backend/Service, Frontend/Templates, Lokalisierung, Tests) mit `[MODIFY]`, `[NEW]`, `[DELETE]` und Dateilinks.
+  6. `## 📋 Verification Plan`:
+     - Automatisierte Pytest-Befehle (`docker compose exec -T web pytest ...`) und manuelle UI-Prüfschritte.
 
 ### 5.2 Objectivity, Critical Analysis & Authoritative Source Verification Mandate
 - Act strictly as an objective, critical analyst. The goal is finding factual truth, technical accuracy, and robust software architecture, not pleasing the user or uncritically agreeing.

@@ -116,9 +116,9 @@ Kündigungsschreiben (z. B. nach DIN 5008 generierte PDF-Briefe oder E-Mail-Vorl
 * Alle in die Basiswährung des Nutzers (z. B. EUR) umgerechneten Werte auf Dashboards, Übersichten und Cashflow-Projektionen sind indikative Schätzwerte.
 * Umrechnungswerte müssen im Frontend stets eindeutig als Richtwert gekennzeichnet werden (durch vorangestellte Tilde `~` bzw. `≈` oder Kursdatum-Angabe), da tatsächliche Kreditkartenabrechnungen oder Bankabbuchungen aufgrund von Wechselkursaufschlägen oder Auslandseinsatzentgelten abweichen können.
 
-### 7.3 Taggenaue Einzelabrechnung vs. Monatsdurchschnitt
-* Für historische und prognostizierte Cashflow-Fälligkeiten (z. B. wöchentliche oder quartalsweise Abbuchungen) wird der Wechselkurs des konkreten Fälligkeitstags (`billing_date`) herangezogen.
-* Historische Wechselkurse vor dem heutigen Tag sind unveränderlich (*Write Once, Read Forever*).
+### 7.3 Historische Genauigkeit vs. Indikative Zukunftsprognose (Zukunftskurs-Verbot)
+* **Vergangene Fälligkeiten ($d \le \text{heute}$):** Werden taggenau mit dem jeweiligen historischen EZB-Referenzkurs des Fälligkeitstags umgerechnet, um die tatsächlich angefallenen Gesamtausgaben („Bisher bezahlt“) exakt und realitätsgetreu zu beziffern. Historische Kurse sind unveränderlich (*Write Once, Read Forever*).
+* **Zukünftige Fälligkeiten ($d > \text{heute}$):** Werden in Cashflow-Projektionen und Budget-Forecasts indikativ über den aktuellen Spot-Kurs (heutiger Tageskurs) als Schätzwert berechnet. Die Abfrage oder Speicherung spekulativer Zukunftskurse („Orakelei“) ist fachlich unzulässig.
 
 ---
 

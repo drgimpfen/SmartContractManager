@@ -2,6 +2,7 @@ from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 
 from app.services.financial_service import FinancialService
+from app.services.currency_service import CurrencyService
 from app.forms import ContractForm
 from app.routes.contract import populate_provider_choices
 from app.models import Tag, Contract
@@ -26,6 +27,7 @@ def index():
     user_payment_methods = sorted(list(set(c.payment_method for c in all_user_contracts if c.payment_method)))
 
     fin_svc = FinancialService()
+    curr_svc = CurrencyService()
 
     monthly_budget = fin_svc.calculate_monthly_budget(contracts, user_currency)
     current_month_expenses = fin_svc.calculate_current_month_expenses(contracts, user_currency)
@@ -36,6 +38,8 @@ def index():
 
     critical_reminders = fin_svc.get_critical_deadlines(contracts)
     missing_notice = fin_svc.get_missing_notice(contracts)
+
+    active_exchange_rates = curr_svc.get_active_rates_for_user(current_user, contracts)
 
     return render_template(
         'dashboard.html',
@@ -52,4 +56,5 @@ def index():
         all_tags=all_tags,
         user_categories=user_categories,
         user_payment_methods=user_payment_methods,
+        active_exchange_rates=active_exchange_rates,
     )

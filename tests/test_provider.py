@@ -385,5 +385,105 @@ def test_provider_directory_card_grid(client, app):
     assert '49,99' in html or '49.99' in html
 
 
+def test_provider_detail_with_foreign_currency_tilde_indication(client, app):
+    from app import db
+    from app.models import Contract, ContractStatus, Frequency, ExchangeRateCache
+    from datetime import date
+
+    with app.app_context():
+        u = User(username='prov_usd_user', hashed_password=generate_password_hash('pass123'), currency='EUR')
+        db.session.add(u)
+        db.session.flush()
+
+        p = Provider(
+            user_id=u.id,
+            name='US Cloud Provider',
+        )
+        db.session.add(p)
+        db.session.flush()
+
+        c = Contract(
+            user_id=u.id,
+            provider_id=p.id,
+            category='Cloud Services',
+            status=ContractStatus.active,
+            amount=10.00,
+            currency='USD',
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+        )
+        cache_entry = ExchangeRateCache(
+            base_currency="EUR",
+            target_currency="USD",
+            rate=1.0850,
+            rate_date=date(2026, 9, 4),
+        )
+        db.session.add_all([c, cache_entry])
+        db.session.commit()
+        p_id = p.id
+
+    client.post('/login', data={'username': 'prov_usd_user', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.get(f'/providers/{p_id}')
+    assert resp.status_code == 200
+
+    html = resp.data.decode('utf-8')
+    # Tilde indication in KPIs
+    assert '~ ' in html
+    # Primary contract amount in USD
+    assert '10.00 USD' in html
+    # Indicative converted subtitle in EUR
+    assert '&asymp;' in html or '≈' in html
+    # Anti-redundancy: No duplicate legal notice modal or trigger inside provider detail card (exactly 1 in global footer)
+    assert html.count('id="legalNoticeModal"') == 1
+    assert html.count('data-bs-target="#legalNoticeModal"') == 1
+
+
+def test_provider_detail_without_foreign_currency_no_tilde(client, app):
+    from app import db
+    from app.models import Contract, ContractStatus, Frequency
+    from datetime import date
+
+    with app.app_context():
+        u = User(username='prov_eur_user', hashed_password=generate_password_hash('pass123'), currency='EUR')
+        db.session.add(u)
+        db.session.flush()
+
+        p = Provider(
+            user_id=u.id,
+            name='Domestic Provider',
+        )
+        db.session.add(p)
+        db.session.flush()
+
+        c = Contract(
+            user_id=u.id,
+            provider_id=p.id,
+            category='Gym',
+            status=ContractStatus.active,
+            amount=25.00,
+            currency='EUR',
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+        )
+        db.session.add(c)
+        db.session.commit()
+        p_id = p.id
+
+    client.post('/login', data={'username': 'prov_eur_user', 'password': 'pass123'}, follow_redirects=True)
+    resp = client.get(f'/providers/{p_id}')
+    assert resp.status_code == 200
+
+    html = resp.data.decode('utf-8')
+    # No tilde in KPI values
+    assert '~ 25.00' not in html
+    assert '~ 300.00' not in html
+    # Contract amount is in EUR without asymp subtitle
+    assert '25.00 EUR' in html
+    assert '&asymp;' not in html
+
+
+
 
 

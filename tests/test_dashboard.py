@@ -1,10 +1,10 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from flask_login import login_user
 from werkzeug.security import generate_password_hash
 import pytest
 
 from app import db
-from app.models import User, Provider, Contract, ContractStatus, Frequency
+from app.models import User, Provider, Contract, ContractStatus, Frequency, ExchangeRateCache
 
 
 def test_dashboard_unauthenticated_redirect(client):
@@ -157,3 +157,98 @@ def test_dashboard_populated_with_financial_metrics_and_charts(app, client, mock
     assert 'combobox-container' in html
     assert 'contract-term-group' in html
     assert 'name="tags"' in html
+
+
+def test_dashboard_active_exchange_rates_card_hidden_for_base_currency(app, client):
+    with app.app_context():
+        user = User(
+            username="eur_only_user",
+            hashed_password=generate_password_hash("password123"),
+            currency="EUR",
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        prov = Provider(user_id=user.id, name="Local Telco")
+        db.session.add(prov)
+        db.session.flush()
+
+        c = Contract(
+            user_id=user.id,
+            provider_id=prov.id,
+            category="Internet",
+            status=ContractStatus.active,
+            amount=50.0,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+        )
+        db.session.add(c)
+        db.session.commit()
+
+    client.post('/login', data={'username': 'eur_only_user', 'password': 'password123'}, follow_redirects=True)
+    resp = client.get('/')
+    assert resp.status_code == 200
+    html = resp.data.decode('utf-8')
+    assert 'id="foreignCurrencyRatesCard"' not in html
+
+
+def test_dashboard_active_exchange_rates_card_visible_for_foreign_currency(app, client):
+    with app.app_context():
+        user = User(
+            username="multi_curr_user",
+            hashed_password=generate_password_hash("password123"),
+            currency="EUR",
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        prov = Provider(user_id=user.id, name="Global SaaS")
+        db.session.add(prov)
+        db.session.flush()
+
+        c_eur = Contract(
+            user_id=user.id,
+            provider_id=prov.id,
+            category="Internet",
+            status=ContractStatus.active,
+            amount=40.0,
+            currency="EUR",
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 1),
+        )
+        c_cad = Contract(
+            user_id=user.id,
+            provider_id=prov.id,
+            category="Cloud",
+            status=ContractStatus.active,
+            amount=10.0,
+            currency="CAD",
+            frequency=Frequency.monthly,
+            billing_anchor_date=date(2026, 1, 15),
+        )
+        today = date.today()
+        # Seed rate cache with explicit rate and date for CAD -> EUR
+        cache_entry = ExchangeRateCache(
+            base_currency="CAD",
+            target_currency="EUR",
+            rate=0.6850,
+            rate_date=today,
+            last_updated=datetime.now(timezone.utc),
+        )
+        db.session.add_all([c_eur, c_cad, cache_entry])
+        db.session.commit()
+
+    client.post('/login', data={'username': 'multi_curr_user', 'password': 'password123'}, follow_redirects=True)
+    resp = client.get('/')
+    assert resp.status_code == 200
+    html = resp.data.decode('utf-8')
+
+    assert 'id="exchangeRatesModalTrigger"' in html
+    assert 'id="exchangeRatesModal"' in html
+    assert 'id="foreignCurrencyRatesCard"' not in html
+    assert 'CAD' in html
+    assert '1 CAD = 0.6850 EUR' in html
+    assert today.strftime('%d.%m.%Y') in html
+    assert '1 ' in html  # 1 contract count badge
+

@@ -577,6 +577,12 @@ class FinancialService:
         canceled_contracts = [c for c in contracts if c.status == ContractStatus.canceled]
         archived_contracts = [c for c in contracts if getattr(c, "is_archived", False) or c.status == ContractStatus.archived]
 
+        has_foreign_currency = any(
+            (c.currency or "EUR") != target_currency
+            for c in contracts
+            if not (getattr(c, "is_archived", False) or c.status == ContractStatus.archived)
+        )
+
         monthly_spend = self.calculate_monthly_budget(active_contracts, target_currency, as_of_date)
         annual_projected = round(monthly_spend * 12.0, 2)
 
@@ -603,6 +609,7 @@ class FinancialService:
 
         return {
             "target_currency": target_currency,
+            "has_foreign_currency": has_foreign_currency,
             "total_contracts": total_contracts,
             "active_count": len(active_contracts),
             "canceled_count": len(canceled_contracts),

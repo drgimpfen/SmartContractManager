@@ -83,10 +83,16 @@ def detail(id):
     contract_form.currency.data = current_user.currency or "EUR"
 
     fin_service = FinancialService()
+    target_currency = current_user.currency or "EUR"
     summary = fin_service.calculate_provider_summary(
         provider.contracts,
-        target_currency=current_user.currency or "EUR",
+        target_currency=target_currency,
     )
+    converted_amounts = {
+        c.id: fin_service.currency_service.convert(c.amount, c.currency or "EUR", target_currency)
+        for c in provider.contracts
+        if (c.currency or "EUR") != target_currency
+    }
     note_form = NoteForm()
 
     all_user_contracts = Contract.query.filter_by(user_id=current_user.id, is_archived=False).all()
@@ -99,6 +105,7 @@ def detail(id):
         form=form,
         contract_form=contract_form,
         summary=summary,
+        converted_amounts=converted_amounts,
         note_form=note_form,
         user_categories=user_categories,
         user_payment_methods=user_payment_methods,

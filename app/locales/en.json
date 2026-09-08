@@ -71,7 +71,14 @@
     "missing_notice": "Missing notice",
     "no_notice": "All active contracts have a cancellation notice.",
     "cost_distribution": "Cost distribution",
-    "no_cost_distribution": "No cost distribution available yet."
+    "no_cost_distribution": "No cost distribution available yet.",
+    "exchange_rates_title": "Active Exchange Rates & Foreign Currencies",
+    "exchange_rates_active_count": "Foreign Currencies",
+    "exchange_rates_hint": "Click for details",
+    "exchange_rates_contracts": "Contracts",
+    "exchange_rates_as_of": "As of",
+    "exchange_rates_ecb": "ECB Reference Rate",
+    "exchange_rates_modal_hint": "These exchange rates are based on official daily reference rates from the European Central Bank (ECB) via the Frankfurter API to provide standardized comparisons across all contracts. Actual credit card or bank debit amounts may vary slightly due to individual foreign transaction fees."
   },
   "modal": {
     "close": "Close",
